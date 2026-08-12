@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estuary — Project Overview &amp; History</title>
+<style>
+  :root {
+    --ink: #16323a;
+    --ink-soft: #4a656d;
+    --ink-faint: #7e959c;
+    --paper: #f7f9f8;
+    --card: #ffffff;
+    --teal: #0e6e6a;
+    --teal-deep: #0a4f4c;
+    --sea: #1479a5;
+    --sand: #e8e2d4;
+    --line: #dde6e4;
+    --good: #1c7c4a;
+    --warn: #a06514;
+    --block: #a13333;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 28px 96px; }
+
+  header.hero {
+    background: linear-gradient(150deg, var(--teal-deep) 0%, var(--teal) 55%, var(--sea) 100%);
+    color: #eef7f6;
+    padding: 72px 28px 56px;
+  }
+  .hero-inner { max-width: 880px; margin: 0 auto; }
+  .hero .kicker {
+    text-transform: uppercase; letter-spacing: 0.22em; font-size: 12px;
+    color: #a8d8d2; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 52px; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 16px;
+  }
+  .hero p.tagline { font-size: 19px; max-width: 620px; color: #d7ecea; }
+  .hero .meta { margin-top: 28px; font-size: 13px; color: #a8d8d2; }
+
+  h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400; font-size: 30px; color: var(--teal-deep);
+    margin: 64px 0 8px;
+  }
+  h2 + .rule { width: 56px; height: 3px; background: var(--teal); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 28px 0 10px; color: var(--ink); }
+  p { margin-bottom: 14px; }
+  p.lede { font-size: 18px; color: var(--ink-soft); }
+  strong { color: var(--ink); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px 26px; margin: 18px 0;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14.5px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th { text-align: left; background: #eef4f3; color: var(--teal-deep); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 14px; }
+  td { padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em;
+    padding: 2px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .badge.done { background: #e3f2e9; color: var(--good); }
+  .badge.wip { background: #fdf3e2; color: var(--warn); }
+  .badge.blocked { background: #fbe9e9; color: var(--block); }
+  .badge.next { background: #e7f0f7; color: var(--sea); }
+
+  .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .pillar { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 8px; padding: 16px 18px; }
+  .pillar h4 { font-size: 14.5px; margin-bottom: 6px; color: var(--teal-deep); }
+  .pillar p { font-size: 13.5px; color: var(--ink-soft); margin: 0; }
+
+  /* timeline */
+  .timeline { position: relative; margin: 28px 0 8px; padding-left: 34px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 9px; top: 6px; bottom: 6px;
+    width: 2px; background: linear-gradient(var(--teal), var(--sea));
+  }
+  .tl-item { position: relative; padding-bottom: 30px; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -31px; top: 7px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--card); border: 3px solid var(--teal);
+  }
+  .tl-item.custody::before { background: var(--teal); border-color: var(--teal-deep); }
+  .tl-date { font-size: 12.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sea); margin-bottom: 3px; }
+  .tl-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .tl-body { font-size: 14.5px; color: var(--ink-soft); max-width: 640px; }
+  .tl-body ul { margin: 8px 0 0 18px; }
+  .tl-body li { margin-bottom: 4px; }
+
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 0.92em; background: #eef3f2; border-radius: 4px; padding: 1px 5px; color: var(--teal-deep); }
+
+  footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-faint); }
+  @media (max-width: 560px) { .hero h1 { font-size: 38px; } h2 { font-size: 25px; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="kicker">Arus · Internal Finance Platform</div>
+    <h1>Estuary</h1>
+    <p class="tagline">The single place where every ringgit leaving Arus is submitted, approved, paid, signed for, and accounted — replacing four disconnected systems with one auditable flow.</p>
+    <div class="meta">Project ID: estuary · Design locked April 2026 · Local MVP proven · Production backbone in progress · Page updated 6 July 2026</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2>What Estuary Is</h2>
+  <div class="rule"></div>
+  <p class="lede">Estuary is a centralized internal finance operations hub for the Arus group of companies. It manages the full <strong>money-out lifecycle</strong>: someone requests a payment, the right people approve it, finance pays it, the recipient signs for it, and the transaction lands in the accounting system — all in one place, all traceable.</p>
+  <p>Today that lifecycle is scattered across <strong>Google Forms</strong> (submissions), <strong>Google Sheets with Apps Script</strong> (payment vouchers), a <strong>petty cash spreadsheet</strong>, <strong>Kakitangan</strong> (expense claims), and <strong>SQL Account</strong> (books). No system owns the whole picture. The gaps are bridged by humans re-typing data, chasing signatures, and reconciling stale copies of the same record — high-error, unauditable, and unscalable. Signed vouchers go uncollected for months. Apps Script fails silently. Every payment needs at least two people touching it in different systems.</p>
+
+  <div class="pillars">
+    <div class="pillar"><h4>Single source of truth</h4><p>Every money-out event lives in one system with an immutable audit trail of every state change.</p></div>
+    <div class="pillar"><h4>Automated chasing</h4><p>Signed PV collection happens via one-time tokenised email links and automatic reminders — no human follow-up.</p></div>
+    <div class="pillar"><h4>API-first</h4><p>Every action is a REST endpoint under <code>/api/v1/</code>. The web UI is just one consumer.</p></div>
+    <div class="pillar"><h4>AI-operable</h4><p>An MCP server wraps the API so AI agents can operate finance workflows as callable tools.</p></div>
+    <div class="pillar"><h4>Multi-entity from day one</h4><p>Organization is the top-level partition; one login, an org switcher, per-org roles.</p></div>
+    <div class="pillar"><h4>Accounting-aligned</h4><p>Four transaction dimensions (Agent, Area, GL Code, Project) mirror SQL Account, exported as import-ready CSV.</p></div>
+  </div>
+
+  <h2>The Six Payment Types</h2>
+  <div class="rule"></div>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Type</th><th>Approval flow</th><th>Notes</th></tr>
+    <tr><td><strong>Payment Voucher</strong></td><td>Director (1 step)</td><td>The MVP priority — replaces the Sheets/Apps Script system</td></tr>
+    <tr><td>Invoice Payment</td><td>None — direct to payment</td><td>Later block</td></tr>
+    <tr><td>Cash Advance</td><td>Manager → Director (2 steps)</td><td>3-checkpoint reconciliation (2w/3w/4w); overspend links a child advance; unreconciled advances block new ones</td></tr>
+    <tr><td>Travel Allowance</td><td>Manager → Director (2 steps)</td><td></td></tr>
+    <tr><td>Expense Claim</td><td>None — direct to payment</td><td>Stays in Kakitangan until mid-2027</td></tr>
+    <tr><td>Petty Cash Top-up</td><td>Manager → Director (2 steps)</td><td>Model pending confirmation (OQ-PettyCashConfirm)</td></tr>
+  </table>
+  </div>
+  <p>Approval is decided <strong>per payment type, not by amount tiers</strong>. Internal approvers act only through SSO-authenticated sessions — email is notification, never authorization. External recipients (teachers, contractors, vendors) sign vouchers through one-use, expiring, hashed token links with no login at all.</p>
+
+  <h2>Architecture &amp; Stack</h2>
+  <div class="rule"></div>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Layer</th><th>Choice</th><th>Why</th></tr>
+    <tr><td>Web + API</td><td>Next.js (TypeScript, App Router)</td><td>One codebase for UI and <code>/api/v1/</code> REST routes</td></tr>
+    <tr><td>Database</td><td>PostgreSQL + Prisma ORM</td><td>40+ model relational contract; RDS in production</td></tr>
+    <tr><td>Auth (web)</td><td>NextAuth.js + Google OAuth</td><td>SSO across the group, org switcher</td></tr>
+    <tr><td>Auth (API/MCP)</td><td>Scoped API keys (<code>X-API-Key</code>)</td><td>Server-to-server and agent clients</td></tr>
+    <tr><td>Email</td><td>AWS SES</td><td>Domain already configured; email-only external channel</td></tr>
+    <tr><td>Files</td><td>AWS S3</td><td>Receipts, signed documents — no Google Drive</td></tr>
+    <tr><td>PDF</td><td>React-PDF (server-side)</td><td>Voucher generation from live data</td></tr>
+    <tr><td>MCP server</td><td><code>@modelcontextprotocol/sdk</code></td><td>Wraps the REST API; never bypasses it</td></tr>
+    <tr><td>Deployment</td><td>Docker → AWS Lightsail (~$10/mo)</td><td>Containerized from day one; lifts to ECS unchanged if commercialized</td></tr>
+  </table>
+  </div>
+  <p>The workflow engine is data-driven: each submission carries a type-prefixed state (<code>PV_DRAFT</code>) plus a reporting group, and every transition writes an immutable <code>SubmissionTransition</code> row. Workflow definitions, states, and transition rules live in the database — approval chains, email wording, and even theme direction are treated as <strong>configuration, not code</strong>, so changing policy never means changing code paths.</p>
+
+  <h2>Development History</h2>
+  <div class="rule"></div>
+  <p>Estuary is built inside David's project-lock workspace: one AI holds the project at a time, with ownership, handoffs, and lessons tracked in control files. Two AI custodians have driven it so far — Claude (as Athanor agent ALAKAZAM01) and OpenAI Codex (as ARCANINE).</p>
+
+  <div class="timeline">
+    <div class="tl-item custody">
+      <div class="tl-date">10 April 2026</div>
+      <div class="tl-title">Project born — Claude / ALAKAZAM01 acquires the lock</div>
+      <div class="tl-body">Estuary is created in the workspace and assigned. The first sessions frame the problem architecturally: map the four legacy systems, the six payment types, and the personas before writing anything.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-date">10–13 April 2026</div>
+      <div class="tl-title">Design phase — scope and schema locked</div>
+      <div class="tl-body">Three design sessions produce the project's contracts:
+        <ul>
+          <li><strong>SOFTWARE_SCOPE v0.8</strong> — problem statement, goals, personas, module breakdown, 8-phase plan</li>
+          <li><strong>SCHEMA v2.2</strong> — 40+ Prisma models, hardened through two external Codex review cycles</li>
+          <li>Stack locked: pnpm, Next.js, Prisma, PostgreSQL, NextAuth, SES, S3, React-PDF, Docker, Lightsail</li>
+          <li>Approval policy decisions captured: submitter-selected approvers, director fallback, urgent bypass with visible flag, permanent retention</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-date">14 April 2026</div>
+      <div class="tl-title">Phase 0 scaffold</div>
+      <div class="tl-body">First code: Next.js + TypeScript scaffold, Docker compose, Prisma initialized directly from the schema document, bootstrap API, lint/test/e2e harness, and defined layer boundaries (<code>web / api / domain / worker / data / integration</code>).</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-date">15 April 2026</div>
+      <div class="tl-title">From workbench to working MVP — eight commits in one day</div>
+      <div class="tl-body">The legacy PV manual and template are ingested, and the prototype evolves rapidly: a configurable workbench becomes a routed, navigable app (dashboard, composer, approvals, finance, settings); the composer gains multi-line items with tax and totals; the UI is reworked twice against the CreateSpace design guide; live PDF generation ships; and by end of day the <strong>full payment-voucher lifecycle works locally</strong> — issue → director approval → finance payment → recipient signature → staff verification → export — persisted in local JSON with a queued email outbox.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-date">16 April 2026</div>
+      <div class="tl-title">Payment-request module — multi-agent build</div>
+      <div class="tl-body">Parallel worker agents add the second module: invoice payments, expense claims, travel allowance, and cash advance request lifecycles with list/create/detail routes, action APIs, manager→director chains, parent-child overspend linkage, and Playwright coverage. E2E is stabilized by running against production builds (Dropbox file-locking interfered with dev-mode).</div>
+    </div>
+    <div class="tl-item custody">
+      <div class="tl-date">14–23 April 2026</div>
+      <div class="tl-title">Custody: OpenAI Codex / ARCANINE</div>
+      <div class="tl-body">The lock transfers to Codex, which consolidates verification (all suites green on 16 April) and closes out on 23 April, releasing the project with documented blockers and next steps.</div>
+    </div>
+    <div class="tl-item custody">
+      <div class="tl-date">6 July 2026</div>
+      <div class="tl-title">Claude / ALAKAZAM01 returns — foundations for the real backbone</div>
+      <div class="tl-body">After a 2.5-month pause:
+        <ul>
+          <li>Full verification chain re-run and green (lint, typecheck, 8 unit tests, build, e2e)</li>
+          <li>Discovered the entire April payment-request module (~3,900 lines) had never been committed — recovered and checkpointed it</li>
+          <li><strong>First database migration authored</strong> from Schema v2.2 and proven to apply cleanly against a real PostgreSQL instance (38 tables) — ready for one-command deploy</li>
+          <li>Roadmap restructured into an ordered build sequence (B0–B8)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h2>Where It Stands &amp; What's Next</h2>
+  <div class="rule"></div>
+  <p>The design is complete and the workflows are <em>proven</em> — but on a stand-in backbone (local JSON instead of Postgres, dummy sign-in instead of sessions, a file outbox instead of SES). The build direction is single-minded: <strong>replace the stand-in backbone with the real one without losing the working flows.</strong></p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Block</th><th>Scope</th><th>Status</th></tr>
+    <tr><td><strong>B0</strong> Environment &amp; contract</td><td>Scaffold, schema, initial migration</td><td><span class="badge done">Done — one gate open</span></td></tr>
+    <tr><td><strong>B1</strong> Real persistence</td><td>JSON state → Postgres/Prisma; workflow engine seeded</td><td><span class="badge next">Next — needs local Postgres decision</span></td></tr>
+    <tr><td><strong>B2</strong> Sessions, orgs, roles</td><td>NextAuth abstraction, org scoping, no client-supplied identity</td><td><span class="badge next">Next</span></td></tr>
+    <tr><td><strong>B3</strong> Production PV path</td><td>SES + S3 adapters, token links, PDF fidelity, job worker, MCP shell</td><td><span class="badge wip">Queued</span></td></tr>
+    <tr><td><strong>B4</strong> Hardening</td><td>Masking, redaction, upload scanning, batch PV</td><td><span class="badge wip">Queued</span></td></tr>
+    <tr><td><strong>B5</strong> CA / Travel completion</td><td>Reconciliation checkpoints, overdue blocking</td><td><span class="badge wip">Queued</span></td></tr>
+    <tr><td><strong>B6</strong> Additional workflows</td><td>Invoice/claims productionized; petty cash</td><td><span class="badge blocked">Petty cash blocked (OQ-PettyCashConfirm)</span></td></tr>
+    <tr><td><strong>B7</strong> Accounting export</td><td>SQL Account CSV, bank batch export</td><td><span class="badge blocked">Blocked (needs real CSV sample)</span></td></tr>
+    <tr><td><strong>B8</strong> Deploy &amp; scale</td><td>Lightsail, config UIs, reporting, expanded MCP</td><td><span class="badge wip">Future</span></td></tr>
+  </table>
+  </div>
+  <p>Open decisions sit with David: local Postgres (Docker Desktop vs native), Google OAuth + AWS credentials, the petty cash model, and a real SQL Account CSV sample. Full detail lives in <code>PROJECT_ROADMAP.md</code>.</p>
+
+  <footer>
+    Estuary · Arus internal finance platform · This page: <code>docs/ESTUARY_OVERVIEW.html</code>, maintained alongside the project docs. Sources: SOFTWARE_SCOPE.md v0.8, SCHEMA.md v2.2, PROJECT_ROADMAP.md, PROJECT_HISTORY.md, AI_HANDOFF.md, git log.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,251 @@
+.shell {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  min-height: 100svh;
+}
+
+.sidebar {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 2rem;
+  padding: 1.8rem 1rem 1rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-right: 1px solid var(--line);
+}
+
+.brandCluster,
+.brandBlock,
+.nav,
+.footerList,
+.topbarTitleBlock,
+.topbarControls {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.brand {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(2.4rem, 4vw, 3.4rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  color: var(--ink-strong);
+}
+
+.status,
+.footerLabel,
+.topbarLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.status {
+  color: var(--accent);
+}
+
+.brandNote {
+  padding: 1rem 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  background: var(--surface-strong);
+  color: var(--ink-muted);
+  line-height: 1.65;
+  box-shadow: var(--shadow-glass);
+}
+
+.nav {
+  align-content: start;
+}
+
+.navLink {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  color: var(--ink);
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateX(2px);
+}
+
+.navLinkActive {
+  background: var(--surface-strong);
+  color: var(--accent);
+  box-shadow: var(--shadow-glass);
+}
+
+.navIndex {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.8rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.82rem;
+  background: rgba(225, 29, 72, 0.08);
+  color: var(--accent);
+}
+
+.navLinkActive .navIndex {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.sidebarFooter {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface-strong);
+}
+
+.footerLabel {
+  color: rgba(71, 85, 105, 0.62);
+}
+
+.footerList {
+  gap: 0.4rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+}
+
+.mainArea {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1.5rem;
+  padding: 1.8rem 2rem 0.8rem;
+}
+
+.topbarTitleBlock {
+  gap: 0.35rem;
+}
+
+.topbarLabel {
+  color: rgba(71, 85, 105, 0.64);
+}
+
+.topbarTitle {
+  display: block;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(2rem, 3vw, 3.2rem);
+  font-weight: 700;
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+  color: var(--ink-strong);
+}
+
+.topbarMeta {
+  color: var(--ink-muted);
+  font-size: 0.98rem;
+}
+
+.topbarControls {
+  grid-auto-flow: column;
+  align-items: start;
+  gap: 0.9rem;
+}
+
+.routeBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #4f46e5, #2563eb);
+  color: #ffffff;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.18);
+}
+
+.userSwitch {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 290px;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-glass);
+}
+
+.userSwitch span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(71, 85, 105, 0.62);
+}
+
+.userSwitch select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 1rem;
+  background: #ffffff;
+  outline: none;
+}
+
+.userSwitch select:focus {
+  border-color: rgba(37, 99, 235, 0.58);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.content {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    padding-inline: 1rem;
+  }
+
+  .topbarControls {
+    grid-auto-flow: row;
+    width: 100%;
+  }
+
+  .userSwitch {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .nav {
+    grid-template-columns: 1fr 1fr;
+  }
+}

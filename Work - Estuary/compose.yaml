@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    command: corepack pnpm dev
+    environment:
+      DATABASE_URL: postgresql://estuary:estuary@db:5432/estuary?schema=public
+      DIRECT_URL: postgresql://estuary:estuary@db:5432/estuary?schema=public
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: replace-me
+      GOOGLE_CLIENT_ID: replace-me
+      GOOGLE_CLIENT_SECRET: replace-me
+      AWS_REGION: ap-southeast-1
+      AWS_ACCESS_KEY_ID: replace-me
+      AWS_SECRET_ACCESS_KEY: replace-me
+      AWS_SES_FROM_EMAIL: finance@example.com
+      AWS_S3_BUCKET: estuary-local
+      ESTUARY_BASE_URL: http://localhost:3000
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - estuary_node_modules:/app/node_modules
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: estuary
+      POSTGRES_USER: estuary
+      POSTGRES_PASSWORD: estuary
+    ports:
+      - '5432:5432'
+    volumes:
+      - estuary_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  estuary_node_modules:
+  estuary_postgres_data:
