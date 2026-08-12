@@ -68,10 +68,13 @@
 - Batch (mass) PV creation: Batch entity groups N submissions; one approval, N emails — Phase 3 (after core PV lifecycle validated in production)
 - Docker from day one: migrate from Lightsail to ECS without code changes when commercializing
 
-## Project-Lock Notes
-- Read `PROJECT_LOCK.md` before editing code.
-- Treat project ownership as primary; task files are optional support artifacts.
-- Use `PROJECT_ROADMAP.md` for future features and deferred work.
+## Collaboration Model
+- GitHub is the collaboration source of truth for this team project.
+- Before implementation, create or identify a GitHub issue, assign its owner, and confirm that no active issue or pull request already covers the same scope.
+- Contributors may work concurrently on separate, descriptive branches when their scopes are distinct.
+- Communicate before editing the same files; overlapping edits to the same lines may need merge-conflict resolution when branches are combined.
+- `PROJECT_LOCK.md` is retained only for Ground Control compatibility and is explicitly non-blocking for Estuary.
+- Use `PROJECT_ROADMAP.md` for future features and deferred work; it does not replace issue-level ownership.
 
 ## Conventions
 - Root-cause fixes over patches.
@@ -80,3 +83,10 @@
 - Update `PROJECT_MEMORY.md` only for durable lessons and reusable methodology.
 - Update `PROJECT_ROADMAP.md` when you discover future work or better sequencing.
 - Follow local `.prettierrc` and `.eslintrc.json` over AI defaults.
+
+## GitHub Close-Out
+- Do not commit or push directly to `main`.
+- Use one appropriately descriptive branch per GitHub issue or coherent change. Codex branches use `agent/{description}`.
+- At session close, verify the intended diff, commit the completed work, and prepare a push to `arusacademy-git/Estuary`.
+- Open a pull request into `main`; do not treat a pushed branch as merged work.
+- Before every push, report the current branch, remote name, and exact push command to Afiq and wait for explicit confirmation.
