@@ -10,8 +10,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/normalize-estuary-repository
-- Last Updated: 2026-08-12T16:52:22+08:00
+- Current Branch: feature/simplify-pv-lines
+- Last Updated: 2026-08-16T12:25:00+08:00
 
 ## Handover Status
 - Session Status: ACTIVE
@@ -78,6 +78,8 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-08-16: Ported Afiq's Google Sheets Ringgit-to-Malay-words formula and helper vocabulary into the shared voucher calculation library. The composer now derives a read-only amount-in-words value from the grand total, while voucher issuing and PDF generation independently recalculate it so callers cannot persist or print a mismatched phrase.
+- 2026-08-16: Simplified the Payment Voucher composer around the normal reimbursement case. Each voucher line now exposes Account, Description, and a direct Amount field; quantity, unit price, and tax are collapsed under an optional calculation control. One voucher still represents one payee, while multiple lines separate purposes or accounting categories.
 - 2026-08-12: Normalized the GitHub repository layout on a branch based on `origin/main`. The GitHub upload had placed the real project under `Work - Estuary/` and its history was unrelated to the complete local repository, preventing pull-request comparison. The normalization moves the project to the repository root and overlays the verified current local tree so future branches share GitHub `main` history after merge.
 - 2026-08-12: Replaced exclusive project locking for Estuary with GitHub-first collaboration. Issues and assignees own scope, separate branches allow parallel work, and pull requests into protected `main` are the integration path. `PROJECT_LOCK.md` remains only as a non-blocking Ground Control compatibility record.
 - 2026-08-12: Repaired duplicate Estuary registration. Ground Control now targets the nested folder that contains the actual Git repository, the misleading wrapper-level lock was removed, and Afiq transferred the canonical project lock from Claude/ALAKAZAM01 to OpenAI Codex without modifying Athanor. Added the standing GitHub close-out policy; first publication remains blocked on missing `gh` and missing remote configuration.
@@ -103,6 +105,20 @@
 - 2026-07-06: Added `docs/ESTUARY_OVERVIEW.html` — self-contained project overview and development-history page for human readers
 
 ## Verification
+- 2026-08-16 amount-in-words automation:
+  - `corepack pnpm lint` -> pass
+  - `corepack pnpm typecheck` -> pass
+  - `corepack pnpm test` -> pass (`6 files`, `13 tests`)
+  - `corepack pnpm build` -> pass
+  - `$env:PLAYWRIGHT_BROWSERS_PATH='0'; $env:E2E_PORT='3131'; $env:CI='1'; corepack pnpm test:e2e` -> pass (`2 passed`)
+  - local browser verification -> RM1,250.40 produces `RINGGIT MALAYSIA SATU RIBU DUA RATUS LIMA PULUH DAN SEN EMPAT PULUH SAHAJA`; field is read-only
+- 2026-08-16 PV line simplification:
+  - `corepack pnpm lint` -> pass
+  - `corepack pnpm typecheck` -> pass
+  - `corepack pnpm test` -> pass (`6 files`, `8 tests`)
+  - `corepack pnpm build` -> pass
+  - `$env:PLAYWRIGHT_BROWSERS_PATH='0'; $env:E2E_PORT='3131'; $env:CI='1'; corepack pnpm test:e2e` -> pass (`2 passed`)
+  - local browser verification -> direct amount updates totals; optional control reveals quantity, unit price, and tax fields
 - 2026-08-12 normalization verification:
   - normalized index tree matches verified local commit `72f0178` except for four continuity files documenting the new normalization branch
   - `git diff --cached --check` -> pass

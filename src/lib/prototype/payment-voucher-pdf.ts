@@ -10,6 +10,7 @@ import {
   calculateLineTotal,
   composePaymentDetails,
   formatMoney,
+  formatRinggitMalaysiaInWords,
   parseMoney,
   summarizeDraftTotals,
 } from './voucher-calculations';
@@ -388,7 +389,7 @@ export async function buildPaymentVoucherPdfDocument(
   pageState.cursorY -= 18;
   drawWrappedText(
     pageState,
-    draft.amountInWords,
+    formatRinggitMalaysiaInWords(totals.grand),
     MARGIN,
     PAGE_WIDTH - MARGIN * 2,
     10,

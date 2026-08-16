@@ -360,7 +360,7 @@
 
 .lineItemTable {
   width: 100%;
-  min-width: 880px;
+  min-width: 760px;
   border-collapse: collapse;
 }
 
@@ -385,6 +385,46 @@
   font-family: var(--font-mono), monospace;
   font-weight: 600;
   color: var(--ink-strong);
+}
+
+.lineAmountHint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.lineCalculation {
+  min-width: 12rem;
+}
+
+.lineCalculation summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.lineCalculationFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(8rem, 1fr));
+  gap: 0.65rem;
+  min-width: 22rem;
+  padding-top: 0.75rem;
+}
+
+.lineCalculationFields label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.lineCalculationFields label > span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .iconButton {

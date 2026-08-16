@@ -14,7 +14,8 @@ The build direction is therefore single-minded: **replace the stand-in backbone 
 
 ### Repository operations gate
 - [x] Install and authenticate GitHub CLI (`gh`) and configure `origin` for `arusacademy-git/Estuary`.
-- [ ] Publish `agent/normalize-estuary-repository` after Afiq confirms the exact push command, then open the one-time normalization pull request into `main`.
+- [x] Publish `agent/normalize-estuary-repository` and open draft PR #1 into `main`.
+- [ ] Review and merge PR #1 before starting new feature branches from normalized `main`.
 - [ ] Configure GitHub branch protection/rules for `main` to require pull requests and prevent direct pushes.
 
 ## Decision Queue (Afiq)
@@ -56,6 +57,7 @@ Swap file-backed JSON state for Prisma/Postgres behind the existing repository i
 - [ ] S3 receipt/file upload with local-disk adapter for dev; replace receipt-link text
 - [ ] `ExternalActionToken` one-use signed links for recipient signature (hashed, expiring)
 - [ ] PV PDF layout tightened against the real voucher template
+- [x] Automatically generate Malay amount-in-words from the numeric total using Afiq's established Sheet vocabulary
 - [ ] Worker polling shell for `job_queue` (reminders, retries)
 - [ ] MCP tool shell wrapping the real `/api/v1/` endpoints
 - **Acceptance:** full PV lifecycle — issue → director approval → payment → recipient signature → verification → export — runs on the real backbone with every state change audited.
@@ -99,3 +101,5 @@ Swap file-backed JSON state for Prisma/Postgres behind the existing repository i
 - 2026-04-16: Payment-request module (invoice/claim/travel/CA) with e2e; Playwright stabilized in production mode
 - 2026-04-23: Codex close-out and lock release
 - 2026-07-06: Lock reacquired (Claude/ALAKAZAM01); baseline re-verified; orphaned April work committed; initial Prisma migration authored + verified; `E2E_PORT` isolation added
+- 2026-08-16: Simplified PV lines to Account + Description + Amount for normal use; moved quantity, unit price, and tax into an optional detailed calculation control
+- 2026-08-16: Ported Afiq's Ringgit-to-Malay-words formula into the shared calculation layer and made the composer field automatic/read-only
