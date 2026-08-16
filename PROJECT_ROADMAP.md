@@ -12,7 +12,12 @@ Design is complete and locked (SOFTWARE_SCOPE v0.8, SCHEMA v2.2, two Codex revie
 
 The build direction is therefore single-minded: **replace the stand-in backbone with the real one without losing the working flows.** No new feature surfaces until B1–B3 are done.
 
-## Decision Queue (David)
+### Repository operations gate
+- [x] Install and authenticate GitHub CLI (`gh`) and configure `origin` for `arusacademy-git/Estuary`.
+- [ ] Publish `agent/normalize-estuary-repository` after Afiq confirms the exact push command, then open the one-time normalization pull request into `main`.
+- [ ] Configure GitHub branch protection/rules for `main` to require pull requests and prevent direct pushes.
+
+## Decision Queue (Afiq)
 
 | ID | Decision needed | Blocks |
 |----|----------------|--------|
