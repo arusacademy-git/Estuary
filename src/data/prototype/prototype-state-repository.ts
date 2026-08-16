@@ -11,7 +11,11 @@ import type {
   PrototypeVoucherRecord,
 } from '@/domain/prototype/types';
 import { buildPaymentVoucherPdfDocument } from '@/lib/prototype/payment-voucher-pdf';
-import { formatMoney, summarizeDraftTotals } from '@/lib/prototype/voucher-calculations';
+import {
+  formatMoney,
+  formatRinggitMalaysiaInWords,
+  summarizeDraftTotals,
+} from '@/lib/prototype/voucher-calculations';
 import { interpolateTemplate } from '@/lib/template/interpolate-template';
 
 const runtimeRoot = path.join(process.cwd(), 'runtime', 'prototype');
@@ -460,6 +464,7 @@ export async function issueVoucher(
     ...cloneDraft(draft),
     voucherNumber,
     currentUserId: actorId,
+    amountInWords: formatRinggitMalaysiaInWords(summarizeDraftTotals(draft).grand),
   };
   const voucher = seedVoucher(nextDraft, {
     id: makeId('voucher'),

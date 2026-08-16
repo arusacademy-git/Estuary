@@ -12,9 +12,11 @@ import type {
   PrototypeWorkspace,
 } from '@/domain/prototype/types';
 import {
+  calculateLineSubtotal,
   calculateLineTotal,
   createLineItem,
   formatMoney,
+  formatRinggitMalaysiaInWords,
   summarizeDraftTotals,
   syncLineItem,
 } from '@/lib/prototype/voucher-calculations';
@@ -294,6 +296,11 @@ export function VoucherComposerScreen(): React.JSX.Element {
   const approver =
     approverOptions.find((user) => user.id === activeDraft.approverId) ?? approverOptions[0];
   const totals = summarizeDraftTotals(activeDraft);
+  const generatedAmountInWords = formatRinggitMalaysiaInWords(totals.grand);
+  const generatedDraft = {
+    ...activeDraft,
+    amountInWords: generatedAmountInWords,
+  };
 
   function updateLineItem(
     lineItemId: string,
@@ -348,7 +355,7 @@ export function VoucherComposerScreen(): React.JSX.Element {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(activeDraft),
+        body: JSON.stringify(generatedDraft),
       });
 
       if (!response.ok) {
@@ -380,7 +387,7 @@ export function VoucherComposerScreen(): React.JSX.Element {
       const payload = await runWorkflowAction({
         action: 'issue_voucher',
         actorId: currentUser.id,
-        draft: activeDraft,
+        draft: generatedDraft,
       });
 
       if (payload.error || !payload.data?.voucher) {
@@ -546,13 +553,10 @@ export function VoucherComposerScreen(): React.JSX.Element {
               <label className={styles.fieldWide}>
                 <span>Amount in words</span>
                 <input
-                  value={activeDraft.amountInWords}
-                  onChange={(event) =>
-                    setDraft((current) =>
-                      current ? { ...current, amountInWords: event.target.value } : current
-                    )
-                  }
+                  readOnly
+                  value={generatedAmountInWords}
                 />
+                <small>Automatically generated from the grand total.</small>
               </label>
               <label className={styles.fieldWide}>
                 <span>Voucher summary</span>
@@ -572,7 +576,7 @@ export function VoucherComposerScreen(): React.JSX.Element {
               <div className={styles.blockHeader}>
                 <div>
                   <h3>Voucher lines</h3>
-                  <span>Add as many payment lines as needed.</span>
+                  <span>Use one line per purpose or accounting category for this payee.</span>
                 </div>
                 <button className={styles.ghostButton} type='button' onClick={addLineItem}>
                   Add line
@@ -596,34 +600,6 @@ export function VoucherComposerScreen(): React.JSX.Element {
                 </label>
                 <label className={styles.optionPill}>
                   <input
-                    checked={activeDraft.showDescriptionColumn}
-                    type='checkbox'
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? { ...current, showDescriptionColumn: event.target.checked }
-                          : current
-                      )
-                    }
-                  />
-                  <span>Show description column</span>
-                </label>
-                <label className={styles.optionPill}>
-                  <input
-                    checked={activeDraft.showTaxAmountColumn}
-                    type='checkbox'
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current
-                          ? { ...current, showTaxAmountColumn: event.target.checked }
-                          : current
-                      )
-                    }
-                  />
-                  <span>Show tax amount column</span>
-                </label>
-                <label className={styles.optionPill}>
-                  <input
                     checked={activeDraft.showFooters}
                     type='checkbox'
                     onChange={(event) =>
@@ -641,12 +617,9 @@ export function VoucherComposerScreen(): React.JSX.Element {
                   <thead>
                     <tr>
                       <th>Account</th>
-                      {activeDraft.showDescriptionColumn ? <th>Description</th> : null}
-                      <th>Qty</th>
-                      <th>Unit price</th>
-                      <th>Tax code</th>
-                      {activeDraft.showTaxAmountColumn ? <th>Tax amount</th> : null}
-                      <th>Total</th>
+                      <th>Description</th>
+                      <th>Amount</th>
+                      <th>Optional calculation</th>
                       <th aria-label='Actions' />
                     </tr>
                   </thead>
@@ -670,28 +643,15 @@ export function VoucherComposerScreen(): React.JSX.Element {
                             ))}
                           </select>
                         </td>
-                        {activeDraft.showDescriptionColumn ? (
-                          <td>
-                            <input
-                              className={styles.lineInput}
-                              placeholder={`Line ${index + 1} description`}
-                              value={item.description}
-                              onChange={(event) =>
-                                updateLineItem(item.id, {
-                                  description: event.target.value,
-                                })
-                              }
-                            />
-                          </td>
-                        ) : null}
                         <td>
                           <input
                             className={styles.lineInput}
-                            inputMode='decimal'
-                            value={item.quantity}
+                            aria-label={`Line ${index + 1} description`}
+                            placeholder={`Line ${index + 1} description`}
+                            value={item.description}
                             onChange={(event) =>
                               updateLineItem(item.id, {
-                                quantity: event.target.value,
+                                description: event.target.value,
                               })
                             }
                           />
@@ -699,49 +659,70 @@ export function VoucherComposerScreen(): React.JSX.Element {
                         <td>
                           <input
                             className={styles.lineInput}
+                            aria-label={`Line ${index + 1} amount`}
                             inputMode='decimal'
-                            value={item.unitPrice}
+                            placeholder='0.00'
+                            value={item.quantity === '1' ? item.unitPrice : calculateLineSubtotal(item).toFixed(2)}
                             onChange={(event) =>
                               updateLineItem(item.id, {
+                                quantity: '1',
                                 unitPrice: event.target.value,
                               })
                             }
                           />
+                          <span className={styles.lineAmountHint}>
+                            {formatMoney(calculateLineTotal(item, activeDraft.amountsTaxInclusive))} including configured tax
+                          </span>
                         </td>
                         <td>
-                          <select
-                            className={styles.lineInput}
-                            value={item.taxCode}
-                            onChange={(event) =>
-                              updateLineItem(item.id, {
-                                taxCode: event.target.value,
-                              })
-                            }
-                          >
-                            {taxCodeOptions.map((option) => (
-                              <option key={option.id} value={option.code}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        {activeDraft.showTaxAmountColumn ? (
-                          <td>
-                            <input
-                              className={styles.lineInput}
-                              disabled={item.taxCode !== 'MANUAL'}
-                              inputMode='decimal'
-                              value={item.taxAmount}
-                              onChange={(event) =>
-                                updateLineItem(item.id, {
-                                  taxAmount: event.target.value,
-                                })
-                              }
-                            />
-                          </td>
-                        ) : null}
-                        <td className={styles.lineTotalCell}>
-                          {formatMoney(calculateLineTotal(item, activeDraft.amountsTaxInclusive))}
+                          <details className={styles.lineCalculation}>
+                            <summary>Qty, unit price &amp; tax</summary>
+                            <div className={styles.lineCalculationFields}>
+                              <label>
+                                <span>Quantity</span>
+                                <input
+                                  className={styles.lineInput}
+                                  inputMode='decimal'
+                                  value={item.quantity}
+                                  onChange={(event) => updateLineItem(item.id, { quantity: event.target.value })}
+                                />
+                              </label>
+                              <label>
+                                <span>Unit price</span>
+                                <input
+                                  className={styles.lineInput}
+                                  inputMode='decimal'
+                                  value={item.unitPrice}
+                                  onChange={(event) => updateLineItem(item.id, { unitPrice: event.target.value })}
+                                />
+                              </label>
+                              <label>
+                                <span>Tax code</span>
+                                <select
+                                  className={styles.lineInput}
+                                  value={item.taxCode}
+                                  onChange={(event) => updateLineItem(item.id, { taxCode: event.target.value })}
+                                >
+                                  {taxCodeOptions.map((option) => (
+                                    <option key={option.id} value={option.code}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              {item.taxCode === 'MANUAL' ? (
+                                <label>
+                                  <span>Tax amount</span>
+                                  <input
+                                    className={styles.lineInput}
+                                    inputMode='decimal'
+                                    value={item.taxAmount}
+                                    onChange={(event) => updateLineItem(item.id, { taxAmount: event.target.value })}
+                                  />
+                                </label>
+                              ) : null}
+                            </div>
+                          </details>
                         </td>
                         <td>
                           <button

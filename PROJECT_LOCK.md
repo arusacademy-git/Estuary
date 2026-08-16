@@ -4,11 +4,11 @@
 - Project ID: estuary
 - Lock State: RELEASED
 - Lock Policy: GITHUB_COLLABORATIVE_NON_BLOCKING
-- Working Branch: agent/normalize-estuary-repository
+- Working Branch: feature/simplify-pv-lines
 - Current Holder:
 - Last Holder: OpenAI Codex
 - Acquired At: 2026-08-12T16:52:22+08:00
-- Last Updated: 2026-08-12T17:17:54+08:00
+- Last Updated: 2026-08-16T12:25:00+08:00
 - Last Released By: Afiq
 - Last Release Note: Exclusive project ownership retired by Afiq. GitHub issues, assignees, branches, and pull requests are now the collaboration authority.
 - Transfer Note:

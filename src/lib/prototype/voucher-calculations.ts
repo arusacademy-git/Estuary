@@ -15,6 +15,75 @@ export type VoucherTotals = {
   grand: number;
 };
 
+const malayWordsBelowTwenty = [
+  'KOSONG',
+  'SATU',
+  'DUA',
+  'TIGA',
+  'EMPAT',
+  'LIMA',
+  'ENAM',
+  'TUJUH',
+  'LAPAN',
+  'SEMBILAN',
+  'SEPULUH',
+  'SEBELAS',
+  'DUA BELAS',
+  'TIGA BELAS',
+  'EMPAT BELAS',
+  'LIMABELAS',
+  'ENAM BELAS',
+  'TUJUH BELAS',
+  'LAPAN BELAS',
+  'SEMBILAN BELAS',
+] as const;
+
+function integerToMalayWords(value: number): string {
+  if (value < 20) return malayWordsBelowTwenty[value];
+
+  if (value < 100) {
+    const tens = Math.floor(value / 10);
+    const remainder = value % 10;
+    return `${malayWordsBelowTwenty[tens]} PULUH${
+      remainder ? ` ${malayWordsBelowTwenty[remainder]}` : ''
+    }`;
+  }
+
+  if (value < 1_000) {
+    const hundreds = Math.floor(value / 100);
+    const remainder = value % 100;
+    const prefix = hundreds === 1 ? 'SERATUS' : `${malayWordsBelowTwenty[hundreds]} RATUS`;
+    return `${prefix}${remainder ? ` ${integerToMalayWords(remainder)}` : ''}`;
+  }
+
+  const scales = [
+    { value: 1_000_000_000, label: 'BILION' },
+    { value: 1_000_000, label: 'JUTA' },
+    { value: 1_000, label: 'RIBU' },
+  ];
+
+  const scale = scales.find((candidate) => value >= candidate.value);
+  if (!scale) return '';
+
+  const leading = Math.floor(value / scale.value);
+  const remainder = value % scale.value;
+  return `${integerToMalayWords(leading)} ${scale.label}${
+    remainder ? ` ${integerToMalayWords(remainder)}` : ''
+  }`;
+}
+
+export function formatRinggitMalaysiaInWords(amount: number): string {
+  if (!Number.isFinite(amount) || amount < 0) return '';
+
+  const totalSen = Math.round(amount * 100);
+  if (!Number.isSafeInteger(totalSen)) return '';
+
+  const ringgit = Math.floor(totalSen / 100);
+  const sen = totalSen % 100;
+
+  return `RINGGIT MALAYSIA ${integerToMalayWords(ringgit)} DAN SEN ${integerToMalayWords(sen)} SAHAJA`;
+}
+
 export function parseMoney(value: string): number {
   const normalized = value.replaceAll(/[^0-9.-]/g, '');
   const parsed = Number.parseFloat(normalized);
