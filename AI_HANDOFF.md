@@ -78,6 +78,7 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-09-24: Added distinct Prisma `PaymentType` values for Internet/Commute, Medical, Mileage, PD, and Tech claims; migration generation and verification are tracked in GitHub issue #3.
 - 2026-08-16: Ported Afiq's Google Sheets Ringgit-to-Malay-words formula and helper vocabulary into the shared voucher calculation library. The composer now derives a read-only amount-in-words value from the grand total, while voucher issuing and PDF generation independently recalculate it so callers cannot persist or print a mismatched phrase.
 - 2026-08-16: Simplified the Payment Voucher composer around the normal reimbursement case. Each voucher line now exposes Account, Description, and a direct Amount field; quantity, unit price, and tax are collapsed under an optional calculation control. One voucher still represents one payee, while multiple lines separate purposes or accounting categories.
 - 2026-08-12: Normalized the GitHub repository layout on a branch based on `origin/main`. The GitHub upload had placed the real project under `Work - Estuary/` and its history was unrelated to the complete local repository, preventing pull-request comparison. The normalization moves the project to the repository root and overlays the verified current local tree so future branches share GitHub `main` history after merge.
@@ -105,6 +106,14 @@
 - 2026-07-06: Added `docs/ESTUARY_OVERVIEW.html` — self-contained project overview and development-history page for human readers
 
 ## Verification
+- 2026-09-24 claim payment types:
+  - `npx.cmd prisma migrate dev --name add_claim_payment_types` -> pass against an isolated local PostgreSQL 18 development database
+  - generated migration contains only five `ALTER TYPE "PaymentType" ADD VALUE` statements for the requested claim types
+  - `npx.cmd prisma migrate status` -> pass (`Database schema is up to date`)
+  - `npx.cmd prisma validate` -> pass
+  - ESLint -> pass
+  - TypeScript typecheck -> pass
+  - Vitest -> pass (`6 files`, `13 tests`)
 - 2026-08-16 amount-in-words automation:
   - `corepack pnpm lint` -> pass
   - `corepack pnpm typecheck` -> pass
