@@ -88,6 +88,7 @@ Swap file-backed JSON state for Prisma/Postgres behind the existing repository i
 - [ ] Bank batch export
 
 ### B8 — Deploy, scale, configure *(old Phase 7–8)*
+- [x] Prepare a minimal app-only server package for the current prototype, connecting to an existing PostgreSQL service and preserving `runtime/` on the host
 - [ ] Lightsail deployment (Dockerized app + RDS), domain + SES production mode
 - [ ] Approval chain / email template / PV template configuration UIs per org
 - [ ] Reporting and audit search; expanded MCP tool surface
@@ -103,3 +104,4 @@ Swap file-backed JSON state for Prisma/Postgres behind the existing repository i
 - 2026-07-06: Lock reacquired (Claude/ALAKAZAM01); baseline re-verified; orphaned April work committed; initial Prisma migration authored + verified; `E2E_PORT` isolation added
 - 2026-08-16: Simplified PV lines to Account + Description + Amount for normal use; moved quantity, unit price, and tax into an optional detailed calculation control
 - 2026-08-16: Ported Afiq's Ringgit-to-Malay-words formula into the shared calculation layer and made the composer field automatic/read-only
+- 2026-09-30: Prepared a minimal production-image and app-only Compose package for deploying the current prototype beside an existing PostgreSQL service
