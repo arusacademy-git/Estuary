@@ -79,6 +79,7 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-09-30: Added `docs/INTERN_UPDATE_GUIDE.md` for recovering the unpushed login-page version, using intern branches and pull requests for future work, and rebuilding the Penang Ubuntu deployment without touching PostgreSQL, `.env.server`, or runtime data.
 - 2026-09-30: Added the minimal server deployment package tracked by GitHub issue #5: a production Next.js standalone image, an app-only `compose.server.yaml` that leaves the server's existing PostgreSQL untouched, a persistent `runtime` bind mount for current JSON/PDF state, a health check, an environment template, and concise deploy/update instructions.
 - 2026-09-24: Added distinct Prisma `PaymentType` values for Internet/Commute, Medical, Mileage, PD, and Tech claims; migration generation and verification are tracked in GitHub issue #3.
 - 2026-08-16: Ported Afiq's Google Sheets Ringgit-to-Malay-words formula and helper vocabulary into the shared voucher calculation library. The composer now derives a read-only amount-in-words value from the grand total, while voucher issuing and PDF generation independently recalculate it so callers cannot persist or print a mismatched phrase.
