@@ -2,7 +2,7 @@
 
 ## Current State
 - Project: Estuary
-- Summary: Transferred to OpenAI Codex during duplicate-path control-state repair; no Athanor files were changed.
+- Summary: Minimal one-container server package prepared for the current prototype; it connects to an existing PostgreSQL service and preserves the file-backed runtime directory on the host.
 - Current Holder: GitHub issue/branch owner (non-exclusive project model)
 - Actor Model: OpenAI Codex
 - Assigned Agent:
@@ -10,8 +10,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: feature/simplify-pv-lines
-- Last Updated: 2026-08-16T12:25:00+08:00
+- Current Branch: agent/package-current-estuary-server
+- Last Updated: 2026-09-30T11:42:00+08:00
 
 ## Handover Status
 - Session Status: ACTIVE
@@ -78,6 +78,7 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-09-30: Added the minimal server deployment package tracked by GitHub issue #5: a production Next.js standalone image, an app-only `compose.server.yaml` that leaves the server's existing PostgreSQL untouched, a persistent `runtime` bind mount for current JSON/PDF state, a health check, an environment template, and concise deploy/update instructions.
 - 2026-09-24: Added distinct Prisma `PaymentType` values for Internet/Commute, Medical, Mileage, PD, and Tech claims; migration generation and verification are tracked in GitHub issue #3.
 - 2026-08-16: Ported Afiq's Google Sheets Ringgit-to-Malay-words formula and helper vocabulary into the shared voucher calculation library. The composer now derives a read-only amount-in-words value from the grand total, while voucher issuing and PDF generation independently recalculate it so callers cannot persist or print a mismatched phrase.
 - 2026-08-16: Simplified the Payment Voucher composer around the normal reimbursement case. Each voucher line now exposes Account, Description, and a direct Amount field; quantity, unit price, and tax are collapsed under an optional calculation control. One voucher still represents one payee, while multiple lines separate purposes or accounting categories.
@@ -106,6 +107,14 @@
 - 2026-07-06: Added `docs/ESTUARY_OVERVIEW.html` — self-contained project overview and development-history page for human readers
 
 ## Verification
+- 2026-09-30 minimal server package:
+  - `corepack pnpm lint` -> pass
+  - `corepack pnpm typecheck` -> pass
+  - `corepack pnpm test` -> pass (`6 files`, `13 tests`)
+  - `corepack pnpm build` -> pass; Next.js standalone server emitted
+  - standalone server health endpoint `/api/v1/system/bootstrap` -> HTTP 200
+  - `docker compose -f compose.server.yaml config` -> pass using `.env.server.example`
+  - Linux image build not run locally because the Docker Desktop engine was not running
 - 2026-09-24 claim payment types:
   - `npx.cmd prisma migrate dev --name add_claim_payment_types` -> pass against an isolated local PostgreSQL 18 development database
   - generated migration contains only five `ALTER TYPE "PaymentType" ADD VALUE` statements for the requested claim types

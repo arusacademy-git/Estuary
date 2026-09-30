@@ -47,6 +47,13 @@ The repo now contains a browsable local payment-voucher MVP rather than a single
 
 Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) for the prototype UI.
 
+## Minimal Server Run
+
+To run the current prototype as one application container while keeping an
+existing PostgreSQL installation, follow
+[`docs/SERVER_DEPLOYMENT.md`](docs/SERVER_DEPLOYMENT.md). The server Compose
+file does not create a PostgreSQL container.
+
 ## Verification
 
 - Lint: `corepack pnpm lint`
