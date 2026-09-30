@@ -1,8 +1,14 @@
 # Minimal Server Deployment
 
 This deployment runs the current Estuary prototype as one application
-container. It does not create or replace PostgreSQL. Prisma is packaged with
-the application and reads the existing database connection from `.env.server`.
+container on the Penang Ubuntu desktop. Access is through NetBird and
+`ssh estuary-db`; administrative commands use `sudo`. It does not create or
+replace PostgreSQL.
+
+The app joins the existing `estuary-db_default` Docker network and reaches the
+healthy `estuary-postgres` container directly. The existing database package
+remains at `/opt/estuary-db` and its `estuary_postgres_data` volume is not
+modified by this deployment.
 
 The current prototype still stores workflow state, queued email files, and PDF
 exports under `runtime/prototype`. Compose mounts the server's `runtime`
@@ -10,36 +16,44 @@ directory into the container so those files survive a rebuild or restart.
 
 ## First deployment
 
-The server needs Git and Docker Engine with the Compose plugin.
+From the Windows project computer, connect through NetBird:
 
-```sh
-git clone https://github.com/arusacademy-git/Estuary.git estuary
-cd estuary
-cp .env.server.example .env.server
+```powershell
+ssh estuary-db
 ```
 
-Edit `.env.server` and set at least:
+On the Ubuntu server, prepare an app-owned folder and clone the public
+repository:
 
-- `DATABASE_URL` and `DIRECT_URL` for the PostgreSQL already on the server
-- `NEXTAUTH_URL` and `ESTUARY_BASE_URL` to the address users will open
-- a long random `NEXTAUTH_SECRET`
+```sh
+sudo mkdir -p /opt/estuary-app
+sudo chown arusacademy:arusacademy /opt/estuary-app
+git clone https://github.com/arusacademy-git/Estuary.git /opt/estuary-app
+cd /opt/estuary-app
+```
 
-When PostgreSQL runs directly on the same Linux host, use
-`host.docker.internal` instead of `localhost` in the database URLs. Inside a
-container, `localhost` means the Estuary container itself. PostgreSQL must be
-configured to accept the connection from Docker's bridge network.
+Create `.env.server` without displaying or copying the existing PostgreSQL
+password. The argument is the NetBird address users will open:
+
+```sh
+bash scripts/configure-server-env.sh http://100.72.165.226:3000
+```
+
+The script reads the credentials from `estuary-postgres` using `sudo docker
+inspect`, URL-encodes them, generates a new application secret, and writes a
+mode-600 `.env.server`. It never prints the database password.
 
 Create the persistent runtime folder and start Estuary:
 
 ```sh
 mkdir -p runtime/prototype
-docker compose -f compose.server.yaml up -d --build
-docker compose -f compose.server.yaml ps
-docker compose -f compose.server.yaml logs --tail=100 app
+sudo docker compose -f compose.server.yaml up -d --build
+sudo docker compose -f compose.server.yaml ps
+sudo docker compose -f compose.server.yaml logs --tail=100 app
 ```
 
-Open `http://SERVER_ADDRESS:3000/dashboard`, or the value configured through
-`ESTUARY_PORT`.
+While connected to NetBird, open
+`http://100.72.165.226:3000/dashboard`.
 
 ## Updating after an approved change
 
@@ -48,8 +62,8 @@ and merge into `main`, update the server with:
 
 ```sh
 git pull --ff-only origin main
-docker compose -f compose.server.yaml up -d --build
-docker compose -f compose.server.yaml ps
+sudo docker compose -f compose.server.yaml up -d --build
+sudo docker compose -f compose.server.yaml ps
 ```
 
 Do not edit application files directly on the server. Do not commit

@@ -21,6 +21,7 @@
 - Next Assignee Start Point: run `corepack pnpm install`, then `corepack pnpm lint`, `corepack pnpm test`, and `$env:E2E_PORT='3131'; $env:CI='1'; corepack pnpm test:e2e` before new feature work.
 
 ## Current Blockers
+- The real deployment target is the Penang Ubuntu desktop reached over NetBird via `ssh estuary-db`; it is not AWS Lightsail. Docker commands on that host use `sudo`.
 - GitHub publishing setup: `origin` targets `arusacademy-git/Estuary`; GitHub CLI is installed and authenticated as `afiq-work`.
 - OQ-PettyCashConfirm: Petty Cash model not confirmed. Blocks Phase 5 only.
 - OQ-5: SQL Account CSV sample needed before Phase 6 export build. Blocks Phase 6 only.
