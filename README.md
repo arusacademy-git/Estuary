@@ -54,6 +54,11 @@ existing PostgreSQL installation, follow
 [`docs/SERVER_DEPLOYMENT.md`](docs/SERVER_DEPLOYMENT.md). The server Compose
 file does not create a PostgreSQL container.
 
+Interns should follow
+[`docs/INTERN_UPDATE_GUIDE.md`](docs/INTERN_UPDATE_GUIDE.md) to recover
+unpushed work, submit changes through pull requests, and update the Penang
+server after an approved merge.
+
 ## Verification
 
 - Lint: `corepack pnpm lint`
