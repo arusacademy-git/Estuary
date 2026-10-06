@@ -1,0 +1,98 @@
+.backLink {
+    display: inline-flex;
+    margin: 0 0 16px;
+    color: #175ea8;
+    font-size: 13px;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.backLink:hover,
+.backLink:focus,
+.backLink:active,
+.backLink:visited {
+    color: #0b315d;
+    text-decoration: none;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+}
+
+.formColumn {
+    min-width: 0;
+}
+
+.remarkCard {
+    position: static;
+    top: 20px;
+    padding: 18px;
+    border: 1px solid #fca5a5;
+    border-radius: 13px;
+    color: #7f1d1d;
+    background: #fff1f2;
+    box-shadow: 0 1px 3px rgb(127 29 29 / 7%);
+}
+
+.remarkCard>span {
+    display: inline-flex;
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: #991b1b;
+    background: #fee2e2;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.remarkCard h2 {
+    margin: 12px 0 14px;
+    color: #991b1b;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.remarkCard small {
+    display: block;
+    margin-bottom: 7px;
+    color: #b42318;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.remarkCard blockquote {
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 2px solid #dc2626;
+    border-radius: 0 6px 6px 0;
+    color: #7f1d1d;
+    background: #ffe4e6;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.remarkCard p {
+    margin: 12px 0 0;
+    color: #9f1239;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+@media (max-width: 1000px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .remarkCard {
+        position: static;
+        grid-row: 1;
+    }
+}

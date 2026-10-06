@@ -1,0 +1,37 @@
+.statePage {
+    display: grid;
+    min-height: 220px;
+    place-content: center;
+    justify-items: center;
+    padding: 52px 24px;
+    color: #102a4c;
+    text-align: center;
+}
+
+.statePage h1 {
+    margin: 0;
+    font-size: clamp(28px, 3vw, 34px);
+    letter-spacing: -.025em;
+}
+
+.statePage p {
+    margin: 7px 0 0;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.statePage a {
+    margin-top: 3px;
+    color: #1d5dcc;
+    font-size: 15px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.statePage a:hover,
+.statePage a:focus,
+.statePage a:active,
+.statePage a:visited {
+    color: #0b315d;
+    text-decoration: none;
+}
