@@ -1,0 +1,22 @@
+.recordBackLink {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0;
+  color: #526987;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.recordBackLink:hover {
+  color: #334155;
+  text-decoration: none;
+}
+
+.recordBackLink:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgb(37 99 235 / 20%);
+  outline-offset: 3px;
+}

@@ -1,0 +1,604 @@
+.page {
+    display: grid;
+    gap: 24px;
+    color: #1e293b;
+}
+
+.backRow a {
+    color: #526987;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.pageHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.pageHeader p {
+    margin: 0;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.pageHeader h1 {
+    margin: 8px 0 12px;
+    color: #1e3a5f;
+    font-size: clamp(30px, 4vw, 42px);
+}
+
+.pageHeader>div>span {
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.accountCard {
+    display: grid;
+    min-width: 210px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.accountCard span,
+.accountCard small {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.accountCard strong {
+    margin: 5px 0;
+    color: #173a64;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.summaryGrid article {
+    display: grid;
+    padding: 22px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.summaryGrid span,
+.summaryGrid small {
+    color: #64748b;
+}
+
+.summaryGrid strong {
+    margin: 12px 0;
+    color: #1e3a5f;
+    font-size: 30px;
+}
+
+.recordsFilterCard,
+.recordsResults {
+    padding: 28px;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #fff;
+}
+
+.recordsFilterHeading,
+.recordsResultsHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.recordsFilterHeading h2,
+.recordsResultsHeader h2 {
+    margin: 0;
+    color: #1e293b;
+}
+
+.recordsFilterHeading p,
+.recordsResultsHeader p {
+    margin: 7px 0 0;
+    color: #64748b;
+}
+
+.recordsFilters {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.5fr) repeat(4, minmax(145px, 1fr));
+    gap: 16px;
+}
+
+.recordsFilters label {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    color: #334155;
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+.recordsSearchField {
+    min-width: 0;
+}
+
+.recordsFilters input,
+.recordsFilters select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    color: #1e293b;
+    background: #fff;
+    font: inherit;
+    outline: none;
+}
+
+.recordsFilters input:focus,
+.recordsFilters select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+}
+
+.clearFiltersButton {
+    min-height: 42px;
+    padding: 8px 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    color: #1e3a5f;
+    background: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.clearFiltersButton:hover {
+    background: #f8fafc;
+}
+
+.recordsViewToggle {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.recordsViewToggle>span {
+    padding: 0 8px;
+    color: #64748b;
+    font-size: .76rem;
+    font-weight: 700;
+}
+
+.recordsViewToggle button {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 7px;
+    color: #64748b;
+    background: transparent;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.recordsViewToggle button:hover {
+    color: #1e3a5f;
+    background: #e2e8f0;
+}
+
+.recordsViewToggle button[data-active='true'] {
+    color: #fff;
+    background: #1e3a5f;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 14%);
+}
+
+.tableWrapper {
+    overflow-x: auto;
+}
+
+.tableWrapper table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tableWrapper th,
+.tableWrapper td {
+    padding: 15px 16px;
+    border-bottom: 1px solid #e7ecf2;
+    color: #243b5a;
+    font-size: 13px;
+    text-align: left;
+}
+
+.tableWrapper th {
+    color: #526987;
+    background: #f7f9fc;
+    font-size: 10px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.tableWrapper td strong,
+.tableWrapper td small {
+    display: block;
+}
+
+.tableWrapper td strong {
+    color: #11345d;
+}
+
+.tableWrapper td small {
+    max-width: 220px;
+    margin-top: 3px;
+    overflow: hidden;
+    color: #71849c;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.amount {
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.actionCell {
+    text-align: right !important;
+}
+
+.actionCell a,
+.recordCard>a {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 12px;
+    border: 1px solid #c8d5e5;
+    border-radius: 8px;
+    color: #173a64;
+    font-size: 12px;
+    font-weight: 750;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.statusBadge {
+    display: inline-flex;
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #9a6700;
+    background: #fef3c7;
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.statusBadge[data-status='PENDING_FINANCE_PROCESSING'],
+.statusBadge[data-status='PENDING_FINANCE_RECONCILIATION'] {
+    color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.statusBadge[data-status='PENDING_RECONCILIATION'] {
+    color: #6941c6;
+    background: #f4ebff;
+}
+
+.statusBadge[data-status='COMPLETED'] {
+    color: #067647;
+    background: #d1fadf;
+}
+
+.statusBadge[data-status='RETURNED_TO_STAFF'] {
+    color: #b42318;
+    background: #fee4e2;
+}
+
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding: 4px 0 6px;
+}
+
+.recordCard {
+    display: flex;
+    flex-direction: column;
+    padding: 21px;
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.cardTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cardTop>span:first-child {
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.recordCard h2 {
+    margin: 15px 0 4px;
+    color: #102a4c;
+    font-size: 19px;
+}
+
+.recordCard>p {
+    display: -webkit-box;
+    min-height: 38px;
+    margin: 0;
+    overflow: hidden;
+    color: #64748b;
+    -webkit-box-orient: vertical;
+}
+
+.recordCard dl {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 18px 0;
+    padding: 15px;
+    border-radius: 9px;
+    background: #f7f9fc;
+}
+
+.recordCard dt,
+.recordCard dd {
+    margin: 0;
+}
+
+.recordCard dt {
+    color: #71849c;
+    font-size: 11px;
+}
+
+.recordCard dd {
+    margin-top: 4px;
+    color: #172b4d;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.recordCard>a {
+    align-self: flex-end;
+}
+
+.emptyState,
+.statePage {
+    padding: 52px 24px;
+    text-align: center;
+}
+
+.emptyState {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.emptyState h2,
+.statePage h1 {
+    margin: 0;
+    color: #11345d;
+}
+
+.emptyState p,
+.statePage p {
+    color: #64748b;
+}
+
+.statePage a {
+    color: #1d5dcc;
+    font-weight: 700;
+}
+
+.errorState {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #9f1239;
+    background: #fff5f6;
+}
+
+.srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+@media (max-width: 1100px) {
+
+    .summaryGrid,
+    .recordsFilters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .cardGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+
+    .pageHeader,
+    .recordsFilterHeading,
+    .recordsResultsHeader {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .summaryGrid,
+    .recordsFilters {
+        grid-template-columns: 1fr;
+    }
+
+    .recordsFilterCard,
+    .recordsResults {
+        padding: 20px;
+    }
+
+    .recordsViewToggle {
+        align-self: flex-start;
+    }
+
+    .accountCard {
+        min-width: 0;
+    }
+}
+
+/* Payment Voucher-aligned list table */
+.tableWrapper {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.tableWrapper table {
+    width: 100%;
+    min-width: 900px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.tableWrapper th,
+.tableWrapper td {
+    min-width: 0;
+    padding: 16px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: .82rem;
+    text-align: left;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+.tableWrapper th {
+    color: #64748b;
+    background: #f8fafc;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.tableWrapper tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.tableWrapper tbody tr:hover {
+    background: #f8fbff;
+}
+
+.tableWrapper td:first-child strong {
+    color: #2563eb;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.tableWrapper td:first-child strong:hover {
+    color: #1d4ed8;
+}
+
+.tableWrapper td small {
+    max-width: 100%;
+    margin-top: 4px;
+    overflow: hidden;
+    color: #64748b;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tableWrapper .amount {
+    color: #0f2f57;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.tableWrapper .actionCell {
+    padding-right: 20px;
+    padding-left: 16px;
+    text-align: right;
+}
+
+.tableWrapper .actionCell a {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border: 1px solid #bfd0e5;
+    border-radius: 8px;
+    color: #1e3a5f;
+    background: #fff;
+    font-size: .78rem;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.tableWrapper .actionCell a:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+.tableWrapper .statusBadge {
+    align-items: center;
+    gap: 7px;
+    width: max-content;
+    max-width: none;
+    justify-content: center;
+    font-size: .72rem;
+    white-space: nowrap;
+}
+
+.tableWrapper .statusBadge::before {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: currentColor;
+    content: '';
+}

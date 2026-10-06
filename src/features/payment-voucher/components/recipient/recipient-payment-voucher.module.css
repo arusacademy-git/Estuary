@@ -1,0 +1,1601 @@
+.publicPage {
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.publicHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px max(24px, calc((100vw - 1320px) / 2));
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.brand {
+  margin: 0;
+  color: #1e3a5f;
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.brandDescription {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.secureLabel {
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e3a5f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pageContainer {
+  width: min(1320px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 38px 0 64px;
+}
+
+.introductionCard,
+.card,
+.actionCard,
+.helpCard,
+.stateCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgb(15 23 42 / 5%);
+}
+
+.introductionCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 32px;
+}
+
+.eyebrow,
+.sectionLabel {
+  margin: 0 0 8px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.titleRow h1 {
+  margin: 0;
+  color: #1e293b;
+  font-size: clamp(30px, 4vw, 44px);
+  letter-spacing: -0.035em;
+}
+
+.introductionText {
+  max-width: 720px;
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.downloadButton,
+.uploadButton,
+.submitButton {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 10px;
+  background: #1e3a5f;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.downloadButton {
+  flex: 0 0 auto;
+}
+
+.downloadButton:hover,
+.uploadButton:hover,
+.submitButton:hover {
+  background: #162e4a;
+}
+
+.downloadButton:disabled,
+.submitButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  align-items: start;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.detailsColumn,
+.actionColumn {
+  display: grid;
+  gap: 24px;
+}
+
+.actionColumn {
+  position: sticky;
+  top: 24px;
+}
+
+.card,
+.actionCard,
+.helpCard {
+  padding: 28px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sectionHeader h2,
+.actionCard h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 23px;
+  letter-spacing: -0.02em;
+}
+
+.amount {
+  color: #1e3a5f;
+  font-size: 25px;
+  white-space: nowrap;
+}
+
+.informationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0 0;
+}
+
+.informationGrid div {
+  min-width: 0;
+}
+
+.informationGrid dt {
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.informationGrid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.highlightGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 26px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #e2e8f0;
+}
+
+.highlightGrid div {
+  padding: 18px;
+  background: #f8fafc;
+}
+
+.highlightGrid span {
+  display: block;
+  margin-bottom: 7px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.highlightGrid strong {
+  line-height: 1.5;
+}
+
+.lineCount {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.linesTable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.linesTable th {
+  padding: 13px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.linesTable td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.linesTable th:nth-child(n + 3),
+.linesTable td:nth-child(n + 3) {
+  text-align: right;
+}
+
+.grandTotal {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 28px;
+  padding-top: 20px;
+}
+
+.grandTotal span {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.grandTotal strong {
+  color: #1e3a5f;
+  font-size: 22px;
+}
+
+.actionDescription,
+.actionCard>p,
+.helpCard p {
+  color: #64748b;
+  line-height: 1.65;
+}
+
+.confirmationBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  cursor: pointer;
+}
+
+.confirmationBox input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #2563eb;
+}
+
+.confirmationBox span {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.signatureField {
+  margin-top: 24px;
+}
+
+.signatureField>label {
+  display: block;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.signatureField>p {
+  margin: 7px 0 14px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.uploadButton {
+  width: 100%;
+  border: 1px dashed #94a3b8;
+  background: #ffffff;
+  color: #1e3a5f;
+}
+
+.uploadButton:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e3a5f;
+}
+
+.signaturePreview {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.signatureImageArea {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
+    linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
+    linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-size: 16px 16px;
+}
+
+.signatureImageArea img {
+  display: block;
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+.signatureFileDetails {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.signatureFileDetails strong,
+.signatureFileDetails span {
+  display: block;
+}
+
+.signatureFileDetails span {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.signatureFileDetails button {
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.signatureError,
+.errorNotice {
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.signatureError {
+  margin-top: 18px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.errorNotice {
+  margin-bottom: 20px;
+  padding: 15px 18px;
+}
+
+.submitButton {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.securityNote {
+  margin: 15px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.methodSection {
+  margin-top: 24px;
+}
+
+.methodHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.methodHeading strong {
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.methodHeading span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.methodGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.methodCard {
+  display: flex;
+  min-width: 0;
+  min-height: 154px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1e293b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.methodCard:hover:not(:disabled) {
+  border-color: #60a5fa;
+  background: #f8fbff;
+}
+
+.methodCard:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 20%);
+  outline-offset: 2px;
+}
+
+.methodCard:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.methodCardSelected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.methodIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.methodCard>strong {
+  font-size: 14px;
+}
+
+.methodCard>span:last-child {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.manualSection {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.manualStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.manualStep strong,
+.manualStep p {
+  display: block;
+}
+
+.manualStep strong {
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.manualStep p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.stepNumber {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #1e3a5f;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.downloadOutlineButton {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid #1e3a5f;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1e3a5f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.downloadOutlineButton:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.downloadOutlineButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.manualFileReady {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.manualFileReady strong,
+.manualFileReady span {
+  display: block;
+}
+
+.manualFileReady strong {
+  color: #166534;
+  font-size: 13px;
+}
+
+.manualFileReady span {
+  max-width: 230px;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manualFileReady button {
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.helpCard h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.helpCard p {
+  margin-bottom: 0;
+  font-size: 14px;
+}
+
+.successNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.successNotice strong {
+  display: block;
+}
+
+.successNotice p {
+  margin: 5px 0 0;
+  line-height: 1.5;
+}
+
+.successIcon,
+.errorIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.successIcon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.errorIcon {
+  margin: 0 auto 18px;
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.stateCard {
+  width: min(620px, calc(100% - 48px));
+  margin: 80px auto;
+  padding: 42px;
+  text-align: center;
+}
+
+.stateCard h1 {
+  margin: 8px 0 14px;
+  color: #1e293b;
+  font-size: 32px;
+}
+
+.stateCard p:last-child {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+@media (max-width: 980px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionColumn {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .publicHeader,
+  .introductionCard,
+  .sectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pageContainer {
+    width: min(100% - 28px, 1320px);
+    padding-top: 22px;
+  }
+
+  .introductionCard,
+  .card,
+  .actionCard,
+  .helpCard {
+    padding: 21px;
+  }
+
+  .downloadButton {
+    width: 100%;
+  }
+
+  .informationGrid,
+  .highlightGrid,
+  .methodGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .methodCard {
+    min-height: auto;
+  }
+
+  .secureLabel {
+    align-self: flex-start;
+  }
+}
+
+/* Compact recipient receipt layout */
+.publicHeader {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  min-height: 64px;
+  padding: 12px max(24px, calc((100vw - 1180px) / 2));
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.brandDescription {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.secureLabel {
+  padding: 6px 11px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 10px;
+}
+
+.pageContainer {
+  display: grid;
+  width: min(1180px, calc(100% - 40px));
+  grid-template-columns: minmax(0, 7fr) minmax(330px, 5fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+  column-gap: 24px;
+  row-gap: 0;
+  padding: 32px 0 56px;
+}
+
+.noticeContainer {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.noticeContainer:not(:empty) {
+  padding-top: 20px;
+}
+
+.noticeContainer .successNotice,
+.noticeContainer .errorNotice {
+  margin: 0;
+}
+
+.successNotice,
+.errorNotice {
+  grid-column: 1 / -1;
+}
+
+.introductionCard {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 24px;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 14px 34px rgb(15 23 42 / 7%);
+}
+
+.eyebrow,
+.sectionLabel {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.titleRow {
+  gap: 10px;
+}
+
+.titleRow h1 {
+  font-size: clamp(25px, 3vw, 31px);
+}
+
+.introductionText {
+  max-width: 570px;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.downloadButton {
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.contentGrid {
+  display: contents;
+}
+
+.detailsColumn {
+  grid-column: 1;
+  grid-row: 2;
+  gap: 0;
+}
+
+.detailsColumn .card {
+  padding: 24px;
+  border-top: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.detailsColumn .card:last-child {
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 14px 34px rgb(15 23 42 / 7%);
+}
+
+.detailsColumn .card:first-child {
+  background: #f8fafc;
+}
+
+.actionColumn {
+  position: static;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  gap: 14px;
+}
+
+.actionCard {
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgb(15 23 42 / 7%);
+}
+
+.helpCard {
+  padding: 15px 17px;
+  border-radius: 11px;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.sectionHeader {
+  align-items: flex-end;
+  gap: 18px;
+  padding-bottom: 18px;
+}
+
+.sectionHeader h2,
+.actionCard h2 {
+  font-size: 18px;
+  text-transform: capitalize;
+}
+
+.amountBlock {
+  text-align: right;
+}
+
+.amountBlock span {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.amount {
+  font-size: clamp(25px, 3vw, 32px);
+  font-weight: 800;
+}
+
+.informationGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px 22px;
+  margin-top: 19px;
+}
+
+.informationGrid dt {
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.informationGrid dd {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.highlightGrid {
+  gap: 22px;
+  margin-top: 18px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.highlightGrid div {
+  padding: 0;
+  background: transparent;
+}
+
+.highlightGrid span {
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.highlightGrid strong {
+  font-size: 12px;
+}
+
+.detailsColumn .card:nth-child(2) .sectionHeader,
+.detailsColumn .card:nth-child(3) .sectionHeader {
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 0;
+}
+
+.detailsColumn .card:nth-child(2) .informationGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.lineCount {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tableWrapper {
+  margin-top: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.linesTable {
+  min-width: 610px;
+}
+
+.linesTable th {
+  padding: 10px;
+  font-size: 9px;
+}
+
+.linesTable td {
+  padding: 13px 10px;
+  font-size: 11px;
+}
+
+.grandTotal {
+  margin-top: -1px;
+  padding: 12px 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0 0 10px 10px;
+  background: #f8fafc;
+}
+
+.grandTotal span {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.grandTotal strong {
+  font-size: 16px;
+}
+
+.actionDescription,
+.actionCard>p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.confirmationBox {
+  gap: 10px;
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.confirmationBox input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.confirmationBox span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.signatureField {
+  margin-top: 20px;
+}
+
+.signatureFieldHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.signatureFieldHeading label {
+  color: #334155;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.signatureFieldHeading span {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.uploadButton {
+  display: flex;
+  min-height: 132px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 18px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #1e3a5f;
+}
+
+.uploadButton strong {
+  font-size: 12px;
+}
+
+.uploadButton small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.uploadIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  margin-bottom: 5px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 18px;
+}
+
+.submitButton {
+  min-height: 43px;
+  margin-top: 20px;
+  font-size: 12px;
+}
+
+.securityNote {
+  margin-top: 9px;
+  font-size: 10px;
+}
+
+.helpCard h3 {
+  font-size: 12px;
+}
+
+.helpCard p {
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+  .pageContainer {
+    display: block;
+  }
+
+  .noticeContainer {
+    width: min(100% - 24px, 1180px);
+  }
+
+  .introductionCard {
+    border-radius: 14px 14px 0 0;
+  }
+
+  .contentGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+    margin-top: 0;
+  }
+
+  .detailsColumn,
+  .actionColumn {
+    display: grid;
+  }
+
+  .actionColumn {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .publicHeader {
+    align-items: flex-start;
+    padding: 12px 16px;
+  }
+
+  .brandDescription {
+    display: none;
+  }
+
+  .pageContainer {
+    width: min(100% - 24px, 1180px);
+    padding-top: 18px;
+  }
+
+  .introductionCard,
+  .detailsColumn .card,
+  .actionCard {
+    padding: 19px;
+  }
+
+  .introductionCard,
+  .sectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .downloadButton {
+    width: 100%;
+  }
+
+  .informationGrid,
+  .detailsColumn .card:nth-child(2) .informationGrid,
+  .highlightGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .amountBlock {
+    text-align: left;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 460px) {
+
+  .informationGrid,
+  .detailsColumn .card:nth-child(2) .informationGrid,
+  .highlightGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .signatureFieldHeading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+/* Internal Payment Voucher-aligned external details */
+.pageContainer {
+  display: block;
+  width: min(1320px, calc(100% - 48px));
+  padding: 32px 0 64px;
+}
+
+.noticeContainer {
+  width: min(1320px, calc(100% - 48px));
+}
+
+.introductionCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 28px 32px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.titleRow h1 {
+  color: #102a4c;
+  font-size: clamp(28px, 3vw, 38px);
+}
+
+.introductionText {
+  max-width: 760px;
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.detailsColumn {
+  display: grid;
+  grid-column: auto;
+  grid-row: auto;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.detailsColumn .card,
+.detailsColumn .card:first-child,
+.detailsColumn .card:last-child {
+  padding: 28px 32px;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.detailsColumn .card:last-child {
+  border-bottom: 0;
+}
+
+.sectionHeader {
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sectionHeader h2,
+.actionCard h2 {
+  color: #102a4c;
+  font-size: 18px;
+  text-transform: none;
+}
+
+.eyebrow,
+.sectionLabel {
+  margin-bottom: 6px;
+  color: #526987;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.informationGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px 28px;
+  margin-top: 22px;
+}
+
+.informationGrid dt {
+  margin-bottom: 5px;
+  color: #71839a;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.informationGrid dd {
+  color: #102a4c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detailsColumn .card:nth-child(2) .sectionHeader,
+.detailsColumn .card:nth-child(3) .sectionHeader {
+  align-items: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detailsColumn .card:nth-child(2) .informationGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.amountBlock span {
+  color: #71839a;
+}
+
+.amount {
+  color: #102a4c;
+  font-size: clamp(26px, 3vw, 34px);
+}
+
+.tableWrapper {
+  margin-top: 20px;
+  overflow-x: auto;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+}
+
+.linesTable {
+  min-width: 680px;
+}
+
+.linesTable th {
+  padding: 11px 12px;
+  color: #526987;
+  background: #f8fafc;
+  font-size: 9px;
+}
+
+.linesTable td {
+  padding: 14px 12px;
+  font-size: 12px;
+}
+
+.grandTotal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.actionColumn {
+  display: grid;
+  position: static;
+  grid-column: auto;
+  grid-row: auto;
+  gap: 16px;
+}
+
+.actionCard,
+.helpCard {
+  border: 1px solid #dbe3ee;
+  box-shadow: none;
+}
+
+.actionCard {
+  padding: 26px;
+  border-radius: 14px;
+}
+
+@media (max-width: 980px) {
+
+  .pageContainer,
+  .noticeContainer {
+    width: min(100% - 28px, 1320px);
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .pageContainer {
+    padding-top: 20px;
+  }
+
+  .introductionCard,
+  .sectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .introductionCard,
+  .detailsColumn .card,
+  .detailsColumn .card:first-child,
+  .detailsColumn .card:last-child,
+  .actionCard {
+    padding: 20px;
+  }
+
+  .informationGrid,
+  .detailsColumn .card:nth-child(2) .informationGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .amountBlock {
+    text-align: left;
+  }
+}
+
+@media (max-width: 460px) {
+
+  .informationGrid,
+  .detailsColumn .card:nth-child(2) .informationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Typed recipient signature */
+.typedSignatureSection {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.typedSignatureSection>label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.typedSignatureSection>label span {
+  color: #334155;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.typedSignatureSection>label small {
+  color: #64748b;
+  font-size: 10px;
+  text-align: right;
+}
+
+.typedSignatureSection>input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  outline: none;
+  color: #1e293b;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13px;
+}
+
+.typedSignatureSection>input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+}
+
+.typedSignatureSection>input:disabled {
+  color: #64748b;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.signaturePreviewCard {
+  overflow: hidden;
+  border: 1px dashed #b8c7da;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.previewHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.previewHeading span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.previewHeading small {
+  font-size: 10px;
+}
+
+.cursiveSignature {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px 5px;
+  overflow-wrap: anywhere;
+  color: #1e3a5f;
+  font-family: "Brush Script MT", "Segoe Script", "Lucida Handwriting", cursive;
+  font-size: clamp(38px, 5vw, 56px);
+  font-style: italic;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.signaturePreviewCard>p {
+  margin: 0;
+  padding: 0 16px 13px;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 460px) {
+  .typedSignatureSection>label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .typedSignatureSection>label small {
+    text-align: left;
+  }
+
+  .cursiveSignature {
+    min-height: 92px;
+    font-size: 38px;
+  }
+}

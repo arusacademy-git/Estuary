@@ -1,0 +1,238 @@
+.notificationContainer {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.bellButton:hover,
+.bellButton[aria-expanded='true'] {
+  color: #1e3a5f;
+  background: #f1f5f9;
+}
+
+.bellButton:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 18%);
+  outline-offset: 1px;
+}
+
+.unreadBadge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  display: inline-flex;
+  min-width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #dc2626;
+  padding: 0 3px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.bellButton .unreadBadge {
+  color: #ffffff;
+}
+
+.notificationDropdown {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(390px, calc(100vw - 32px));
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow:
+    0 20px 45px rgb(15 23 42 / 16%);
+}
+
+.notificationHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 18px;
+}
+
+.notificationHeader h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.notificationHeader p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.notificationHeader button {
+  border: 0;
+  color: #2563eb;
+  background: transparent;
+  padding: 2px 0;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notificationHeader button:hover {
+  text-decoration: underline;
+}
+
+.notificationContent {
+  max-height: 440px;
+  overflow-y: auto;
+}
+
+.notificationList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notificationList li:not(:last-child) {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.notificationItem {
+  position: relative;
+  display: grid;
+  width: 100%;
+  grid-template-columns:
+    38px minmax(0, 1fr) 8px;
+  gap: 12px;
+  border: 0;
+  color: inherit;
+  background: #ffffff;
+  padding: 15px 17px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notificationItem:hover {
+  background: #f8fafc;
+}
+
+.notificationUnread {
+  background: #eff6ff;
+}
+
+.notificationUnread:hover {
+  background: #dbeafe;
+}
+
+.notificationIcon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: #1e3a5f;
+  background: #dbeafe;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.notificationBody {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.notificationBody strong {
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.notificationBody > span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+}
+
+.notificationBody small {
+  color: #94a3b8;
+  font-size: 0.65rem;
+}
+
+.unreadDot {
+  width: 7px;
+  height: 7px;
+  align-self: start;
+  border-radius: 50%;
+  background: #2563eb;
+  margin-top: 5px;
+}
+
+.notificationEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 38px 22px;
+  color: #64748b;
+  text-align: center;
+}
+
+.notificationEmpty > span {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #16a34a;
+  background: #dcfce7;
+  font-weight: 800;
+}
+
+.notificationEmpty strong {
+  color: #1e293b;
+  font-size: 0.86rem;
+}
+
+.notificationEmpty p {
+  max-width: 250px;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 500px) {
+  .notificationDropdown {
+    position: fixed;
+    top: 70px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+}

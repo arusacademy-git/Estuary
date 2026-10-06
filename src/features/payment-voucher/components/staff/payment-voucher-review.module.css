@@ -1,0 +1,525 @@
+.reviewPage {
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  color: #1e293b;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.stepLabel {
+  margin: 0 0 5px;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.pageDescription {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.readyBadge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #92400e;
+  background: #fffbeb;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.readyBadge i,
+.cardTitle i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.reviewCard {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 20px -2px rgb(15 23 42 / 5%), 0 2px 6px -1px rgb(15 23 42 / 2%);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 18px 28px;
+  background: #f8fafc;
+}
+
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #475569;
+}
+
+.cardTitle i {
+  background: #0284c7;
+}
+
+.cardTitle strong {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.editLink,
+.attachButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 2px;
+  color: #0369a1;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editLink svg {
+  width: 14px;
+  height: 14px;
+}
+
+.editLink:hover,
+.attachButton:hover {
+  color: #0c4a6e;
+  text-decoration: underline;
+}
+
+.cardBody {
+  padding: 30px 34px;
+}
+
+.amendmentNote {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 26px;
+  border: 1px solid #fde68a;
+  border-radius: 9px;
+  padding: 12px 14px;
+  color: #78350f;
+  background: #fffbeb;
+  font-size: 15px;
+}
+
+.amendmentNote span {
+  color: #92400e;
+}
+
+.informationSection {
+  padding: 0 0 28px;
+}
+
+.informationSection + .informationSection,
+.documentsSection {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 28px;
+}
+
+.informationSection h2,
+.documentsSection h2 {
+  margin: 0 0 18px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.informationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 44px;
+  margin: 0;
+}
+
+.informationGrid div {
+  min-width: 0;
+}
+
+.informationGrid dt,
+.breakdownRow span {
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.informationGrid dd {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.directorValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.directorValue span,
+.lineCount {
+  display: inline-flex;
+  border-radius: 5px;
+  padding: 3px 7px;
+  color: #64748b;
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+.sectionHeadingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.sectionHeadingRow h2 {
+  margin: 0;
+}
+
+.breakdownTable {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+}
+
+.breakdownHeader,
+.breakdownRow {
+  display: grid;
+  grid-template-columns: 0.75fr 1.4fr 0.65fr 0.9fr 0.75fr 0.9fr;
+  align-items: center;
+}
+
+.breakdownHeader {
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.breakdownBody {
+  display: block;
+}
+
+.breakdownHeader span {
+  padding: 11px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.breakdownHeader span:nth-child(n + 3),
+.breakdownRow > div:nth-child(n + 3) {
+  text-align: right;
+}
+
+.breakdownRow {
+  min-height: 50px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.breakdownRow:last-child {
+  border-bottom: 0;
+}
+
+.breakdownRow > div {
+  min-width: 0;
+  padding: 12px;
+}
+
+.breakdownRow span {
+  display: none;
+}
+
+.breakdownRow strong {
+  display: block;
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.totalsPanel {
+  display: grid;
+  width: min(310px, 100%);
+  gap: 8px;
+  margin: 16px 0 0 auto;
+}
+
+.totalsPanel > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.totalsPanel strong {
+  color: #334155;
+  font-size: 11px;
+}
+
+.totalsPanel .grandTotal {
+  margin-top: 2px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.grandTotal strong {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.amountWords {
+  display: grid;
+  gap: 5px;
+  margin-top: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #f8fafc;
+}
+
+.amountWords span {
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.amountWords strong {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.55;
+  text-transform: uppercase;
+}
+
+.documentsSection {
+  padding-bottom: 28px;
+}
+
+.documentsBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #f8fafc;
+}
+
+.emptyDocuments,
+.documentList li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.emptyDocuments svg,
+.documentList svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+
+.documentList {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.documentList span {
+  overflow-wrap: anywhere;
+}
+
+.attachButton {
+  flex: 0 0 auto;
+}
+
+.reviewActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 22px;
+}
+
+.reviewActions > span {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.reviewActions > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.secondaryButton,
+.primaryButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 8px 15px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondaryButton {
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  background: #fff;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.primaryButton {
+  border: 1px solid #0f172a;
+  color: #fff;
+  background: #0f172a;
+  box-shadow: 0 2px 5px rgb(15 23 42 / 16%);
+}
+
+.primaryButton:hover:not(:disabled) {
+  border-color: #1e293b;
+  background: #1e293b;
+}
+
+.secondaryButton:disabled,
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 760px) {
+  .pageHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cardBody {
+    padding: 26px 24px;
+  }
+
+  .breakdownHeader {
+    display: none;
+  }
+
+  .breakdownRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 6px;
+  }
+
+  .breakdownRow > div,
+  .breakdownRow > div:nth-child(n + 3) {
+    padding: 9px;
+    text-align: left;
+  }
+
+  .breakdownRow span {
+    display: block;
+  }
+}
+
+@media (max-width: 560px) {
+  .cardHeader,
+  .reviewActions,
+  .documentsBox,
+  .amendmentNote {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cardHeader {
+    padding: 16px 18px;
+  }
+
+  .cardBody {
+    padding: 22px 18px;
+  }
+
+  .informationGrid,
+  .breakdownRow {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewActions > div {
+    width: 100%;
+  }
+
+  .secondaryButton,
+  .primaryButton {
+    flex: 1;
+  }
+}

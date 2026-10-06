@@ -1,0 +1,87 @@
+.resultActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.downloadGroup {
+    display: grid;
+    gap: 6px;
+    justify-items: end;
+}
+
+.bulkDownloadButton {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: 1px solid #1e4775;
+    border-radius: 10px;
+    color: #fff;
+    background: #1e4775;
+    box-shadow: 0 2px 5px rgb(30 71 117 / 16%);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.bulkDownloadButton:not(:disabled):hover {
+    border-color: #163a63;
+    background: #163a63;
+    transform: translateY(-1px);
+}
+
+.bulkDownloadButton:focus-visible {
+    outline: 3px solid rgb(37 99 235 / 22%);
+    outline-offset: 2px;
+}
+
+.bulkDownloadButton:disabled {
+    border-color: #cbd5e1;
+    color: #64748b;
+    background: #e2e8f0;
+    cursor: not-allowed;
+}
+
+.downloadSuccess,
+.downloadError {
+    max-width: 300px;
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: right;
+}
+
+.downloadSuccess {
+    color: #166534;
+}
+
+.downloadError {
+    color: #b91c1c;
+}
+
+@media (max-width: 680px) {
+    .resultActions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .downloadGroup {
+        justify-items: stretch;
+    }
+
+    .bulkDownloadButton {
+        width: 100%;
+    }
+
+    .downloadSuccess,
+    .downloadError {
+        max-width: none;
+        text-align: left;
+    }
+}

@@ -1,0 +1,372 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 12px 30px
+    rgba(15, 23, 42, 0.06);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header h2 {
+  margin: 6px 0 8px;
+  color: #1e293b;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.description {
+  max-width: 720px;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #b45309;
+  background: #fef3c7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.summaryGrid div {
+  min-width: 0;
+}
+
+.summaryGrid span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.summaryGrid strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.reviewGrid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  gap: 20px;
+}
+
+.signatureCard,
+.actionCard {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.cardHeader h3,
+.actionCard h3 {
+  margin: 5px 0 0;
+  color: #1e293b;
+  font-size: 1.12rem;
+  line-height: 1.35;
+}
+
+.cardEyebrow {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.signedBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: #166534;
+  background: #dcfce7;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.signaturePreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 170px;
+  padding: 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.signaturePreview img {
+  display: block;
+  max-width: 100%;
+  max-height: 130px;
+  object-fit: contain;
+}
+
+.signaturePreview p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.signatureDetails {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0 0;
+}
+
+.signatureDetails div {
+  min-width: 0;
+  padding: 13px 14px;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.signatureDetails dt {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.signatureDetails dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.actionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.actionDescription {
+  margin: 12px 0 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 44px;
+  padding: 11px 18px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.primaryButton {
+  width: 100%;
+  border: 1px solid #1e3a5f;
+  color: #ffffff;
+  background: #1e3a5f;
+}
+
+.primaryButton:hover:not(:disabled) {
+  border-color: #162e4a;
+  background: #162e4a;
+  transform: translateY(-1px);
+}
+
+.secondaryButton {
+  border: 1px solid #cbd5e1;
+  color: #1e3a5f;
+  background: #ffffff;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.confirmationField:focus-within {
+  outline: 3px solid
+    rgba(37, 99, 235, 0.2);
+  outline-offset: 2px;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.confirmationField {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin: 22px 0 16px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  color: #1e293b;
+  background: #eff6ff;
+  cursor: pointer;
+}
+
+.confirmationField input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.confirmationField span {
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.success,
+.error {
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.success {
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.error {
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.notice {
+  padding: 14px 16px;
+  border-left: 3px solid #2563eb;
+  border-radius: 8px;
+  color: #1e3a5f;
+  background: #eff6ff;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 1000px) {
+  .summaryGrid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .reviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .panel {
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .statusBadge {
+    align-self: flex-start;
+  }
+
+  .summaryGrid,
+  .signatureDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .signatureCard,
+  .actionCard {
+    padding: 18px;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}

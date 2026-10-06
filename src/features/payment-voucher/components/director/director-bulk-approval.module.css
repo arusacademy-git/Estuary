@@ -1,0 +1,824 @@
+.page {
+  display: grid;
+  gap: 24px;
+  padding: 32px;
+  color: #1e293b;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.pageHeader h1 {
+  margin: 6px 0 10px;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+  color: #1e3a5f;
+}
+
+.pageHeader p {
+  max-width: 720px;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.backButton {
+  flex-shrink: 0;
+  padding: 11px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #1e3a5f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backButton:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.signatureWarning,
+.errorMessage,
+.successMessage {
+  padding: 18px 20px;
+  border-radius: 12px;
+}
+
+.signatureWarning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid #f5c76b;
+  background: #fff8e7;
+}
+
+.signatureWarning strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.signatureWarning p {
+  margin: 0;
+  color: #64748b;
+}
+
+.signatureWarning a {
+  flex-shrink: 0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  background: #1e3a5f;
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.errorMessage {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.successMessage {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.summaryCard {
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.summaryCard span {
+  display: block;
+  margin-bottom: 10px;
+  color: #64748b;
+}
+
+.summaryCard strong {
+  display: block;
+  color: #1e3a5f;
+  font-size: 28px;
+}
+
+.summaryCard p {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.approvalPanel {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.selectAll {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.selectAll input,
+.voucherCheckbox input,
+.confirmationCheck input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
+.recordCount {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.selectionTableWrapper {
+  overflow-x: auto;
+}
+
+.selectionTable {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 13px;
+}
+
+.selectionTable th,
+.selectionTable td {
+  padding: 15px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* The established approval-panel selector also owns the table layout. This
+   prevents an older CSS-module class map from leaving the new markup unstyled. */
+.approvalPanel table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 13px;
+}
+
+.approvalPanel table th,
+.approvalPanel table td {
+  padding: 15px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.approvalPanel table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.approvalPanel table td {
+  white-space: nowrap;
+}
+
+.approvalPanel table td:nth-child(2) {
+  min-width: 190px;
+  white-space: normal;
+}
+
+.approvalPanel table td:last-child {
+  min-width: 118px;
+}
+
+.selectionTable th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.selectionTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.selectionTable tbody tr[data-selected='true'] {
+  background: #eff6ff;
+}
+
+.selectionTable tbody tr:hover {
+  background: #f8fbff;
+}
+
+.checkCell {
+  width: 42px;
+  text-align: center !important;
+}
+
+.checkCell input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
+.tableSubtext {
+  display: block;
+  overflow: hidden;
+  max-width: 210px;
+  margin-top: 4px;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amountCell {
+  color: #1e3a5f;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.actionCell {
+  text-align: right !important;
+}
+
+.voucherList {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.voucherCard,
+.selectedVoucherCard {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.selectedVoucherCard {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.voucherCheckbox {
+  padding-top: 4px;
+  cursor: pointer;
+}
+
+.voucherInformation {
+  flex: 1;
+  min-width: 0;
+}
+
+.voucherTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.voucherTopRow a {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.voucherTopRow h2 {
+  margin: 6px 0 0;
+  color: #1e293b;
+  font-size: 20px;
+}
+
+.voucherTopRow>strong {
+  flex-shrink: 0;
+  color: #1e3a5f;
+  font-size: 20px;
+}
+
+.voucherPurpose {
+  margin: 14px 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.voucherMetadata {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 14px 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.voucherMetadata dt {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.voucherMetadata dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.reviewLink {
+  display: inline-flex;
+  margin-top: 4px;
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.reviewLink:hover {
+  text-decoration: underline;
+}
+
+.confirmationPanel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid #bfdbfe;
+  border-radius: 16px;
+  background: #eff6ff;
+}
+
+.confirmationPanel h2 {
+  margin: 6px 0;
+  color: #1e3a5f;
+}
+
+.confirmationPanel p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.confirmationCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.confirmationCheck input {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.approveButton {
+  min-height: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.approveButton:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.approveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.rejectionNotice {
+  font-size: 13px;
+}
+
+.emptyState {
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.emptyState h2 {
+  margin: 0 0 8px;
+  color: #1e3a5f;
+}
+
+.emptyState p {
+  margin: 0;
+  color: #64748b;
+}
+
+.voucherNumber {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.voucherAmountArea {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reviewedBadge,
+.notReviewedBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reviewedBadge {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.notReviewedBadge {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.reviewButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 0 15px;
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reviewButton:hover {
+  background: #eff6ff;
+}
+
+.reviewRequiredMessage {
+  padding: 12px 14px;
+  border: 1px solid #f5c76b;
+  border-radius: 9px;
+  background: #fff8e7;
+  color: #92400e;
+  font-size: 14px;
+}
+
+.modalOverlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 55%);
+  backdrop-filter: blur(3px);
+}
+
+.reviewModal {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 48px);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 25px 70px rgb(15 23 42 / 25%);
+}
+
+.reviewModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 26px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.reviewModalHeader h1 {
+  margin: 6px 0;
+  color: #1e3a5f;
+  font-size: 30px;
+}
+
+.reviewModalHeader p {
+  margin: 0;
+  color: #64748b;
+}
+
+.reviewModalTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.modalCloseButton {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modalCloseButton:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.reviewModalBody {
+  display: grid;
+  overflow-y: auto;
+  gap: 24px;
+  padding: 26px;
+  background: #f8fafc;
+}
+
+.modalInformationSection,
+.modalBreakdownSection {
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.modalInformationSection h2,
+.modalBreakdownSection h2 {
+  margin: 0 0 18px;
+  color: #1e3a5f;
+  font-size: 18px;
+}
+
+.modalInformationGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+
+.modalInformationGrid dt {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.modalInformationGrid dd {
+  margin: 5px 0 0;
+  color: #1e293b;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.modalPurposeSummary {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
+.modalPurposeSummary span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.modalPurposeSummary p {
+  margin: 6px 0 0;
+  color: #1e293b;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.modalSectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.modalSectionHeading span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.modalTableWrapper {
+  overflow-x: auto;
+}
+
+.modalBreakdownTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.modalBreakdownTable th,
+.modalBreakdownTable td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.modalBreakdownTable th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.modalBreakdownTable tfoot td {
+  border-bottom: 0;
+  color: #1e3a5f;
+  font-weight: 700;
+}
+
+.modalBreakdownTable tfoot td:first-child {
+  text-align: right;
+}
+
+.reviewModalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 26px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.modalNavigationButtons,
+.modalDecisionButtons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modalNavigationButtons button,
+.modalCancelButton,
+.markReviewedButton {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalNavigationButtons button,
+.modalCancelButton {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e3a5f;
+}
+
+.modalNavigationButtons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.markReviewedButton {
+  border: 0;
+  background: #1e3a5f;
+  color: #ffffff;
+}
+
+.markReviewedButton:hover:not(:disabled) {
+  background: #162e4a;
+}
+
+.markReviewedButton:disabled {
+  background: #16a34a;
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .modalOverlay {
+    padding: 0;
+  }
+
+  .reviewModal {
+    width: 100%;
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modalInformationGrid,
+  .modalPurposeSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewModalFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modalNavigationButtons,
+  .modalDecisionButtons {
+    display: grid;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 20px;
+  }
+
+  .pageHeader,
+  .signatureWarning,
+  .voucherTopRow {
+    flex-direction: column;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .voucherMetadata {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .summaryGrid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,337 @@
+.paymentTypeCard {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 22px;
+  min-height: 330px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 24px;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.paymentTypeCard:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 16px 36px rgb(30 58 95 / 10%);
+  transform: translateY(-2px);
+}
+
+.paymentTypeCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.paymentTypeIcon {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: #ffffff;
+  background: #1e3a5f;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.availableBadge,
+.comingSoonBadge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.availableBadge {
+  color: #16a34a;
+  background: #dcfce7;
+}
+
+.comingSoonBadge {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.paymentTypeContent h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.3rem;
+  line-height: 1.35;
+}
+
+.paymentTypeContent p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.paymentTypeStatistics {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-self: end;
+}
+
+.paymentTypeStatistics > div {
+  display: grid;
+  gap: 8px;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.paymentTypeStatistics span {
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.paymentTypeStatistics strong {
+  color: #1e3a5f;
+  font-size: 1.4rem;
+}
+
+.paymentTypeStatistics .attentionNumber {
+  color: #d97706;
+}
+
+.paymentTypeCardFooter {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 18px;
+}
+
+.viewRecordsButton,
+.disabledRecordsButton {
+  display: flex;
+  width: 100%;
+  min-height: 45px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 11px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.viewRecordsButton {
+  color: #ffffff;
+  background: #1e3a5f;
+  transition: background 160ms ease;
+}
+
+.viewRecordsButton:hover {
+  background: #162e4a;
+}
+
+.viewRecordsButton span {
+  font-size: 1.1rem;
+  transition: transform 160ms ease;
+}
+
+.viewRecordsButton:hover span {
+  transform: translateX(3px);
+}
+
+.disabledRecordsButton {
+  color: #94a3b8;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+@media (max-width: 500px) {
+  .paymentTypeCard {
+    min-height: auto;
+    padding: 20px;
+  }
+
+  .paymentTypeStatistics {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paymentRecordsPage {
+  display: grid;
+  gap: 24px;
+}
+
+.paymentRecordsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 32px;
+}
+
+.pageEyebrow {
+  margin: 0 0 10px;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.paymentRecordsHeader h1 {
+  margin: 0;
+  color: #1e293b;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.15;
+}
+
+.paymentRecordsHeader > div:first-child > p:last-child {
+  max-width: 760px;
+  margin: 14px 0 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.signedInSummary {
+  display: grid;
+  flex: 0 0 240px;
+  gap: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #f8fafc;
+  padding: 18px;
+}
+
+.signedInSummary span,
+.signedInSummary small {
+  color: #64748b;
+}
+
+.signedInSummary span {
+  font-size: 0.76rem;
+}
+
+.signedInSummary strong {
+  color: #1e293b;
+}
+
+.signedInSummary small {
+  line-height: 1.4;
+}
+
+.recordsSummary {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.recordsSummary article {
+  display: grid;
+  gap: 10px;
+  min-height: 115px;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+  padding: 22px;
+}
+
+.recordsSummary span {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.recordsSummary strong {
+  color: #1e3a5f;
+  font-size: 2rem;
+}
+
+.paymentTypesSection {
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 28px;
+}
+
+.sectionHeading {
+  margin-bottom: 24px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.5rem;
+}
+
+.sectionHeading p {
+  margin: 8px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.paymentTypesGrid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.paymentRecordsState {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 28px;
+}
+
+.paymentRecordsState h1,
+.paymentRecordsState p {
+  margin: 0;
+}
+
+.paymentRecordsState p {
+  color: #64748b;
+}
+
+@media (max-width: 1100px) {
+  .paymentTypesGrid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .recordsSummary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .paymentRecordsHeader {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .signedInSummary {
+    flex-basis: auto;
+  }
+
+  .paymentTypesGrid,
+  .recordsSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .paymentTypesSection {
+    padding: 20px;
+  }
+}

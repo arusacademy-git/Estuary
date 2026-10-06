@@ -1,0 +1,393 @@
+.page {
+    width: min(1000px, 100%);
+    margin: 0 auto;
+    padding: 4px 0 36px;
+    color: #172b4d;
+}
+
+.pageHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.pageHeader p {
+    margin: 0 0 7px;
+    color: #7086a1;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.pageHeader p span {
+    margin: 0 7px;
+    color: #b2becd;
+}
+
+.pageHeader h1 {
+    margin: 0;
+    color: #102a4c;
+    font-size: clamp(25px, 3vw, 32px);
+    letter-spacing: -.03em;
+}
+
+.pageHeader small {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.readyBadge {
+    display: inline-flex;
+    min-height: 27px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 11px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d5dcc;
+    background: #eff6ff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.readyBadge i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563eb;
+}
+
+.errorNotice {
+    margin-bottom: 16px;
+    padding: 13px 15px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #991b1b;
+    background: #fff1f2;
+    font-size: 14px;
+}
+
+.reviewCard {
+    overflow: hidden;
+    border: 1px solid #dbe3ee;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 5%);
+}
+
+.hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 34px 38px;
+    border-bottom: 1px solid #edf1f5;
+}
+
+.hero>div:first-child {
+    min-width: 0;
+}
+
+.hero span {
+    color: #7188a5;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.hero h2 {
+    margin: 8px 0 5px;
+    color: #081b34;
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.15;
+    letter-spacing: -.035em;
+}
+
+.hero p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.requestedTotal {
+    display: grid;
+    flex: 0 0 auto;
+    justify-items: end;
+    text-align: right;
+}
+
+.requestedTotal strong {
+    margin-top: 4px;
+    color: #102a4c;
+    font-size: 30px;
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+.requestedTotal small {
+    margin-top: 7px;
+    color: #059669;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.reviewSection {
+    padding: 28px 38px;
+}
+
+.reviewSection+.reviewSection {
+    border-top: 1px solid #edf1f5;
+}
+
+.reviewSection h3 {
+    margin: 0 0 17px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e7ecf2;
+    color: #7188a5;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.fourColumn {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px;
+    margin: 0;
+}
+
+.fourColumn>div {
+    min-width: 0;
+}
+
+.fourColumn dt {
+    color: #71849c;
+    font-size: 11px;
+}
+
+.fourColumn dd {
+    margin: 5px 0 0;
+    overflow-wrap: anywhere;
+    color: #10213a;
+    font-size: 15px;
+    font-weight: 750;
+    line-height: 1.5;
+}
+
+.fourColumn>div>small {
+    display: block;
+    margin-top: 4px;
+    color: #8a9aaf;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.staffValue {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.staffValue span {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    place-items: center;
+    border-radius: 50%;
+    color: #1d4ed8;
+    background: #dbeafe;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.emphasizedAmount {
+    font-size: 18px !important;
+}
+
+.complianceList {
+    display: grid;
+}
+
+.complianceList>div {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 11px;
+    align-items: center;
+    padding: 12px 0;
+}
+
+.complianceList>div+div {
+    border-top: 1px solid #edf1f5;
+}
+
+.documentIcon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 50%;
+    color: #2563eb;
+    background: #eff6ff;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.fileIcon {
+    color: #ef4444;
+    background: #fff1f2;
+}
+
+.complianceList small,
+.complianceList a,
+.complianceList strong {
+    display: block;
+}
+
+.complianceList small {
+    color: #8091a7;
+    font-size: 10px;
+}
+
+.complianceList a,
+.complianceList>div>div>strong {
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+    color: #1d5dcc;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.complianceList>div>div>strong {
+    color: #10213a;
+}
+
+.linkedBadge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #1d5dcc;
+    background: #eff6ff;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.complianceList button {
+    min-height: 32px;
+    padding: 6px 12px;
+    border: 1px solid #c8d5e5;
+    border-radius: 7px;
+    color: #173a64;
+    background: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 38px;
+    border-top: 1px solid #e2e8f0;
+    background: #f7f9fc;
+}
+
+.primaryButton,
+.secondaryButton {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 17px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.primaryButton {
+    border: 1px solid #173a64;
+    color: #fff;
+    background: #173a64;
+}
+
+.primaryButton:hover:not(:disabled) {
+    background: #102e52;
+}
+
+.primaryButton:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.secondaryButton {
+    border: 1px solid #c8d5e5;
+    color: #173a64;
+    background: #fff;
+}
+
+@media (max-width: 720px) {
+
+    .pageHeader,
+    .hero {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .readyBadge {
+        align-self: flex-start;
+    }
+
+    .requestedTotal {
+        justify-items: start;
+        text-align: left;
+    }
+
+    .fourColumn {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hero,
+    .reviewSection,
+    .actions {
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+
+    .actions {
+        flex-direction: column-reverse;
+    }
+
+    .primaryButton,
+    .secondaryButton {
+        width: 100%;
+    }
+}
+
+@media (max-width: 500px) {
+    .fourColumn {
+        grid-template-columns: 1fr;
+    }
+
+    .complianceList>div {
+        grid-template-columns: 30px minmax(0, 1fr);
+    }
+
+    .complianceList>div>button,
+    .linkedBadge {
+        grid-column: 2;
+        justify-self: start;
+    }
+}

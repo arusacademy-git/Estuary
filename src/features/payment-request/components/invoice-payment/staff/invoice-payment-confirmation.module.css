@@ -1,0 +1,429 @@
+.page {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+    padding: 4px 0 38px;
+    color: #172b4d;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 18px;
+    color: #71849c;
+    font-size: 11px;
+}
+
+.breadcrumb i {
+    color: #b7c2d0;
+    font-size: 17px;
+    font-style: normal;
+}
+
+.breadcrumb strong {
+    color: #173a64;
+    font-weight: 750;
+}
+
+.card {
+    overflow: hidden;
+    border: 1px solid #dbe3ee;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgb(15 23 42 / 5%);
+}
+
+.successHeader {
+    display: grid;
+    justify-items: center;
+    padding: 34px 28px 30px;
+    text-align: center;
+    background: #ffff;
+}
+
+.successIcon {
+    display: grid;
+    width: 54px;
+    height: 54px;
+    place-items: center;
+    margin-bottom: 14px;
+    border: 7px solid #dcfce7;
+    border-radius: 50%;
+    color: #059669;
+    background: #ecfdf5;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.successHeader h1 {
+    margin: 0;
+    color: #081b34;
+    font-size: clamp(23px, 3vw, 30px);
+    letter-spacing: -.035em;
+}
+
+.referenceRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.referenceBox {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 7px 5px 11px;
+    border: 1px solid #dbe3ee;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.referenceBox small {
+    color: #8191a6;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+}
+
+.referenceBox strong {
+    color: #102a4c;
+    font-size: 16px;
+}
+
+.referenceBox button {
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 5px;
+    color: #31577f;
+    background: #edf2f7;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.statusBadge {
+    display: inline-flex;
+    min-height: 29px;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    color: #9a5a00;
+    background: #fffbeb;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.statusBadge i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+}
+
+.successHeader>p {
+    max-width: 560px;
+    margin: 14px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.summarySection,
+.workflowSection {
+    padding: 28px 38px;
+    border-top: 1px solid #edf1f5;
+}
+
+.summarySection h2,
+.workflowSection h2 {
+    margin: 0 0 20px;
+    color: #607995;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 25px;
+    margin: 0;
+}
+
+.summaryGrid>div {
+    min-width: 0;
+}
+
+.summaryGrid dt {
+    color: #71849c;
+    font-size: 11px;
+}
+
+.summaryGrid dd {
+    margin: 5px 0 0;
+    overflow-wrap: anywhere;
+    color: #10213a;
+    font-size: 14px;
+    font-weight: 750;
+}
+
+.summaryGrid .amount {
+    color: #102a4c;
+    font-size: 20px;
+}
+
+.summaryGrid small {
+    display: block;
+    margin-top: 4px;
+    color: #8091a7;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.workflowSection {
+    padding-bottom: 34px;
+}
+
+.workflow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.workflowStep {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    min-width: 0;
+    padding: 0 8px;
+    text-align: center;
+}
+
+.workflowStep::before {
+    position: absolute;
+    z-index: 0;
+    top: 15px;
+    right: 50%;
+    left: -50%;
+    height: 2px;
+    background: #e2e8f0;
+    content: '';
+}
+
+.workflowStep:first-child::before {
+    display: none;
+}
+
+.workflowStep>span {
+    z-index: 1;
+    display: grid;
+    width: 31px;
+    height: 31px;
+    place-items: center;
+    border-radius: 50%;
+    color: #8ea0b4;
+    background: #edf2f7;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.workflowStep strong {
+    margin-top: 11px;
+    color: #8a9aaf;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.workflowStep small {
+    margin-top: 4px;
+    color: #a0adbc;
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.workflowStep.complete::before,
+.workflowStep.active::before {
+    background: #a7f3d0;
+}
+
+.workflowStep.complete>span {
+    color: #fff;
+    background: #10b981;
+}
+
+.workflowStep.complete strong {
+    color: #10213a;
+}
+
+.workflowStep.active>span {
+    color: #fff;
+    background: #173a64;
+}
+
+.workflowStep.active strong {
+    color: #10213a;
+}
+
+.workflowStep.active small {
+    color: #b45309;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 20px 38px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.actions>div {
+    display: flex;
+    gap: 10px;
+}
+
+
+.secondaryButton,
+.primaryButton {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 750;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+.secondaryButton {
+    border: 1px solid #c8d5e5;
+    color: #173a64;
+    background: #fff;
+}
+
+.primaryButton {
+    border: 1px solid #173a64;
+    color: #fff;
+    background: #173a64;
+}
+
+.primaryButton:hover {
+    background: #102e52;
+}
+
+.note {
+    margin: 18px 0 0;
+    color: #7b8da3;
+    font-size: 11px;
+    text-align: center;
+}
+
+@media (max-width: 800px) {
+    .summaryGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workflow {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .workflowStep {
+        grid-template-columns: 34px minmax(0, 1fr);
+        justify-items: start;
+        padding: 0;
+        text-align: left;
+    }
+
+    .workflowStep::before {
+        top: -15px;
+        right: auto;
+        bottom: 30px;
+        left: 15px;
+        width: 2px;
+        height: auto;
+    }
+
+    .workflowStep>span {
+        grid-row: 1 / span 2;
+    }
+
+    .workflowStep strong {
+        margin-top: 1px;
+    }
+
+    .workflowStep small {
+        grid-column: 2;
+    }
+
+    .actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .actions>div {
+        flex-direction: column;
+    }
+
+    .printButton,
+    .secondaryButton,
+    .primaryButton {
+        width: 100%;
+    }
+
+    .printButton {
+        padding-left: 14px;
+    }
+}
+
+@media (max-width: 520px) {
+
+    .summarySection,
+    .workflowSection,
+    .actions {
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+
+    .summaryGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .referenceRow {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+@media print {
+
+    .breadcrumb,
+    .actions,
+    .note {
+        display: none;
+    }
+
+    .page {
+        padding: 0;
+    }
+
+    .card {
+        border: 0;
+        box-shadow: none;
+    }
+}
