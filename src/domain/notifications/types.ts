@@ -1,0 +1,68 @@
+export type NotificationType =
+  | 'PAYMENT_VOUCHER_SUBMITTED'
+  | 'PAYMENT_VOUCHER_APPROVED'
+  | 'PAYMENT_VOUCHER_REJECTED'
+  | 'PAYMENT_RECEIPT_UPLOADED'
+  | 'PAYMENT_RECEIPT_VERIFIED'
+  | 'RECIPIENT_SIGNATURE_REQUIRED'
+  | 'PAYMENT_VOUCHER_COMPLETED'
+  | 'PAYMENT_VOUCHER_PDF_READY'
+  | 'SIGNED_PAYMENT_VOUCHER_UPLOADED'
+  | 'SIGNED_PAYMENT_VOUCHER_RETURNED'
+  | 'PAYMENT_VOUCHER_INACTIVE'
+  | 'INVOICE_PAYMENT_SUBMITTED'
+  | 'INVOICE_PAYMENT_MANAGER_APPROVED'
+  | 'INVOICE_PAYMENT_DIRECTOR_APPROVED'
+  | 'INVOICE_PAYMENT_RETURNED'
+  | 'INVOICE_PAYMENT_COMPLETED'
+  | 'TRAVEL_ALLOWANCE_SUBMITTED'
+  | 'TRAVEL_ALLOWANCE_MANAGER_APPROVED'
+  | 'TRAVEL_ALLOWANCE_DIRECTOR_APPROVED'
+  | 'TRAVEL_ALLOWANCE_RETURNED'
+  | 'TRAVEL_ALLOWANCE_COMPLETED'
+  | 'CASH_ADVANCE_SUBMITTED'
+  | 'CASH_ADVANCE_MANAGER_APPROVED'
+  | 'CASH_ADVANCE_DIRECTOR_APPROVED'
+  | 'CASH_ADVANCE_RETURNED'
+  | 'CASH_ADVANCE_PAID'
+  | 'CASH_ADVANCE_RECONCILIATION_SUBMITTED'
+  | 'CASH_ADVANCE_COMPLETED'
+  | 'CLAIM_SUBMITTED'
+  | 'CLAIM_MANAGER_APPROVED'
+  | 'CLAIM_DIRECTOR_FORWARDED'
+  | 'CLAIM_RETURNED'
+  | 'CLAIM_PAID'
+  | 'PETTY_CASH_SUBMITTED'
+  | 'PETTY_CASH_MANAGER_APPROVED'
+  | 'PETTY_CASH_DIRECTOR_APPROVED'
+  | 'PETTY_CASH_FINANCE_REVIEWED'
+  | 'PETTY_CASH_RETURNED'
+  | 'PETTY_CASH_FINANCE_VERIFIED'
+  | 'PETTY_CASH_PAID'
+  | 'GENERAL';
+
+export type NotificationEntityType =
+  | 'PAYMENT_VOUCHER'
+  | 'INVOICE_PAYMENT'
+  | 'EXPENSE_CLAIM'
+  | 'CASH_ADVANCE'
+  | 'TRAVEL_ALLOWANCE'
+  | 'PETTY_CASH';
+
+export type NotificationRecord = {
+  id: string;
+  recipientId: string;
+  actorId?: string;
+  type: NotificationType;
+  entityType: NotificationEntityType;
+  entityId: string;
+  referenceNumber: string;
+  title: string;
+  message: string;
+  href: string;
+  readAt?: string;
+  createdAt: string;
+};
+
+export type CreateNotificationInput = Omit<NotificationRecord, 'id' | 'readAt' | 'createdAt'>;
+export function isNotificationUnread(notification: NotificationRecord) { return !notification.readAt; }
