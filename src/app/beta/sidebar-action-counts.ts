@@ -72,6 +72,11 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
         && !record.claimManagerPreviewed
         && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
     }
+    if (record.paymentType === 'PETTY_CASH') {
+      return record.approverIds.includes(account.id)
+        && !record.claimManagerPreviewed
+        && !['DRAFT', 'RETURNED_TO_STAFF'].includes(record.status);
+    }
     return ['PENDING_MANAGER_APPROVAL', 'PENDING_MANAGER_REVIEW'].includes(record.status)
       && record.currentAssigneeId === account.id;
   }
@@ -81,6 +86,11 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
       return record.approverIds.includes(account.id)
         && !record.claimDirectorPreviewed
         && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
+    }
+    if (record.paymentType === 'PETTY_CASH') {
+      return record.approverIds.includes(account.id)
+        && !record.claimDirectorPreviewed
+        && !['DRAFT', 'RETURNED_TO_STAFF'].includes(record.status);
     }
     return ['PENDING_DIRECTOR_APPROVAL', 'PENDING_DIRECTOR_REVIEW'].includes(record.status)
       && record.currentAssigneeId === account.id;

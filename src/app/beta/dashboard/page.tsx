@@ -146,7 +146,7 @@ function typeHref(type: DashboardType, role: BetaRole) {
   if (type === 'EXPENSE_CLAIM') return role === 'manager' ? '/beta/project-manager/payment-requests/claims' : role === 'director' ? '/beta/director/payment-requests/claims' : role === 'finance' ? '/beta/finance/payment-requests/claims' : '/beta/payment-records/claims';
   const segment = type === 'INVOICE_PAYMENT' ? 'invoice-payments' : type === 'TRAVEL_ALLOWANCE' ? 'travel-allowances' : type === 'CASH_ADVANCE' ? 'cash-advance' : 'petty-cash';
   if (role === 'manager') return `/beta/project-manager/payment-requests/${segment}`;
-  if (role === 'director') return type === 'PETTY_CASH' ? '/beta/payment-records/petty-cash' : `/beta/director/payment-requests/${segment}`;
+  if (role === 'director') return `/beta/director/payment-requests/${segment}`;
   if (role === 'finance') return type === 'PETTY_CASH' ? '/beta/finance/payment-requests/petty-cash' : `/beta/finance/payment-requests/${segment}`;
   const staffRecords: Record<Exclude<DashboardType, 'PAYMENT_VOUCHER' | 'EXPENSE_CLAIM'>, string> = {
     INVOICE_PAYMENT: '/beta/payment-records/invoice-payments',
@@ -165,9 +165,13 @@ function needsAction(record: DashboardRecord, role: BetaRole, userId: string) {
     ? record.status === 'APPROVED_FOR_PAYMENT' && !record.managerViewed
     : record.type === 'EXPENSE_CLAIM'
       ? !record.claimManagerPreviewed && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
+      : record.type === 'PETTY_CASH'
+        ? !record.claimManagerPreviewed && !['DRAFT', 'RETURNED_TO_STAFF'].includes(record.status)
       : ['PENDING_MANAGER_APPROVAL', 'PENDING_MANAGER_REVIEW'].includes(record.status);
   if (role === 'director') return record.type === 'EXPENSE_CLAIM'
     ? !record.claimDirectorPreviewed && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
+    : record.type === 'PETTY_CASH'
+      ? !record.claimDirectorPreviewed && !['DRAFT', 'RETURNED_TO_STAFF'].includes(record.status)
     : ['PENDING_DIRECTOR_APPROVAL', 'PENDING_DIRECTOR_REVIEW'].includes(record.status);
   if (record.status === 'PENDING_FINANCE_REVIEW') return record.currentAssigneeId === userId;
   return ['APPROVED_FOR_PAYMENT', 'FINANCE_PROCESSING', 'PENDING_FINANCE_VERIFICATION', 'PENDING_FINANCE_PAYMENT', 'PENDING_FINANCE_PROCESSING', 'PENDING_FINANCE_RECONCILIATION', 'FINANCE_VERIFIED', 'APPROVED_PENDING_PAYMENT', 'PENDING_PAYMENT', 'RECON_PENDING_CHILD_CLOSURE'].includes(record.status);
