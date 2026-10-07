@@ -1,3 +1,4 @@
+/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import {
   ActorType,
   PaymentType,
@@ -102,7 +103,6 @@ function mapCashAdvance(record: StoredCashAdvance): CashAdvanceRecord {
     ['RETURN_BY_MANAGER', 'RETURN_BY_DIRECTOR', 'RETURN_BY_FINANCE', 'RETURN_RECONCILIATION'].includes(item.action_code),
   );
   const returnedMetadata = returned?.metadata_json;
-  const financeMetadata = financePayment?.metadata_json;
   const detail = record.ca_detail;
 
   return {
