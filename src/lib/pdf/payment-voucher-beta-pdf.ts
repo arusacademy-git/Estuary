@@ -6,7 +6,8 @@ export type PaymentVoucherPdfInput = {
 };
 
 export async function generatePaymentVoucherBetaPdf(
-  _input: PaymentVoucherPdfInput
+  input: PaymentVoucherPdfInput
 ): Promise<Uint8Array> {
+  void input;
   throw new Error('Implement with React-PDF or Puppeteer after the PV template is approved.');
 }
