@@ -12,7 +12,8 @@ export interface PaymentVoucherNotificationService {
 export class SesPaymentVoucherNotificationService
   implements PaymentVoucherNotificationService
 {
-  async queue(_notification: PaymentVoucherNotification): Promise<void> {
+  async queue(notification: PaymentVoucherNotification): Promise<void> {
+    void notification;
     throw new Error('Connect this service to the existing AWS SES configuration.');
   }
 }

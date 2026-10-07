@@ -17,7 +17,7 @@ export interface PaymentVoucherStorage {
 }
 
 export class S3PaymentVoucherStorage implements PaymentVoucherStorage {
-  async upload(_input: {
+  async upload(input: {
     organizationId: string;
     voucherId: string;
     kind: PaymentVoucherFileKind;
@@ -25,6 +25,7 @@ export class S3PaymentVoucherStorage implements PaymentVoucherStorage {
     contentType: string;
     body: Uint8Array;
   }): Promise<{ storageKey: string }> {
+    void input;
     throw new Error('Connect this service to the existing AWS S3 configuration.');
   }
 }
