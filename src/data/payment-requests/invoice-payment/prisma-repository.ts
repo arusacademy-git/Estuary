@@ -1,3 +1,4 @@
+/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import { ActorType, PaymentMode, PaymentType, Prisma, StateGroup } from '@prisma/client';
 
 import type { CreateInvoicePaymentRequestInput, InvoicePaymentRequestRecord, PaymentRequestStatus } from '@/domain/payment-requests/invoice-payment/types';

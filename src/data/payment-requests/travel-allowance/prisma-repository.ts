@@ -1,3 +1,4 @@
+/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import {
   ActorType,
   PaymentType,
