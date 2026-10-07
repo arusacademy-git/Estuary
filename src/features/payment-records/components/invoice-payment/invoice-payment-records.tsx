@@ -40,8 +40,8 @@ function needsAttention(record: InvoicePaymentRequestRecord, account: BetaAccoun
 export function InvoicePaymentRecords() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [checked, setChecked] = useState(() => !account);
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [status, setStatus] = useState('ALL');
   const [month, setMonth] = useState('');
@@ -50,7 +50,14 @@ export function InvoicePaymentRecords() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC');
 
-  useEffect(() => { const session = readBetaSession(); setAccount(session); if (!session) { setChecked(true); return; } fetchInvoicePayments({ role: session.role, userId: session.id, includeAll: true }).then(setRecords).finally(() => setChecked(true)); }, []);
+  useEffect(() => {
+    if (!account) return;
+    let cancelled = false;
+    fetchInvoicePayments({ role: account.role, userId: account.id, includeAll: true })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
   const visible = useMemo(() => account ? (personalOnly ? records.filter((record) => record.staffId === account.id) : visibleFor(records, account)) : [], [account, personalOnly, records]);
   const attentionCount = account ? visible.filter((record) => needsAttention(record, account)).length : 0;
   const completedCount = visible.filter((record) => record.status === 'COMPLETED').length;

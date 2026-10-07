@@ -78,12 +78,25 @@ export function PettyCashOverview({ role }: { role: 'director' | 'finance' }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setLoading(true); setError('');
+    let cancelled = false;
     fetchPettyCashLedger({ organizationId: 'beta-arus-org', month, location: location || undefined })
-      .then(setSummaries)
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Ledger could not be loaded.'))
-      .finally(() => setLoading(false));
+      .then((values) => { if (!cancelled) setSummaries(values); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Ledger could not be loaded.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [location, month]);
+
+  function changeMonth(value: string) {
+    setLoading(true);
+    setError('');
+    setMonth(value);
+  }
+
+  function changeLocation(value: PettyCashLocation | '') {
+    setLoading(true);
+    setError('');
+    setLocation(value);
+  }
 
   const totals = useMemo(() => summaries.reduce((value, summary) => ({ moneyIn: value.moneyIn + summary.moneyIn, moneyOut: value.moneyOut + summary.moneyOut, balance: value.balance + summary.balance }), { moneyIn: 0, moneyOut: 0, balance: 0 }), [summaries]);
   const transactions = useMemo(() => {
@@ -98,7 +111,7 @@ export function PettyCashOverview({ role }: { role: 'director' | 'finance' }) {
 
     <section className={styles.managerSummary}><article><span>Total money in</span><strong className={styles.moneyIn}>{money(totals.moneyIn)}</strong><small>Opening balance plus monthly allocation</small></article><article><span>Total money out</span><strong className={styles.moneyOut}>{money(totals.moneyOut)}</strong><small>Paid Petty Cash requests</small></article><article><span>Available balance</span><strong>{money(totals.balance)}</strong><small>Across the selected locations</small></article></section>
 
-    <PettyCashUsageChart summaries={summaries} month={month} location={location} loading={loading} error={error} onMonthChange={setMonth} onLocationChange={setLocation} />
+    <PettyCashUsageChart summaries={summaries} month={month} location={location} loading={loading} error={error} onMonthChange={changeMonth} onLocationChange={changeLocation} />
 
     <section className={styles.managerQueuePanel}>
       <div className={styles.managerQueueHeader}><div><h2>Petty Cash ledger</h2><p>Every monthly allocation and paid request is shown in this table.</p></div><label className={styles.managerSearch}><span>Search</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference or notes" /></label></div>

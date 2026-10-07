@@ -668,6 +668,12 @@ export function BulkManualEntryPanel({
     setFormMessage,
   ] = useState('');
 
+  const activeExpandedRowId =
+    expandedRowId === null ||
+    rows.some((row) => row.rowId === expandedRowId)
+      ? expandedRowId
+      : rows[0]?.rowId ?? null;
+
   const validations = useMemo(
     () =>
       validateBulkPaymentVoucherRows(
@@ -712,21 +718,6 @@ export function BulkManualEntryPanel({
       ),
     [rows],
   );
-
-  useEffect(() => {
-    if (
-      expandedRowId &&
-      !rows.some(
-        (row) =>
-          row.rowId ===
-          expandedRowId,
-      )
-    ) {
-      setExpandedRowId(
-        rows[0]?.rowId ?? null,
-      );
-    }
-  }, [expandedRowId, rows]);
 
   useEffect(() => {
     if (
@@ -1084,7 +1075,7 @@ export function BulkManualEntryPanel({
               styles.secondaryButton
             }
             disabled={
-              expandedRowId === null
+              activeExpandedRowId === null
             }
             onClick={() =>
               setExpandedRowId(null)
@@ -1112,7 +1103,7 @@ export function BulkManualEntryPanel({
               );
 
             const isExpanded =
-              expandedRowId ===
+              activeExpandedRowId ===
               row.rowId;
 
             const isValid =

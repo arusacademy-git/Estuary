@@ -26,25 +26,22 @@ function statusLabel(status: TravelAllowanceRecord['status']) {
 }
 
 export function TravelAllowanceManagerQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<TravelAllowanceRecord[]>([]);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account || account.role !== 'manager');
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const session = readBetaSession();
-    setAccount(session);
-    if (!session || session.role !== 'manager') {
-      setChecked(true);
-      return;
-    }
-    fetchTravelAllowances({ role: 'manager', userId: session.id })
-      .then(setRecords)
-      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'))
-      .finally(() => setChecked(true));
-  }, []);
+    if (!account || account.role !== 'manager') return;
+    let cancelled = false;
+    fetchTravelAllowances({ role: 'manager', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .catch((caught: unknown) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const activeCount = records.filter((record) => record.status === 'PENDING_MANAGER_REVIEW').length;
   const forwardedCount = records.filter((record) =>

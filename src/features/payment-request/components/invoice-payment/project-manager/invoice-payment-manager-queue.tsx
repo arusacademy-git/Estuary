@@ -39,19 +39,21 @@ function statusLabel(status: InvoicePaymentRequestRecord['status']) {
 }
 
 export function InvoicePaymentManagerQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [sessionChecked, setSessionChecked] = useState(() => !account || account.role !== 'manager');
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDING');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    const currentAccount = readBetaSession();
-    setAccount(currentAccount);
-    if (!currentAccount || currentAccount.role !== 'manager') { setSessionChecked(true); return; }
-    fetchInvoicePayments({ role: 'manager', userId: currentAccount.id }).then(setRecords).finally(() => setSessionChecked(true));
-  }, []);
+    if (!account || account.role !== 'manager') return;
+    let cancelled = false;
+    fetchInvoicePayments({ role: 'manager', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .finally(() => { if (!cancelled) setSessionChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const assigned = useMemo(
     () =>

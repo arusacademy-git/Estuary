@@ -29,8 +29,8 @@ function needsAttention(record: PettyCashRecord, account: BetaAccount) { if (rec
 export function PettyCashRecords() {
   const query = useSearchParams();
   const personalOnly = query.get('scope') === 'mine';
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [checked, setChecked] = useState(() => !account);
   const [records, setRecords] = useState<PettyCashRecord[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'ALL' | PettyCashStatus>('ALL');
@@ -41,7 +41,19 @@ export function PettyCashRecords() {
   const [error, setError] = useState('');
   const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC');
 
-  useEffect(() => { const session = readBetaSession(); setAccount(session); if (!session) { setChecked(true); return; } fetchPettyCashRequests({ role: session.role, userId: session.id, includeAll: true }).then((items) => setRecords(personalOnly ? items.filter((item) => item.requesterId === session.id) : items)).catch((caught) => setError(caught instanceof Error ? caught.message : 'Petty Cash records could not be loaded.')).finally(() => setChecked(true)); }, [personalOnly]);
+  useEffect(() => {
+    if (!account) return;
+    let cancelled = false;
+    fetchPettyCashRequests({ role: account.role, userId: account.id, includeAll: true })
+      .then((items) => {
+        if (!cancelled) setRecords(personalOnly ? items.filter((item) => item.requesterId === account.id) : items);
+      })
+      .catch((caught) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Petty Cash records could not be loaded.');
+      })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account, personalOnly]);
 
   const visible = useMemo(() => records, [records]);
   const filtered = useMemo(() => { const term = search.trim().toLowerCase(); const matching = visible.filter((record) => { if (status !== 'ALL' && record.status !== status) return false; if (location !== 'ALL' && record.location !== location) return false; if (month && !record.requestDate.startsWith(month)) return false; if (specificDate && record.requestDate !== specificDate) return false; return !term || [record.requestNumber, record.requesterName, record.notes ?? '', ...record.lines.flatMap((line) => [line.supplier, line.details, line.accountType])].some((value) => value.toLowerCase().includes(term)); }); return sortPaymentRecords(matching, sort, (record) => ({ reference: record.requestNumber, updatedAt: record.updatedAt, amount: record.totalAmount })); }, [location, month, search, sort, specificDate, status, visible]);

@@ -47,7 +47,7 @@ const RECEIPT_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 const RECEIPT_MAX_SIZE = 10 * 1024 * 1024;
 
 export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {}) {
-  const [account, setAccount] = useState<ReturnType<typeof readBetaSession>>(null);
+  const [account] = useState<ReturnType<typeof readBetaSession>>(() => readBetaSession());
   const [context, setContext] = useState<ClaimPolicyContext>({ medicalUsedThisYear: 0 });
   const [loadingPolicy, setLoadingPolicy] = useState(false);
   const [claimType, setClaimType] = useState<ClaimType>(initialRecord?.claimType ?? 'EXPENSE');
@@ -59,14 +59,12 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
   const [lines, setLines] = useState<ClaimLine[]>(initialRecord?.lines?.length ? initialRecord.lines : [makeLine()]);
   const [receiptFiles, setReceiptFiles] = useState<Record<string, File>>({});
   const [entryMode, setEntryMode] = useState<'MANUAL' | 'GOOGLE_SHEET'>('MANUAL');
-  const [sheetMessage, setSheetMessage] = useState('');
   const [notes, setNotes] = useState(initialRecord?.notes ?? '');
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<ClaimRecord | null>(null);
 
-  useEffect(() => { setAccount(readBetaSession()); }, []);
   useEffect(() => {
     if (!account) return;
     let cancelled = false;
@@ -230,7 +228,6 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
     /> : <CorrectionEditLayout remarks={initialRecord ? initialRecord.returnRemarks ?? 'Update the request and resubmit it for approval.' : undefined}>
       <form className={styles.claimForm} onSubmit={submit}>
         {error && <div className={styles.error} role="alert">{error}</div>}
-        {sheetMessage && <div className={styles.success} role="status">{sheetMessage}</div>}
 
         <article className={styles.sheet}>
           <header className={styles.documentBar}><div><strong>Official {type.label} sheet</strong><span>Reference assigned after submission</span></div></header>

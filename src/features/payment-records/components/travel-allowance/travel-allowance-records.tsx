@@ -50,8 +50,8 @@ function needsAttention(record: TravelAllowanceRecord, account: BetaAccount) {
 export function TravelAllowanceRecords() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [checked, setChecked] = useState(() => !account);
   const [records, setRecords] = useState<TravelAllowanceRecord[]>([]);
   const [status, setStatus] = useState<'ALL' | TravelAllowanceStatus>('ALL');
   const [month, setMonth] = useState('');
@@ -62,22 +62,31 @@ export function TravelAllowanceRecords() {
   const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC');
 
   useEffect(() => {
-    const session = readBetaSession();
-    setAccount(session);
-    if (!session) {
-      setChecked(true);
-      return;
-    }
+    if (!account) return;
 
-    fetchTravelAllowances({ role: session.role, userId: session.id, includeAll: true })
-      .then(setRecords)
-      .catch((caught: unknown) => setError(
-        caught instanceof Error
-          ? caught.message
-          : 'Travel Allowance records could not be loaded.',
-      ))
-      .finally(() => setChecked(true));
-  }, []);
+    let cancelled = false;
+
+    fetchTravelAllowances({ role: account.role, userId: account.id, includeAll: true })
+      .then((values) => {
+        if (!cancelled) setRecords(values);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : 'Travel Allowance records could not be loaded.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChecked(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [account]);
 
   const visible = useMemo(() => account ? records.filter((record) => personalOnly ? record.requesterId === account.id : canView(record, account)) : [], [account, personalOnly, records]);
   const filtered = useMemo(() => {

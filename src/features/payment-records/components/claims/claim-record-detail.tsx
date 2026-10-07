@@ -11,8 +11,20 @@ import styles from '@/features/payment-request/components/claims/claims.module.c
 
 function visible(record: ClaimRecord, account: BetaAccount) { if (account.role === 'staff') return record.requesterId === account.id; if (account.role === 'manager') return record.requesterId === account.id || record.managerApproverId === account.id; if (account.role === 'director') return record.requesterId === account.id || record.directorApproverId === account.id; return true; }
 export function ClaimRecordDetail({ requestId }: { requestId: string }) {
-    const [account, setAccount] = useState<BetaAccount | null>(null); const [record, setRecord] = useState<ClaimRecord | null>(null); const [checked, setChecked] = useState(false); const [error, setError] = useState('');
-    useEffect(() => { const session = readBetaSession(); setAccount(session); fetchClaimRequest(requestId).then((value) => { if (!session || !visible(value, session)) throw new Error('You do not have access to this Claim.'); setRecord(value); }).catch((caught) => setError(caught instanceof Error ? caught.message : 'The Claim could not be loaded.')).finally(() => setChecked(true)); }, [requestId]);
+    const [account] = useState<BetaAccount | null>(() => readBetaSession()); const [record, setRecord] = useState<ClaimRecord | null>(null); const [checked, setChecked] = useState(() => !account); const [error, setError] = useState(() => account ? '' : 'Sign in to view this Claim.');
+    useEffect(() => {
+      if (!account) return;
+      let cancelled = false;
+      fetchClaimRequest(requestId).then((value) => {
+        if (!visible(value, account)) throw new Error('You do not have access to this Claim.');
+        if (!cancelled) setRecord(value);
+      }).catch((caught) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'The Claim could not be loaded.');
+      }).finally(() => {
+        if (!cancelled) setChecked(true);
+      });
+      return () => { cancelled = true; };
+    }, [account, requestId]);
     if (!checked) return <State title="Loading Claim" copy="Reading the Claim record…" />; if (!account || !record) return <State title="Claim unavailable" copy={error || 'The Claim could not be found.'} />;
     const returnedBy = record.returnedById ? getBetaAccount(record.returnedById)?.name ?? record.returnedById : 'Approver';
     const returnedRole = record.returnedFromStage === 'FINANCE' ? 'Finance' : record.returnedFromStage === 'DIRECTOR' ? 'Director' : 'Manager';

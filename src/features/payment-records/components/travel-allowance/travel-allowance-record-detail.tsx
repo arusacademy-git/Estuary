@@ -61,29 +61,35 @@ export function TravelAllowanceRecordDetail({
 }: {
   requestId: string;
 }) {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account);
   const [error, setError] = useState("");
   useEffect(() => {
-    const session = readBetaSession();
-    setAccount(session);
-    if (!session) {
-      setChecked(true);
-      return;
-    }
+    if (!account) return;
+
+    let cancelled = false;
 
     fetchTravelAllowance(requestId)
-      .then(setRecord)
+      .then((value) => {
+        if (!cancelled) setRecord(value);
+      })
       .catch((caught: unknown) =>
+        !cancelled &&
         setError(
           caught instanceof Error
             ? caught.message
             : "The record could not be loaded.",
         ),
       )
-      .finally(() => setChecked(true));
-  }, [requestId]);
+      .finally(() => {
+        if (!cancelled) setChecked(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [account, requestId]);
   if (!checked)
     return (
       <State

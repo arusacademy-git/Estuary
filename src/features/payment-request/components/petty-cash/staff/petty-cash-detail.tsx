@@ -14,11 +14,19 @@ function date(value?: string) { if (!value) return 'Not recorded'; const parsed 
 function canView(record: PettyCashRecord, account: BetaAccount) { if (record.requesterId === account.id) return true; if (account.role === 'manager') return record.managerApproverId === account.id || record.financeReviewerId === account.id; if (account.role === 'director') return record.directorApproverId === account.id || record.financeReviewerId === account.id; return account.role === 'finance'; }
 
 export function PettyCashDetail({ requestId }: { requestId: string }) {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [record, setRecord] = useState<PettyCashRecord | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account);
   const [error, setError] = useState('');
-  useEffect(() => { const session = readBetaSession(); setAccount(session); if (!session) { setChecked(true); return; } fetchPettyCashRequest(requestId).then(setRecord).catch((caught) => setError(caught instanceof Error ? caught.message : 'The request could not be loaded.')).finally(() => setChecked(true)); }, [requestId]);
+  useEffect(() => {
+    if (!account) return;
+    let cancelled = false;
+    fetchPettyCashRequest(requestId)
+      .then((value) => { if (!cancelled) setRecord(value); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'The request could not be loaded.'); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account, requestId]);
   if (!checked) return <State title="Loading Petty Cash request" copy="Reading the payment record…" />;
   if (!account) return <State title="Sign in required" copy="Sign in to view this Petty Cash request." />;
   if (!record) return <State title="Petty Cash request not found" copy={error || 'The request could not be found.'} />;
