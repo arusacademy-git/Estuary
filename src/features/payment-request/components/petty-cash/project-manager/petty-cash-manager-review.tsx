@@ -6,13 +6,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   approvePettyCashByManager,
   fetchPettyCashRequest,
-  returnPettyCashByManager,
 } from '@/data/payment-requests/petty-cash/api';
 import type { PettyCashRecord } from '@/domain/payment-requests/petty-cash/types';
-import { notifyPettyCashManagerApproved, notifyPettyCashReturned } from '@/features/payment-request/notifications/petty-cash-notifications';
+import { notifyPettyCashManagerApproved } from '@/features/payment-request/notifications/petty-cash-notifications';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
 
-import { PettyCashPdfForm } from '../petty-cash-pdf-form';
 import { PettyCashStatusBadge } from '../petty-cash-status-badge';
 import styles from '../petty-cash.module.css';
 
@@ -36,7 +34,6 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
   const [account, setAccount] = useState<BetaAccount | null>(null);
   const [record, setRecord] = useState<PettyCashRecord | null>(null);
   const [checked, setChecked] = useState(false);
-  const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
@@ -58,30 +55,9 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
       const updated = await approvePettyCashByManager(record.id, account.id);
       notifyPettyCashManagerApproved(updated, account);
       setRecord(updated);
-      setSuccess('The Petty Cash request was reviewed and forwarded to the Director.');
+      setSuccess('Your informational preview was recorded. Finance processing continues independently.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Request could not be approved.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function returnRequest() {
-    if (!account || account.role !== 'manager' || !record) return;
-    if (remarks.trim().length < 3) {
-      setError('Enter correction remarks before returning the request.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    setSuccess('');
-    try {
-      const updated = await returnPettyCashByManager(record.id, account.id, remarks.trim());
-      notifyPettyCashReturned(updated, account, 'Manager');
-      setRecord(updated);
-      setSuccess('');
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Request could not be returned.');
     } finally {
       setSaving(false);
     }
@@ -90,9 +66,9 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
   if (!checked) return <StatePage title="Loading request" copy="Reading the Petty Cash details…" />;
   if (!account || account.role !== 'manager') return <StatePage title="Manager access required" copy="This page is available only to a Manager." />;
   if (!record) return <StatePage title="Petty Cash request not found" copy={error || 'The request could not be found.'} />;
-  if (record.managerApproverId !== account.id) return <StatePage title="Request assigned to another Manager" copy="You cannot review this Petty Cash request." />;
+  if (record.managerApproverId !== account.id && record.financeReviewerId !== account.id) return <StatePage title="Request assigned to another Manager" copy="You cannot preview this Petty Cash request." />;
 
-  const actionable = record.status === 'PENDING_MANAGER_APPROVAL';
+  const actionable = !record.managerApprovedAt && record.status !== 'RETURNED_TO_STAFF';
 
   return <main className={styles.managerReviewPage}>
     <div className={styles.managerBackRow}><Link href="/beta/project-manager/payment-requests/petty-cash">← Back to Petty Cash requests</Link></div>
@@ -103,7 +79,7 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
       <div className={styles.detailMain}>
         <header className={styles.detailHero}>
           <div>
-            <div className={styles.managerReviewEyebrow}><p>Manager review</p><PettyCashStatusBadge status={record.status} /></div>
+            <div className={styles.managerReviewEyebrow}><p>Manager preview · informational</p><PettyCashStatusBadge status={record.status} /></div>
             <h1>{record.requestNumber}</h1>
             <span>{record.requesterName} · {location(record)}</span>
           </div>
@@ -121,10 +97,6 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
           </dl>
         </DetailSection>
 
-        <DetailSection title="Petty Cash Form">
-          <PettyCashPdfForm record={record} />
-        </DetailSection>
-
         <DetailSection title="Expense breakdown">
           <div className={styles.managerReviewTable}><table><thead><tr><th>#</th><th>Date</th><th>Supplier</th><th>Details / purpose</th><th>Account category</th><th>Division</th><th>Receipt</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{date(line.expenseDate)}</td><td>{line.supplier}</td><td>{line.details}</td><td>{line.accountType}</td><td>{line.division}</td><td>{line.proofLink ? <a href={line.proofLink} rel="noreferrer" target="_blank">Open proof ↗</a> : '—'}</td><td><strong>{money(line.amount)}</strong></td></tr>)}</tbody></table></div>
           <div className={styles.managerReviewTotal}><span>Total requested</span><strong>{money(record.totalAmount)}</strong></div>
@@ -138,17 +110,13 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
       <div className={styles.detailRail}>
         <aside className={styles.managerDecisionPanel}>
           <p>Manager action</p>
-          <h2>{actionable ? 'Review and approve' : record.status === 'RETURNED_TO_STAFF' ? 'Returned to Staff' : 'Approval recorded'}</h2>
+          <h2>{actionable ? 'Preview Petty Cash request' : 'Preview recorded'}</h2>
           {actionable ? <>
-            <span>Confirm that the expenses and receipt links are complete, or return the request with correction notes.</span>
-            <button className={styles.managerApproveButton} disabled={saving} onClick={approve} type="button">Review and send for Director preview <b aria-hidden="true">→</b></button>
-            <div className={styles.managerActionDivider}><span>or return with notes</span></div>
-            <label><span>Correction remarks</span><textarea rows={4} value={remarks} onChange={(event) => setRemarks(event.target.value)} placeholder="Explain what Staff must correct" /></label>
-            <button className={styles.managerReturnButton} disabled={saving || remarks.trim().length < 3} onClick={returnRequest} type="button">Return to Staff</button>
+            <span>Review the expenses and receipt links for visibility. Finance can process this request before or after your preview.</span>
+            <button className={styles.managerApproveButton} disabled={saving} onClick={approve} type="button">Record Manager preview <b aria-hidden="true">→</b></button>
           </> : <>
-            <span>This request is now: <strong>{record.status.replaceAll('_', ' ')}</strong>.</span>
-            {record.managerApprovedAt && <small>Approved {date(record.managerApprovedAt)}</small>}
-            {record.status === 'RETURNED_TO_STAFF' && record.returnRemarks && <div className={styles.managerReturnedReason}><strong>Return reason</strong><p>{record.returnRemarks}</p></div>}
+            <span>Finance processing is independent from this informational preview.</span>
+            {record.managerApprovedAt && <small>Previewed {date(record.managerApprovedAt)}</small>}
           </>}
         </aside>
         <WorkflowProgress record={record} managerName={account.name} />
@@ -158,31 +126,17 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
 }
 
 function WorkflowProgress({ record, managerName }: { record: PettyCashRecord; managerName: string }) {
-  const activeStep = record.status === 'PENDING_MANAGER_APPROVAL' || record.status === 'RETURNED_TO_STAFF'
-    ? 2
-    : record.status === 'PENDING_DIRECTOR_APPROVAL'
-      ? 3
-      : record.status === 'PENDING_FINANCE_PAYMENT' || record.status === 'FINANCE_VERIFIED'
-        ? 4
-        : 5;
+  const activeStep = record.status === 'PAID' ? 5 : record.status === 'FINANCE_VERIFIED' ? 5 : 4;
   const steps = [
-    { title: 'Request Submitted', copy: `Submitted by ${record.requesterName}` },
-    { title: 'Manager Review', copy: record.status === 'RETURNED_TO_STAFF' ? 'Returned to requester for correction' : `Reviewed by ${managerName}` },
-    { title: 'Director Preview', copy: record.directorApprovedAt ? 'Preview completed' : 'Waiting for Director preview' },
-    { title: 'Finance Processing', copy: record.status === 'FINANCE_VERIFIED' ? 'Payment details verified' : 'Finance verification and payment' },
-    { title: 'Completed', copy: 'Payment completed and ledger updated' },
+    { title: 'Request Submitted', copy: `Submitted by ${record.requesterName}`, state: 'complete' },
+    { title: 'Manager Preview', copy: record.managerApprovedAt ? `Previewed by ${managerName}` : 'Informational preview available', state: record.managerApprovedAt ? 'complete' : 'pending' },
+    { title: 'Director Preview', copy: record.directorApprovedAt ? 'Preview completed' : 'Informational preview available', state: record.directorApprovedAt ? 'complete' : 'pending' },
+    { title: 'Finance Processing', copy: record.status === 'FINANCE_VERIFIED' ? 'Payment details verified' : 'Finance verification and payment', state: record.financeVerifiedAt || record.status === 'PAID' ? 'complete' : record.status === 'RETURNED_TO_STAFF' ? 'returned' : 'active' },
+    { title: 'Completed', copy: 'Payment completed and ledger updated', state: record.status === 'PAID' ? 'complete' : record.status === 'FINANCE_VERIFIED' ? 'active' : 'pending' },
   ];
 
-  return <aside className={styles.progressPanel}><header><p>Payment progress</p><span>Step {activeStep} of 4</span></header><ol>{steps.map((step, index) => {
-    const number = index + 1;
-    const state = record.status === 'RETURNED_TO_STAFF' && number === 2
-      ? 'returned'
-      : number < activeStep || (record.status === 'PAID' && number === 5)
-        ? 'complete'
-        : number === activeStep
-          ? 'active'
-          : 'pending';
-    return <li className={styles.progressStep} data-state={state} key={step.title}><i aria-hidden="true">{state === 'complete' ? '✓' : ''}</i><div><strong>{step.title}</strong><small>{state === 'active' || state === 'returned' ? `Current stage: ${step.copy}` : step.copy}</small></div></li>;
+  return <aside className={styles.progressPanel}><header><p>Payment progress</p><span>Step {activeStep} of 5</span></header><ol>{steps.map((step) => {
+    return <li className={styles.progressStep} data-state={step.state} key={step.title}><i aria-hidden="true">{step.state === 'complete' ? '✓' : ''}</i><div><strong>{step.title}</strong><small>{step.state === 'active' || step.state === 'returned' ? `Current stage: ${step.copy}` : step.copy}</small></div></li>;
   })}</ol></aside>;
 }
 

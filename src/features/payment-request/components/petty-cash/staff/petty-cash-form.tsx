@@ -24,18 +24,13 @@ import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
 import { notifyPettyCashSubmitted } from '@/features/payment-request/notifications/petty-cash-notifications';
 import styles from '../petty-cash.module.css';
 import { PettyCashConfirmation } from './petty-cash-confirmation';
-import {
-  PettyCashGoogleSheet,
-  type PettyCashSheetData,
-} from './petty-cash-google-sheet';
 
 
 /* Types & helpers*/
 
 type Account = NonNullable<ReturnType<typeof readBetaSession>>;
 type Location = CreatePettyCashInput['location'];
-type FinanceReviewerRole = 'director' | 'finance' | '';
-type EntryMode = 'MANUAL' | 'GOOGLE_SHEET';
+type FinanceReviewerRole = 'manager' | 'director' | 'finance' | '';
 
 const ORGANIZATION_ID = 'beta-arus-org';
 
@@ -57,29 +52,7 @@ const isKnownOption = (options: readonly string[], value: string) =>
   options.some((option) => option === value);
 
 function getSubmitLabel(role?: Account['role']) {
-  switch (role) {
-    case 'staff':
-      return 'Submit to Manager';
-    case 'manager':
-      return 'Submit for Director preview';
-    case 'director':
-      return 'Submit to Finance';
-    default:
-      return 'Submit for independent review';
-  }
-}
-
-function getRoutingCopy(role?: Account['role']) {
-  switch (role) {
-    case 'staff':
-      return 'Choose the Manager reviewer and Director previewer.';
-    case 'manager':
-      return 'Choose the Director who will preview the request.';
-    case 'director':
-      return 'This request will go directly to Finance processing.';
-    default:
-      return 'Choose another authorized Finance user or a Director for independent review.';
-  }
+  return role === 'finance' ? 'Submit for Finance processing' : 'Submit to Finance';
 }
 
 interface RequestDraft {
@@ -114,7 +87,7 @@ function buildInput(draft: RequestDraft): CreatePettyCashInput {
     requesterContact: contact.trim(),
     requestDate,
     location,
-    managerApproverId: account.role === 'staff' ? managerId : account.id,
+    managerApproverId: account.role === 'staff' ? managerId : isFinance && financeReviewerRole === 'manager' ? financeReviewerId : account.id,
     directorApproverId: resolveDirectorId(draft),
     financeReviewerId: isFinance ? financeReviewerId : undefined,
     financeReviewerRole: isFinance && financeReviewerRole ? financeReviewerRole : undefined,
@@ -165,7 +138,7 @@ function RequestFields({
   const managers = betaAccounts.filter((item) => item.role === 'manager');
   const directors = betaAccounts.filter((item) => item.role === 'director');
   const financeReviewers = betaAccounts.filter(
-    (item) => item.role === 'director' || (item.role === 'finance' && item.id !== account?.id),
+    (item) => ['manager', 'director'].includes(item.role) || (item.role === 'finance' && item.id !== account?.id),
   );
 
   const reviewerValue = financeReviewerRole && financeReviewerId ? `${financeReviewerRole}:${financeReviewerId}` : '';
@@ -212,7 +185,7 @@ function RequestFields({
       )}
       {account?.role === 'finance' && (
         <label>
-          <span>Independent reviewer <em className={styles.requiredMarker}>*</em></span>
+          <span>Independent previewer <em className={styles.requiredMarker}>*</em></span>
           <select
             value={reviewerValue}
             onChange={(event) => {
@@ -220,10 +193,10 @@ function RequestFields({
               onFinanceReviewerChange((role as FinanceReviewerRole) || '', id || '');
             }}
           >
-            <option value="">Choose another Finance user or Director</option>
+            <option value="">Choose another Finance user, Manager or Director</option>
             {financeReviewers.map((item) => (
               <option key={item.id} value={`${item.role}:${item.id}`}>
-                {item.name} · {item.role === 'finance' ? 'Finance' : 'Director'}
+                {item.name} · {item.role === 'finance' ? 'Finance' : item.role === 'manager' ? 'Manager' : 'Director'}
               </option>
             ))}
           </select>
@@ -261,7 +234,7 @@ function ExpenseRow({ line, canRemove, onChange, onRemove }: ExpenseRowProps) {
         <select value={line.accountType} onChange={(e) => onChange(line.id, { accountType: e.target.value })}>
           <option value="">Choose account</option>
           {line.accountType && !isKnownOption(PETTY_CASH_ACCOUNT_TYPES, line.accountType) && (
-            <option value={line.accountType}>{line.accountType} (from Sheet)</option>
+            <option value={line.accountType}>{line.accountType} (saved value)</option>
           )}
           {PETTY_CASH_ACCOUNT_TYPES.map((item) => <option key={item}>{item}</option>)}
         </select>
@@ -270,7 +243,7 @@ function ExpenseRow({ line, canRemove, onChange, onRemove }: ExpenseRowProps) {
         <select value={line.division} onChange={(e) => onChange(line.id, { division: e.target.value })}>
           <option value="">Division</option>
           {line.division && !isKnownOption(DIVISION_TYPES, line.division) && (
-            <option value={line.division}>{line.division} (from Sheet)</option>
+            <option value={line.division}>{line.division} (saved value)</option>
           )}
           {DIVISION_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
@@ -314,8 +287,6 @@ export function PettyCashForm({ initialRecord }: { initialRecord?: PettyCashReco
   const [notes, setNotes] = useState(initialRecord?.notes ?? '');
   const [lines, setLines] = useState<PettyCashRequestLine[]>(initialRecord?.lines ?? [makeLine()]);
   const [confirmed, setConfirmed] = useState(false);
-  const [entryMode, setEntryMode] = useState<EntryMode>('MANUAL');
-  const [sheetImportMessage, setSheetImportMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<PettyCashRecord | null>(null);
@@ -387,19 +358,6 @@ export function PettyCashForm({ initialRecord }: { initialRecord?: PettyCashReco
     ...overrides,
   });
 
-  async function applyGoogleSheet(data: PettyCashSheetData) {
-    if (!account) return setError('Sign in before retrieving a Petty Cash sheet.');
-
-    const input = buildInput(
-      draftFor(account, {
-        requestDate: requestDate || data.requestDate,
-        contact: contact || data.contact,
-        lines: data.lines,
-      }),
-    );
-    await validateAndSubmit(account, input, 'Confirm that the retrieved request information and supporting links are correct.');
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!account) return setError('Sign in before submitting a Petty Cash request.');
@@ -444,57 +402,7 @@ export function PettyCashForm({ initialRecord }: { initialRecord?: PettyCashReco
         <strong>{initialRecord ? 'Correction' : 'Draft'}</strong>
       </header>
 
-      {!initialRecord && (
-        <div className={styles.entryModeTabs} role="group" aria-label="Petty Cash entry method">
-          <button data-active={entryMode === 'MANUAL'} type="button" onClick={() => setEntryMode('MANUAL')}>
-            Manual form
-          </button>
-          <button data-active={entryMode === 'GOOGLE_SHEET'} type="button" onClick={() => setEntryMode('GOOGLE_SHEET')}>
-            Google Sheet Link
-          </button>
-        </div>
-      )}
-
-      {sheetImportMessage && entryMode === 'MANUAL' && (
-        <div className={styles.sheetSuccess} role="status">{sheetImportMessage}</div>
-      )}
-
-      {entryMode === 'GOOGLE_SHEET' && !initialRecord ? (
-        <>
-          {error && <div className={styles.error} role="alert">{error}</div>}
-          <PettyCashGoogleSheet
-            routingCopy={getRoutingCopy(account?.role)}
-            submitLabel={submitLabel}
-            completionFields={
-              <>
-                <RequestFields {...requestFieldsProps} mark=" *" />
-                <label className={styles.sheetCompletionWide}>
-                  <span>Notes</span>
-                  <textarea
-                    rows={3}
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Optional context for Manager or Finance"
-                  />
-                </label>
-                <label className={`${styles.sheetCompletionWide} ${styles.sheetDeclaration}`}>
-                  <input checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />
-                  <span>I confirm that the retrieved request and supporting links are correct.</span>
-                </label>
-              </>
-            }
-            disabled={saving}
-            onCancel={() => setEntryMode('MANUAL')}
-            onApply={applyGoogleSheet}
-            onRetrieved={(data) => {
-              if (data.requestDate) setRequestDate(data.requestDate);
-              if (data.contact) setContact(data.contact);
-              setError('');
-            }}
-          />
-        </>
-      ) : (
-        <form className={`${styles.formCard} ${styles.formPage}`} onSubmit={submit}>
+      <form className={`${styles.formCard} ${styles.formPage}`} onSubmit={submit}>
           {error && <div className={styles.error} role="alert">{error}</div>}
 
           <section className={styles.formGuidance}>
@@ -602,8 +510,7 @@ export function PettyCashForm({ initialRecord }: { initialRecord?: PettyCashReco
               {saving ? 'Submitting…' : initialRecord ? 'Resubmit request' : submitLabel}
             </button>
           </section>
-        </form>
-      )}
+      </form>
     </main>
   );
 }
