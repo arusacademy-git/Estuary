@@ -21,7 +21,7 @@ export const pettyCashInputSchema = z.object({
   managerApproverId: z.string().trim(),
   directorApproverId: z.string().trim(),
   financeReviewerId: z.string().trim().optional(),
-  financeReviewerRole: z.enum(['director', 'finance']).optional(),
+  financeReviewerRole: z.enum(['manager', 'director', 'finance']).optional(),
   lines: z.array(z.object({
     id: z.string().trim().min(1),
     expenseDate: z.string().trim().min(1),
