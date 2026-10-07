@@ -52,18 +52,18 @@ export function PettyCashManagerQueue() {
 
   const assigned = useMemo(
     () => records
-      .filter((record) => record.managerApproverId === account?.id)
+      .filter((record) => record.managerApproverId === account?.id || record.financeReviewerId === account?.id)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
     [account, records],
   );
-  const pendingCount = assigned.filter((record) => record.status === 'PENDING_MANAGER_APPROVAL').length;
-  const forwardedCount = assigned.filter((record) => record.status !== 'PENDING_MANAGER_APPROVAL' && record.status !== 'RETURNED_TO_STAFF').length;
+  const pendingCount = assigned.filter((record) => !record.managerApprovedAt).length;
+  const forwardedCount = assigned.filter((record) => Boolean(record.managerApprovedAt)).length;
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return assigned.filter((record) => {
-      if (filter === 'PENDING' && record.status !== 'PENDING_MANAGER_APPROVAL') return false;
-      if (filter === 'FORWARDED' && (record.status === 'PENDING_MANAGER_APPROVAL' || record.status === 'RETURNED_TO_STAFF')) return false;
+      if (filter === 'PENDING' && record.managerApprovedAt) return false;
+      if (filter === 'FORWARDED' && !record.managerApprovedAt) return false;
       if (!term) return true;
       return [record.requestNumber, record.requesterName, location(record), record.notes ?? '', ...record.lines.flatMap((line) => [line.supplier, line.details])]
         .some((value) => value.toLowerCase().includes(term));
@@ -76,13 +76,13 @@ export function PettyCashManagerQueue() {
 
   return <main className={styles.managerPage}>
     <header className={styles.managerHeader}>
-      <div><p className={styles.eyebrow}>Manager workspace</p><h1>Petty Cash reviews</h1><p>Review and forward Staff requests to Finance for payment.</p></div>
+      <div><p className={styles.eyebrow}>Manager workspace</p><h1>Petty Cash previews</h1><p>Preview assigned requests while Finance processes them independently.</p></div>
       <div className={styles.managerAccountCard}><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></div>
     </header>
 
     <section className={styles.managerSummary}>
-      <article><span>Requires review</span><strong>{pendingCount}</strong><small>Waiting for your action</small></article>
-      <article><span>Forwarded</span><strong>{forwardedCount}</strong><small>Sent to Finance</small></article>
+      <article><span>Needs preview</span><strong>{pendingCount}</strong><small>Informational action</small></article>
+      <article><span>Previewed</span><strong>{forwardedCount}</strong><small>Your preview is recorded</small></article>
       <article><span>All assigned</span><strong>{assigned.length}</strong><small>Your Petty Cash requests</small></article>
     </section>
 
@@ -94,8 +94,8 @@ export function PettyCashManagerQueue() {
 
       <div className={styles.managerToolbar}>
         <div className={styles.managerTabs} role="group" aria-label="Petty Cash filters">
-          <button aria-pressed={filter === 'PENDING'} data-active={filter === 'PENDING'} type="button" onClick={() => setFilter('PENDING')}>Requires review <span>{pendingCount}</span></button>
-          <button aria-pressed={filter === 'FORWARDED'} data-active={filter === 'FORWARDED'} type="button" onClick={() => setFilter('FORWARDED')}>Forwarded <span>{forwardedCount}</span></button>
+          <button aria-pressed={filter === 'PENDING'} data-active={filter === 'PENDING'} type="button" onClick={() => setFilter('PENDING')}>Needs preview <span>{pendingCount}</span></button>
+          <button aria-pressed={filter === 'FORWARDED'} data-active={filter === 'FORWARDED'} type="button" onClick={() => setFilter('FORWARDED')}>Previewed <span>{forwardedCount}</span></button>
           <button aria-pressed={filter === 'ALL'} data-active={filter === 'ALL'} type="button" onClick={() => setFilter('ALL')}>All <span>{assigned.length}</span></button>
         </div>
         <div className={styles.managerViewToggle} role="group" aria-label="Choose queue view">
@@ -104,7 +104,7 @@ export function PettyCashManagerQueue() {
         </div>
       </div>
 
-      {error ? <div className={styles.error}>{error}</div> : visible.length === 0 ? <div className={styles.managerEmpty}><h2>No Petty Cash requests found</h2><p>There are no assigned requests matching this filter.</p></div> : viewMode === 'grid' ? <div className={styles.managerCardGrid}>{pagination.pageRecords.map((record) => <RequestCard key={record.id} record={record} />)}</div> : <div className={styles.managerTableWrapper}><table><thead><tr><th>Request</th><th>Staff</th><th>Location</th><th>Entries</th><th>Amount</th><th>Status</th><th><span className={styles.srOnly}>Action</span></th></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong><small>{date(record.requestDate)}</small></td><td>{record.requesterName}</td><td>{location(record)}</td><td>{record.lines.length}</td><td className={styles.managerAmount}>{money(record.totalAmount)}</td><td><PettyCashStatusBadge status={record.status} /></td><td className={styles.managerActionCell}><Link href={`/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`}>{record.status === 'PENDING_MANAGER_APPROVAL' ? 'Review request' : 'View details'}</Link></td></tr>)}</tbody></table></div>}
+      {error ? <div className={styles.error}>{error}</div> : visible.length === 0 ? <div className={styles.managerEmpty}><h2>No Petty Cash requests found</h2><p>There are no assigned requests matching this filter.</p></div> : viewMode === 'grid' ? <div className={styles.managerCardGrid}>{pagination.pageRecords.map((record) => <RequestCard key={record.id} record={record} />)}</div> : <div className={styles.managerTableWrapper}><table><thead><tr><th>Request</th><th>Staff</th><th>Location</th><th>Entries</th><th>Amount</th><th>Status</th><th><span className={styles.srOnly}>Action</span></th></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong><small>{date(record.requestDate)}</small></td><td>{record.requesterName}</td><td>{location(record)}</td><td>{record.lines.length}</td><td className={styles.managerAmount}>{money(record.totalAmount)}</td><td><PettyCashStatusBadge status={record.status} /></td><td className={styles.managerActionCell}><Link href={`/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`}>{record.managerApprovedAt ? 'View details' : 'Preview request'}</Link></td></tr>)}</tbody></table></div>}
 
       {!error && visible.length > 0 && <ListPagination currentPage={pagination.currentPage} firstRecord={pagination.firstRecord} lastRecord={pagination.lastRecord} pageCount={pagination.pageCount} pageSize={pagination.pageSize} totalRecords={pagination.totalRecords} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />}
     </section>
@@ -112,7 +112,7 @@ export function PettyCashManagerQueue() {
 }
 
 function RequestCard({ record }: { record: PettyCashRecord }) {
-  return <article className={styles.managerRequestCard}><div className={styles.managerCardTop}><span>{record.requestNumber}</span><PettyCashStatusBadge status={record.status} /></div><h2>{record.requesterName}</h2><p>{record.lines.length} expense {record.lines.length === 1 ? 'entry' : 'entries'}</p><dl><div><dt>Location</dt><dd>{location(record)}</dd></div><div><dt>Amount</dt><dd>{money(record.totalAmount)}</dd></div><div><dt>Request date</dt><dd>{date(record.requestDate)}</dd></div><div><dt>Updated</dt><dd>{date(record.updatedAt)}</dd></div></dl><Link href={`/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`}>{record.status === 'PENDING_MANAGER_APPROVAL' ? 'Review request' : 'View details'}</Link></article>;
+  return <article className={styles.managerRequestCard}><div className={styles.managerCardTop}><span>{record.requestNumber}</span><PettyCashStatusBadge status={record.status} /></div><h2>{record.requesterName}</h2><p>{record.lines.length} expense {record.lines.length === 1 ? 'entry' : 'entries'}</p><dl><div><dt>Location</dt><dd>{location(record)}</dd></div><div><dt>Amount</dt><dd>{money(record.totalAmount)}</dd></div><div><dt>Request date</dt><dd>{date(record.requestDate)}</dd></div><div><dt>Updated</dt><dd>{date(record.updatedAt)}</dd></div></dl><Link href={`/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`}>{record.managerApprovedAt ? 'View details' : 'Preview request'}</Link></article>;
 }
 
 function StatePage({ title, copy }: { title: string; copy: string }) {
