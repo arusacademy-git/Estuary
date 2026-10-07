@@ -10,8 +10,6 @@ import { CashAdvanceDetail as CashAdvanceReceipt } from '@/features/payment-requ
 import { PaymentPageState } from '@/shared/payment-page-state';
 import receiptStyles from '@/features/payment-request/components/cash-advance/cash-advance.module.css';
 
-import styles from './cash-advance-records.module.css';
-
 function canView(record: CashAdvanceRecord, account: BetaAccount) {
   if (record.requesterId === account.id) return true;
   if (account.role === 'staff') return record.requesterId === account.id;
@@ -22,20 +20,24 @@ function canView(record: CashAdvanceRecord, account: BetaAccount) {
 
 export function CashAdvancePaymentRecordDetail({ requestId }: { requestId: string }) {
   const [record, setRecord] = useState<CashAdvanceRecord | null>(null);
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [error, setError] = useState('');
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [error, setError] = useState(() => account ? '' : 'Sign in to view this Cash Advance record.');
 
   useEffect(() => {
-    const account = readBetaSession();
-    if (!account) { setError('Sign in to view this Cash Advance record.'); return; }
-    setAccount(account);
+    if (!account) return;
+    let cancelled = false;
+
     fetchCashAdvance(requestId)
       .then((result) => {
         if (!canView(result, account)) throw new Error('This Cash Advance is not available to your account.');
-        setRecord(result);
+        if (!cancelled) setRecord(result);
       })
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Cash Advance could not be loaded.'));
-  }, [requestId]);
+      .catch((caught) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Cash Advance could not be loaded.');
+      });
+
+    return () => { cancelled = true; };
+  }, [account, requestId]);
 
   if (error) return <PaymentPageState title="Cash Advance unavailable" copy={error} backHref="/beta/payment-records/cash-advances" backLabel="Back to Cash Advances" />;
   if (!record) return <PaymentPageState title="Loading Cash Advance" copy="Reading the payment record…" backHref="/beta/payment-records/cash-advances" backLabel="Back to Cash Advances" />;

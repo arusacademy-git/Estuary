@@ -35,10 +35,14 @@ function statusLabel(record: ClaimRecord) {
   return record.status.replaceAll('_', ' ');
 }
 
+function needsManagerPreview(record: ClaimRecord) {
+  return !record.managerApprovedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
+}
+
 export function ClaimManagerQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<ClaimRecord[]>([]);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account || account.role !== 'manager');
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
@@ -46,25 +50,21 @@ export function ClaimManagerQueue() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const current = readBetaSession();
-    setAccount(current);
-    if (!current || current.role !== 'manager') {
-      setChecked(true);
-      return;
-    }
-    fetchClaimRequests({ role: 'manager', userId: current.id })
-      .then(setRecords)
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Claims could not be loaded.'))
-      .finally(() => setChecked(true));
-  }, []);
+    if (!account || account.role !== 'manager') return;
+    let cancelled = false;
+    fetchClaimRequests({ role: 'manager', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Claims could not be loaded.'); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
-  const needsPreview = (record: ClaimRecord) => !record.managerApprovedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
-  const activeCount = records.filter(needsPreview).length;
+  const activeCount = records.filter(needsManagerPreview).length;
   const forwardedCount = records.filter((record) => Boolean(record.managerApprovedAt)).length;
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return records.filter((record) => {
-      if (filter === 'ACTIVE' && !needsPreview(record)) return false;
+      if (filter === 'ACTIVE' && !needsManagerPreview(record)) return false;
       if (filter === 'FORWARDED' && !record.managerApprovedAt) return false;
       if (claimType !== 'ALL' && record.claimType !== claimType) return false;
       return !term || [record.claimNumber, record.requesterName, claimTypeDetails(record.claimType).label]
@@ -129,7 +129,7 @@ export function ClaimManagerQueue() {
                 <div><dt>Items</dt><dd>{record.lines.length}</dd></div>
                 <div><dt>Amount</dt><dd>{money(record.totalAmount)}</dd></div>
               </dl>
-              <Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsPreview(record) ? 'Preview Claim' : 'View progress'}</Link>
+              <Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsManagerPreview(record) ? 'Preview Claim' : 'View progress'}</Link>
             </article>
           ))}</div>
         ) : (
@@ -143,7 +143,7 @@ export function ClaimManagerQueue() {
               <td>{record.lines.length}</td>
               <td><strong>{money(record.totalAmount)}</strong></td>
               <td><span className={styles.status} data-status={record.status}>{statusLabel(record)}</span></td>
-              <td><Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsPreview(record) ? 'Preview Claim' : 'View progress'}</Link></td>
+              <td><Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsManagerPreview(record) ? 'Preview Claim' : 'View progress'}</Link></td>
             </tr>)}</tbody>
           </table></div>
         )}

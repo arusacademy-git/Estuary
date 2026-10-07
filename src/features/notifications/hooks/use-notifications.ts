@@ -49,9 +49,17 @@ export function useNotifications(
   }, [recipientId]);
 
   useEffect(() => {
-    refresh();
+    const initialRefreshId = window.setTimeout(
+      refresh,
+      0,
+    );
+    const unsubscribe =
+      subscribeToNotifications(refresh);
 
-    return subscribeToNotifications(refresh);
+    return () => {
+      window.clearTimeout(initialRefreshId);
+      unsubscribe();
+    };
   }, [refresh]);
 
   const unreadCount = useMemo(() => {

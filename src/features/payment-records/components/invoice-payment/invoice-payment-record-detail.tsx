@@ -55,17 +55,19 @@ export function InvoicePaymentRecordDetail({
 }: {
   requestId: string;
 }) {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [record, setRecord] = useState<InvoicePaymentRequestRecord | null>(
     null,
   );
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account);
   useEffect(() => {
-    setAccount(readBetaSession());
+    if (!account) return;
+    let cancelled = false;
     fetchInvoicePayment(requestId)
-      .then(setRecord)
-      .finally(() => setChecked(true));
-  }, [requestId]);
+      .then((value) => { if (!cancelled) setRecord(value); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account, requestId]);
   if (!checked)
     return (
       <State

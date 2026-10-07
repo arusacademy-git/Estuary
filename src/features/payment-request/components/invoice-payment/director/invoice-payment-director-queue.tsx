@@ -19,18 +19,21 @@ function money(value: number) {
 }
 
 export function InvoicePaymentDirectorQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [checked, setChecked] = useState(() => !account || account.role !== 'director');
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDING');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    const session = readBetaSession(); setAccount(session);
-    if (!session || session.role !== 'director') { setChecked(true); return; }
-    fetchInvoicePayments({ role: 'director', userId: session.id }).then(setRecords).finally(() => setChecked(true));
-  }, []);
+    if (!account || account.role !== 'director') return;
+    let cancelled = false;
+    fetchInvoicePayments({ role: 'director', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const assigned = useMemo(
     () => records

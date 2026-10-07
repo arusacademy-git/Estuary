@@ -68,8 +68,8 @@ function needsAttention(record: CashAdvanceRecord, account: BetaAccount) {
 export function CashAdvanceRecords() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [checked, setChecked] = useState(() => !account);
   const [records, setRecords] = useState<CashAdvanceRecord[]>([]);
   const [error, setError] = useState('');
   const [status, setStatus] = useState<'ALL' | CashAdvanceStatus>('ALL');
@@ -80,14 +80,14 @@ export function CashAdvanceRecords() {
   const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC');
 
   useEffect(() => {
-    const session = readBetaSession();
-    setAccount(session);
-    if (!session) { setChecked(true); return; }
-    fetchCashAdvances({ role: session.role, userId: session.id, includeAll: true })
-      .then(setRecords)
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Cash Advance records could not be loaded.'))
-      .finally(() => setChecked(true));
-  }, []);
+    if (!account) return;
+    let cancelled = false;
+    fetchCashAdvances({ role: account.role, userId: account.id, includeAll: true })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Cash Advance records could not be loaded.'); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const visible = useMemo(() => account ? (personalOnly ? records.filter((record) => record.requesterId === account.id) : visibleFor(records, account)) : [], [account, personalOnly, records]);
   const attentionCount = account ? visible.filter((record) => needsAttention(record, account)).length : 0;

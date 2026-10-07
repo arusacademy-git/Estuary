@@ -29,8 +29,19 @@ function href(record: ClaimRecord, account: BetaAccount) { if (record.status ===
 export function ClaimRecords() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const [account, setAccount] = useState<BetaAccount | null>(null); const [checked, setChecked] = useState(false); const [records, setRecords] = useState<ClaimRecord[]>([]); const [status, setStatus] = useState<'ALL' | ClaimStatus>('ALL'); const [claimType, setClaimType] = useState('ALL'); const [month, setMonth] = useState(''); const [specificDate, setSpecificDate] = useState(''); const [search, setSearch] = useState(''); const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC'); const [viewMode, setViewMode] = useState<ViewMode>('list'); const [error, setError] = useState('');
-  useEffect(() => { const session = readBetaSession(); setAccount(session); if (!session) { setChecked(true); return; } fetchClaimRequests({ role: session.role, userId: session.id }).then(setRecords).catch((caught) => setError(caught instanceof Error ? caught.message : 'Claim records could not be loaded.')).finally(() => setChecked(true)); }, []);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession()); const [checked, setChecked] = useState(() => !account); const [records, setRecords] = useState<ClaimRecord[]>([]); const [status, setStatus] = useState<'ALL' | ClaimStatus>('ALL'); const [claimType, setClaimType] = useState('ALL'); const [month, setMonth] = useState(''); const [specificDate, setSpecificDate] = useState(''); const [search, setSearch] = useState(''); const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC'); const [viewMode, setViewMode] = useState<ViewMode>('list'); const [error, setError] = useState('');
+  useEffect(() => {
+    if (!account) return;
+    let cancelled = false;
+    fetchClaimRequests({ role: account.role, userId: account.id }).then((values) => {
+      if (!cancelled) setRecords(values);
+    }).catch((caught) => {
+      if (!cancelled) setError(caught instanceof Error ? caught.message : 'Claim records could not be loaded.');
+    }).finally(() => {
+      if (!cancelled) setChecked(true);
+    });
+    return () => { cancelled = true; };
+  }, [account]);
   const visible = useMemo(() => records.filter((record) => !personalOnly || record.requesterId === account?.id), [account?.id, personalOnly, records]);
   const filtered = useMemo(() => { const query = search.trim().toLowerCase(); const matching = visible.filter((record) => { if (status !== 'ALL' && record.status !== status) return false; if (claimType !== 'ALL' && record.claimType !== claimType) return false; if (month && !record.claimDate.startsWith(month)) return false; if (specificDate && record.claimDate !== specificDate) return false; return !query || [record.claimNumber, record.requesterName, claimTypeDetails(record.claimType).label, record.notes ?? ''].some((value) => value.toLowerCase().includes(query)); }); return sortPaymentRecords(matching, sort, (record) => ({ reference: record.claimNumber, updatedAt: record.updatedAt, amount: record.totalAmount })); }, [claimType, month, search, sort, specificDate, status, visible]);
   const downloadableForms = filtered.filter((record) => record.status === 'PAID');

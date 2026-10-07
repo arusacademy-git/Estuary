@@ -1,12 +1,13 @@
 'use client';
 
+import Image from 'next/image';
 import {
   useEffect,
   useRef,
   useState,
 } from 'react';
 
-import { useDirectorSignature } from '../hooks/use-director-signature';
+import { useUserSignature } from '../hooks/use-user-signature';
 
 import styles from './director-signature.module.css';
 
@@ -55,23 +56,13 @@ export function DirectorSignatureUpload({
     error,
     uploadSignature,
     removeSignature,
-  } = useDirectorSignature(directorId);
+  } = useUserSignature(directorId);
 
   useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl('');
-      return;
-    }
-
-    const objectUrl =
-      URL.createObjectURL(selectedFile);
-
-    setPreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
-  }, [selectedFile]);
+  }, [previewUrl]);
 
   function handleFileSelection(
     event: React.ChangeEvent<HTMLInputElement>,
@@ -80,6 +71,7 @@ export function DirectorSignatureUpload({
       event.target.files?.[0] ?? null;
 
     setSelectedFile(file);
+    setPreviewUrl(file ? URL.createObjectURL(file) : '');
     setSavedMessage('');
     setLocalError('');
   }
@@ -144,7 +136,7 @@ export function DirectorSignatureUpload({
   }
 
   const displayedImage =
-    previewUrl || signature?.dataUrl;
+    previewUrl || signature?.imageUrl;
 
   return (
     <section className={styles.signaturePanel}>
@@ -196,9 +188,12 @@ export function DirectorSignatureUpload({
 
           <div className={styles.signatureCanvas}>
             {displayedImage ? (
-              <img
+              <Image
                 src={displayedImage}
                 alt={`${directorName} signature`}
+                height={120}
+                unoptimized
+                width={320}
               />
             ) : (
               <div

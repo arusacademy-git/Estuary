@@ -14,20 +14,20 @@ const money = (value: number) => new Intl.NumberFormat('en-MY', { style: 'curren
 const date = (value: string) => new Date(value.length === 10 ? `${value}T12:00:00` : value).toLocaleDateString('en-MY');
 
 export function PettyCashDirectorQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<PettyCashRecord[]>([]);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account || account.role !== 'director');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const current = readBetaSession();
-    setAccount(current);
-    if (!current || current.role !== 'director') { setChecked(true); return; }
-    fetchPettyCashRequests({ role: 'director', userId: current.id })
-      .then(setRecords)
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'))
-      .finally(() => setChecked(true));
-  }, []);
+    if (!account || account.role !== 'director') return;
+    let cancelled = false;
+    fetchPettyCashRequests({ role: 'director', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const assigned = useMemo(() => records.filter((record) => (record.directorApproverId === account?.id || record.financeReviewerId === account?.id) && record.requesterRole !== 'director'), [account, records]);
   if (!checked) return <State title="Loading Petty Cash requests" copy="Checking your Director approvals…" />;

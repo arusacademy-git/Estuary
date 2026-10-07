@@ -29,8 +29,8 @@ function location(record: PettyCashRecord) {
 }
 
 export function PettyCashManagerQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [sessionChecked, setSessionChecked] = useState(() => !account || account.role !== 'manager');
   const [records, setRecords] = useState<PettyCashRecord[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('PENDING');
@@ -38,17 +38,14 @@ export function PettyCashManagerQueue() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const current = readBetaSession();
-    setAccount(current);
-    if (!current || current.role !== 'manager') {
-      setSessionChecked(true);
-      return;
-    }
-    fetchPettyCashRequests({ role: 'manager', userId: current.id })
-      .then(setRecords)
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'))
-      .finally(() => setSessionChecked(true));
-  }, []);
+    if (!account || account.role !== 'manager') return;
+    let cancelled = false;
+    fetchPettyCashRequests({ role: 'manager', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
+      .finally(() => { if (!cancelled) setSessionChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const assigned = useMemo(
     () => records

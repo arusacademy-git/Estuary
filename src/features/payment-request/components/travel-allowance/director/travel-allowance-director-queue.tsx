@@ -16,22 +16,22 @@ const money = (value: number) => new Intl.NumberFormat('en-MY', { style: 'curren
 function statusLabel(status: TravelAllowanceRecord['status']) { return status === 'PENDING_MANAGER_REVIEW' ? 'Pending Manager Review' : status === 'PENDING_DIRECTOR_APPROVAL' ? 'Pending Director Approval' : status === 'PENDING_FINANCE_VERIFICATION' ? 'Pending Finance Verification' : status === 'RETURNED_TO_STAFF' ? 'Returned for Correction' : 'Completed'; }
 
 export function TravelAllowanceDirectorQueue() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<TravelAllowanceRecord[]>([]);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account || account.role !== 'director');
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const session = readBetaSession();
-    setAccount(session);
-    if (!session || session.role !== 'director') { setChecked(true); return; }
-    fetchTravelAllowances({ role: 'director', userId: session.id })
-      .then(setRecords)
-      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'))
-      .finally(() => setChecked(true));
-  }, []);
+    if (!account || account.role !== 'director') return;
+    let cancelled = false;
+    fetchTravelAllowances({ role: 'director', userId: account.id })
+      .then((values) => { if (!cancelled) setRecords(values); })
+      .catch((caught: unknown) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account]);
 
   const activeCount = records.filter((record) => record.status === 'PENDING_DIRECTOR_APPROVAL').length;
   const forwardedCount = records.filter((record) => ['PENDING_FINANCE_VERIFICATION', 'COMPLETED'].includes(record.status)).length;
