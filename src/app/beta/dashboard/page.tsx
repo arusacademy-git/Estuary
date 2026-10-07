@@ -167,12 +167,12 @@ function needsAction(record: DashboardRecord, role: BetaRole, userId: string) {
       ? !record.claimManagerPreviewed && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
       : record.type === 'PETTY_CASH'
         ? !record.claimManagerPreviewed && !['DRAFT', 'RETURNED_TO_STAFF'].includes(record.status)
-      : ['PENDING_MANAGER_APPROVAL', 'PENDING_MANAGER_REVIEW'].includes(record.status);
+        : ['PENDING_MANAGER_APPROVAL', 'PENDING_MANAGER_REVIEW'].includes(record.status);
   if (role === 'director') return record.type === 'EXPENSE_CLAIM'
     ? !record.claimDirectorPreviewed && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
     : record.type === 'PETTY_CASH'
       ? !record.claimDirectorPreviewed && !['DRAFT', 'RETURNED_TO_STAFF'].includes(record.status)
-    : ['PENDING_DIRECTOR_APPROVAL', 'PENDING_DIRECTOR_REVIEW'].includes(record.status);
+      : ['PENDING_DIRECTOR_APPROVAL', 'PENDING_DIRECTOR_REVIEW'].includes(record.status);
   if (record.status === 'PENDING_FINANCE_REVIEW') return record.currentAssigneeId === userId;
   return ['APPROVED_FOR_PAYMENT', 'FINANCE_PROCESSING', 'PENDING_FINANCE_VERIFICATION', 'PENDING_FINANCE_PAYMENT', 'PENDING_FINANCE_PROCESSING', 'PENDING_FINANCE_RECONCILIATION', 'FINANCE_VERIFIED', 'APPROVED_PENDING_PAYMENT', 'PENDING_PAYMENT', 'RECON_PENDING_CHILD_CLOSURE'].includes(record.status);
 }
@@ -208,7 +208,7 @@ function normalizeSummary(account: BetaAccount, records: DashboardSummaryRecord[
 
 export default function BetaDashboardPage() {
   const router = useRouter();
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<DashboardRecord[]>([]);
   const [analyticsRecords, setAnalyticsRecords] = useState<DashboardRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,10 +216,12 @@ export default function BetaDashboardPage() {
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('LAST_6_MONTHS');
 
   useEffect(() => {
-    const session = readBetaSession();
-    if (!session) { router.replace('/beta'); return; }
-    const signedInAccount = session;
-    setAccount(signedInAccount);
+    if (!account) {
+      router.replace('/beta');
+      return;
+    }
+
+    const signedInAccount = account;
     let active = true;
     const organizationAnalytics = signedInAccount.role === 'director' || signedInAccount.role === 'finance';
     Promise.all([
@@ -240,7 +242,7 @@ export default function BetaDashboardPage() {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [router]);
+  }, [account, router]);
 
   const summary = useMemo(() => {
     const attention = records.filter((record) => account && needsAction(record, account.role, account.id)).length;
