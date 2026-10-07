@@ -207,41 +207,35 @@ async function prepareRouting(
   input: CreatePettyCashInput,
 ) {
   await requireRole(tx, input.organizationId, input.requesterId, requesterOrgRole(input.requesterRole));
+  const financeId = input.requesterRole === 'finance'
+    ? input.requesterId
+    : await activeFinanceUser(tx, input.organizationId);
+  const steps: Array<{ step_number: number; required_role: OrgRole; assigned_user_id: string; status_code: 'ACTIVE' }> = [];
 
   if (input.requesterRole === 'staff') {
     await requireRole(tx, input.organizationId, input.managerApproverId, OrgRole.MANAGER);
     await requireRole(tx, input.organizationId, input.directorApproverId, OrgRole.DIRECTOR);
-    return {
-      state: 'PENDING_MANAGER_APPROVAL', assigneeId: input.managerApproverId,
-      steps: [
-        { step_number: 1, required_role: OrgRole.MANAGER, assigned_user_id: input.managerApproverId, status_code: 'ACTIVE' },
-        { step_number: 2, required_role: OrgRole.DIRECTOR, assigned_user_id: input.directorApproverId, status_code: 'PENDING' },
-      ],
-    };
-  }
-
-  if (input.requesterRole === 'manager') {
+    steps.push(
+      { step_number: 1, required_role: OrgRole.MANAGER, assigned_user_id: input.managerApproverId, status_code: 'ACTIVE' },
+      { step_number: 2, required_role: OrgRole.DIRECTOR, assigned_user_id: input.directorApproverId, status_code: 'ACTIVE' },
+    );
+  } else if (input.requesterRole === 'manager') {
     await requireRole(tx, input.organizationId, input.directorApproverId, OrgRole.DIRECTOR);
-    return {
-      state: 'PENDING_DIRECTOR_APPROVAL', assigneeId: input.directorApproverId,
-      steps: [{ step_number: 1, required_role: OrgRole.DIRECTOR, assigned_user_id: input.directorApproverId, status_code: 'ACTIVE' }],
-    };
+    steps.push({ step_number: 1, required_role: OrgRole.DIRECTOR, assigned_user_id: input.directorApproverId, status_code: 'ACTIVE' });
+  } else if (input.requesterRole === 'finance') {
+    if (!input.financeReviewerId || !input.financeReviewerRole || input.financeReviewerId === input.requesterId) {
+      throw new Error('Choose another Finance user, Manager or Director to preview this request.');
+    }
+    const reviewerRole = input.financeReviewerRole === 'manager'
+      ? OrgRole.MANAGER
+      : input.financeReviewerRole === 'director'
+        ? OrgRole.DIRECTOR
+        : OrgRole.FINANCE_ADMIN;
+    await requireRole(tx, input.organizationId, input.financeReviewerId, reviewerRole);
+    steps.push({ step_number: 1, required_role: reviewerRole, assigned_user_id: input.financeReviewerId, status_code: 'ACTIVE' });
   }
 
-  if (input.requesterRole === 'director') {
-    return { state: 'PENDING_FINANCE_PAYMENT', assigneeId: await activeFinanceUser(tx, input.organizationId), steps: [] };
-  }
-
-  if (!input.financeReviewerId || !input.financeReviewerRole || input.financeReviewerId === input.requesterId) {
-    throw new Error('Choose another authorized Finance user or a Director to review this request.');
-  }
-  const reviewerRole = input.financeReviewerRole === 'director' ? OrgRole.DIRECTOR : OrgRole.FINANCE_ADMIN;
-  await requireRole(tx, input.organizationId, input.financeReviewerId, reviewerRole);
-  return {
-    state: input.financeReviewerRole === 'director' ? 'PENDING_DIRECTOR_APPROVAL' : 'PENDING_FINANCE_REVIEW',
-    assigneeId: input.financeReviewerId,
-    steps: [{ step_number: 1, required_role: reviewerRole, assigned_user_id: input.financeReviewerId, status_code: 'ACTIVE' }],
-  };
+  return { state: 'PENDING_FINANCE_PAYMENT', assigneeId: financeId, steps };
 }
 
 async function getOrCreateFloat(
@@ -386,7 +380,7 @@ export async function listPettyCashFromDatabase(scope: ListScope) {
   if (scope.includeAll || scope.role === 'finance') return mapped;
   return mapped.filter((item) =>
     item.requesterId === scope.userId ||
-    (scope.role === 'manager' && item.managerApproverId === scope.userId) ||
+    (scope.role === 'manager' && (item.managerApproverId === scope.userId || item.financeReviewerId === scope.userId)) ||
     (scope.role === 'director' && (item.directorApproverId === scope.userId || item.financeReviewerId === scope.userId)),
   );
 }
@@ -408,17 +402,20 @@ export async function approvePettyCashByManagerInDatabase(
 ) {
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
-    if (!record.petty_cash_detail || record.petty_cash_detail.manager_user_id !== managerId) {
+    const snapshot = readSnapshot(record);
+    const assignedToManager = snapshot.managerApproverId === managerId || (
+      snapshot.requesterRole === 'finance' &&
+      snapshot.financeReviewerRole === 'manager' &&
+      snapshot.financeReviewerId === managerId
+    );
+    if (!assignedToManager) {
       throw new Error('This Petty Cash request is assigned to another Manager.');
     }
-    if (record.current_state_code !== 'PENDING_MANAGER_APPROVAL') {
-      throw new Error('Only a request pending Manager approval can be approved.');
-    }
+    if (record.transitions.some((item) => item.action_code === 'APPROVE_BY_MANAGER')) throw new Error('The Manager preview has already been recorded.');
+    if (record.current_state_code === 'RETURNED_TO_STAFF') throw new Error('A returned request is not available for Manager preview.');
     await requireRole(tx, record.organization_id, managerId, OrgRole.MANAGER);
-    const snapshot = readSnapshot(record);
-    const managerStep = record.approval_steps.find((step) => step.assigned_user_id === managerId && step.status_code === 'ACTIVE');
-    const directorStep = record.approval_steps.find((step) => step.assigned_user_id === snapshot.directorApproverId && step.status_code === 'PENDING');
-    if (!managerStep || !directorStep) throw new Error('The Petty Cash approval route is incomplete.');
+    const managerStep = record.approval_steps.find((step) => step.required_role === OrgRole.MANAGER && step.assigned_user_id === managerId && step.status_code !== 'COMPLETE');
+    if (!managerStep) throw new Error('The Manager preview step is missing.');
     await tx.approvalStep.update({
       where: { id: managerStep.id },
       data: {
@@ -426,20 +423,18 @@ export async function approvePettyCashByManagerInDatabase(
         decision: { create: { decision_code: 'APPROVED', decided_by_user_id: managerId } },
       },
     });
-    await tx.approvalStep.update({
-      where: { id: directorStep.id },
-      data: { status_code: 'ACTIVE' },
-    });
+    const legacyState = ['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_REVIEW'].includes(record.current_state_code);
+    const financeId = snapshot.requesterRole === 'finance' ? snapshot.requesterId : await activeFinanceUser(tx, record.organization_id);
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
-        current_state_code: 'PENDING_DIRECTOR_APPROVAL',
-        current_state_group: StateGroup.IN_REVIEW,
-        current_assignee_id: snapshot.directorApproverId,
+        current_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
+        current_state_group: legacyState ? StateGroup.PENDING_VERIFICATION : record.current_state_group,
+        current_assignee_id: legacyState ? financeId : record.current_assignee_id,
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-            to_state_code: 'PENDING_DIRECTOR_APPROVAL',
+          to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
             action_code: 'APPROVE_BY_MANAGER',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: managerId,
@@ -458,16 +453,19 @@ export async function approvePettyCashByDirectorInDatabase(
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
     const snapshot = readSnapshot(record);
-    if (snapshot.directorApproverId !== directorId) {
+    const assignedToDirector = snapshot.directorApproverId === directorId || (
+      snapshot.requesterRole === 'finance' &&
+      snapshot.financeReviewerRole === 'director' &&
+      snapshot.financeReviewerId === directorId
+    );
+    if (!assignedToDirector) {
       throw new Error('This Petty Cash request is assigned to another Director.');
     }
-    if (record.current_state_code !== 'PENDING_DIRECTOR_APPROVAL') {
-      throw new Error('Only a request pending Director approval can be approved.');
-    }
+    if (record.transitions.some((item) => item.action_code === 'APPROVE_BY_DIRECTOR')) throw new Error('The Director preview has already been recorded.');
+    if (record.current_state_code === 'RETURNED_TO_STAFF') throw new Error('A returned request is not available for Director preview.');
     await requireRole(tx, record.organization_id, directorId, OrgRole.DIRECTOR);
-    const financeId = await activeFinanceUser(tx, record.organization_id);
-    const directorStep = record.approval_steps.find((step) => step.assigned_user_id === directorId && step.status_code === 'ACTIVE');
-    if (!directorStep) throw new Error('The Director preview step is not active.');
+    const directorStep = record.approval_steps.find((step) => step.required_role === OrgRole.DIRECTOR && step.assigned_user_id === directorId && step.status_code !== 'COMPLETE');
+    if (!directorStep) throw new Error('The Director preview step is missing.');
     await tx.approvalStep.update({
       where: { id: directorStep.id },
       data: {
@@ -475,16 +473,18 @@ export async function approvePettyCashByDirectorInDatabase(
         decision: { create: { decision_code: 'APPROVED', decided_by_user_id: directorId } },
       },
     });
+    const legacyState = ['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_REVIEW'].includes(record.current_state_code);
+    const financeId = snapshot.requesterRole === 'finance' ? snapshot.requesterId : await activeFinanceUser(tx, record.organization_id);
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
-        current_state_code: 'PENDING_FINANCE_PAYMENT',
-        current_state_group: StateGroup.PENDING_VERIFICATION,
-        current_assignee_id: financeId,
+        current_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
+        current_state_group: legacyState ? StateGroup.PENDING_VERIFICATION : record.current_state_group,
+        current_assignee_id: legacyState ? financeId : record.current_assignee_id,
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-            to_state_code: 'PENDING_FINANCE_PAYMENT',
+          to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
             action_code: 'APPROVE_BY_DIRECTOR',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: directorId,
@@ -509,15 +509,14 @@ export async function reviewPettyCashByFinancePeerInDatabase(
     if (snapshot.requesterId === reviewerId) {
       throw new Error('A Finance requester cannot review their own Petty Cash request.');
     }
-    if (snapshot.financeReviewerId !== reviewerId || record.current_assignee_id !== reviewerId) {
+    if (snapshot.financeReviewerId !== reviewerId) {
       throw new Error('This Petty Cash request is assigned to another reviewer.');
     }
-    if (record.current_state_code !== 'PENDING_FINANCE_REVIEW') {
-      throw new Error('Only a request pending Finance peer review can be reviewed.');
-    }
+    if (record.transitions.some((item) => item.action_code === 'REVIEW_FINANCE_REQUEST')) throw new Error('The independent preview has already been recorded.');
+    if (record.current_state_code === 'RETURNED_TO_STAFF') throw new Error('A returned request is not available for independent preview.');
     await requireRole(tx, record.organization_id, reviewerId, OrgRole.FINANCE_ADMIN);
-    const reviewStep = record.approval_steps.find((step) => step.assigned_user_id === reviewerId && step.status_code === 'ACTIVE');
-    if (!reviewStep) throw new Error('The Finance peer-review step is not active.');
+    const reviewStep = record.approval_steps.find((step) => step.required_role === OrgRole.FINANCE_ADMIN && step.assigned_user_id === reviewerId && step.status_code !== 'COMPLETE');
+    if (!reviewStep) throw new Error('The Finance preview step is missing.');
     await tx.approvalStep.update({
       where: { id: reviewStep.id },
       data: {
@@ -525,17 +524,17 @@ export async function reviewPettyCashByFinancePeerInDatabase(
         decision: { create: { decision_code: 'APPROVED', decided_by_user_id: reviewerId } },
       },
     });
-    const financeId = await activeFinanceUser(tx, record.organization_id);
+    const legacyState = record.current_state_code === 'PENDING_FINANCE_REVIEW';
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
-        current_state_code: 'PENDING_FINANCE_PAYMENT',
-        current_state_group: StateGroup.PENDING_VERIFICATION,
-        current_assignee_id: financeId,
+        current_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
+        current_state_group: legacyState ? StateGroup.PENDING_VERIFICATION : record.current_state_group,
+        current_assignee_id: legacyState ? snapshot.requesterId : record.current_assignee_id,
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-            to_state_code: 'PENDING_FINANCE_PAYMENT',
+          to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
             action_code: 'REVIEW_FINANCE_REQUEST',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: reviewerId,
