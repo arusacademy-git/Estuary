@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const MAX_SUPPORTED_RECORDS = 1000;
 
@@ -9,14 +9,11 @@ export function useListPagination<T>(records: readonly T[], initialPageSize = 25
         () => records.slice(0, MAX_SUPPORTED_RECORDS),
         [records],
     );
-    const [page, setPageState] = useState(1);
+    const [paginationState, setPaginationState] = useState({ records, page: 1 });
     const [pageSize, setPageSizeState] = useState(initialPageSize);
     const pageCount = Math.max(1, Math.ceil(limitedRecords.length / pageSize));
+    const page = paginationState.records === records ? paginationState.page : 1;
     const currentPage = Math.min(page, pageCount);
-
-    useEffect(() => {
-        setPageState(1);
-    }, [records]);
 
     const pageRecords = useMemo(() => {
         const start = (currentPage - 1) * pageSize;
@@ -24,12 +21,15 @@ export function useListPagination<T>(records: readonly T[], initialPageSize = 25
     }, [currentPage, limitedRecords, pageSize]);
 
     function setPage(nextPage: number) {
-        setPageState(Math.min(Math.max(1, nextPage), pageCount));
+        setPaginationState({
+            records,
+            page: Math.min(Math.max(1, nextPage), pageCount),
+        });
     }
 
     function setPageSize(nextPageSize: number) {
         setPageSizeState(nextPageSize);
-        setPageState(1);
+        setPaginationState({ records, page: 1 });
     }
 
     const firstRecord = limitedRecords.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
