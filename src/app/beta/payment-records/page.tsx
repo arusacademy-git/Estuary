@@ -99,19 +99,16 @@ export default function PaymentRecordsPage() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
   const { records: paymentVouchers } = usePaymentVouchers();
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [invoicePayments, setInvoicePayments] = useState<InvoicePaymentRequestRecord[]>([]);
   const [travelAllowances, setTravelAllowances] = useState<TravelAllowanceRecord[]>([]);
   const [cashAdvances, setCashAdvances] = useState<CashAdvanceRecord[]>([]);
   const [pettyCashRequests, setPettyCashRequests] = useState<PettyCashRecord[]>([]);
   const [claims, setClaims] = useState<ClaimRecord[]>([]);
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(() => !account);
 
   useEffect(() => {
-    const currentAccount = readBetaSession();
-    setAccount(currentAccount);
-    if (!currentAccount) {
-      setSessionChecked(true);
+    if (!account) {
       router.replace('/beta');
       return;
     }
@@ -129,13 +126,13 @@ export default function PaymentRecordsPage() {
         });
     }
 
-    load(fetchInvoicePayments({ role: currentAccount.role, userId: currentAccount.id, includeAll: true }), setInvoicePayments);
-    load(fetchTravelAllowances({ role: currentAccount.role, userId: currentAccount.id, includeAll: true }), setTravelAllowances);
-    load(fetchCashAdvances({ role: currentAccount.role, userId: currentAccount.id, includeAll: true }), setCashAdvances);
-    load(fetchPettyCashRequests({ role: currentAccount.role, userId: currentAccount.id, includeAll: personalOnly }), setPettyCashRequests);
-    load(fetchClaimRequests({ role: currentAccount.role, userId: currentAccount.id }), setClaims);
+    load(fetchInvoicePayments({ role: account.role, userId: account.id, includeAll: true }), setInvoicePayments);
+    load(fetchTravelAllowances({ role: account.role, userId: account.id, includeAll: true }), setTravelAllowances);
+    load(fetchCashAdvances({ role: account.role, userId: account.id, includeAll: true }), setCashAdvances);
+    load(fetchPettyCashRequests({ role: account.role, userId: account.id, includeAll: personalOnly }), setPettyCashRequests);
+    load(fetchClaimRequests({ role: account.role, userId: account.id }), setClaims);
     return () => { active = false; };
-  }, [personalOnly, router]);
+  }, [account, personalOnly, router]);
 
   const visibleVouchers = useMemo(() => account ? (personalOnly ? paymentVouchers.filter((record) => record.submitterId === account.id) : visibleVouchersFor(paymentVouchers, account)) : [], [account, paymentVouchers, personalOnly]);
   const visibleInvoices = useMemo(() => account ? (personalOnly ? invoicePayments.filter((record) => record.staffId === account.id) : visibleInvoicesFor(invoicePayments, account)) : [], [account, invoicePayments, personalOnly]);

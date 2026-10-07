@@ -59,23 +59,6 @@ function formatCurrency(
   ).format(amount);
 }
 
-function formatDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(
-    'en-MY',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    },
-  ).format(date);
-}
-
 function getAccountName(
   accountId: string,
 ) {
@@ -108,13 +91,9 @@ const financeVisibleStatuses =
 export default function FinancePage() {
   const router = useRouter();
 
-  const [account, setAccount] =
-    useState<BetaAccount | null>(null);
-
-  const [
-    sessionChecked,
-    setSessionChecked,
-  ] = useState(false);
+  const [account] = useState<BetaAccount | null>(
+    () => readBetaSession(),
+  );
 
   const [search, setSearch] =
     useState('');
@@ -144,16 +123,10 @@ export default function FinancePage() {
   } = usePaymentVouchers();
 
   useEffect(() => {
-    const currentAccount =
-      readBetaSession();
-
-    setAccount(currentAccount);
-    setSessionChecked(true);
-
-    if (!currentAccount) {
+    if (!account) {
       router.replace('/beta');
     }
-  }, [router]);
+  }, [account, router]);
 
   useEffect(() => {
     const parameters = new URLSearchParams(window.location.search);
@@ -162,22 +135,31 @@ export default function FinancePage() {
       return;
     }
 
-    setActiveFilter('PROCESSING');
-
     const voucherId = parameters.get('voucher');
     const batchSize = Number(parameters.get('batch') ?? '0');
+    let cancelled = false;
 
-    if (voucherId) {
-      setSelectedVoucherId(voucherId);
-    }
+    Promise.resolve().then(() => {
+      if (cancelled) return;
 
-    if (batchSize > 0) {
-      setTransitionMessage(
-        `${batchSize} ${batchSize === 1 ? 'voucher is' : 'vouchers are'} now in processing. The first processing detail is open; continue with each remaining voucher from this queue.`,
-      );
-    }
+      setActiveFilter('PROCESSING');
 
-    window.history.replaceState({}, '', window.location.pathname);
+      if (voucherId) {
+        setSelectedVoucherId(voucherId);
+      }
+
+      if (batchSize > 0) {
+        setTransitionMessage(
+          `${batchSize} ${batchSize === 1 ? 'voucher is' : 'vouchers are'} now in processing. The first processing detail is open; continue with each remaining voucher from this queue.`,
+        );
+      }
+
+      window.history.replaceState({}, '', window.location.pathname);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function showProcessingDetail(voucherId: string) {
@@ -408,7 +390,6 @@ export default function FinancePage() {
   }, [selectedVoucherId]);
 
   if (
-    !sessionChecked ||
     isLoading
   ) {
     return (

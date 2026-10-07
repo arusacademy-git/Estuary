@@ -37,10 +37,6 @@ export default function BetaLoginPage() {
     router.push('/beta/dashboard');
   }
 
-  function openRecipientPortal() {
-    router.push('/beta/recipient/demo-token');
-  }
-
   return (
     <main className={styles.page}>
       <section className={styles.introduction}>

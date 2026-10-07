@@ -67,11 +67,9 @@ function formatCurrency(amount: number) {
 export default function ProjectManagerPaymentVouchersPage() {
   const router = useRouter();
 
-  const [account, setAccount] =
-    useState<BetaAccount | null>(null);
-
-  const [sessionChecked, setSessionChecked] =
-    useState(false);
+  const [account] = useState<BetaAccount | null>(
+    () => readBetaSession(),
+  );
 
   const [search, setSearch] =
     useState('');
@@ -94,16 +92,10 @@ export default function ProjectManagerPaymentVouchersPage() {
   } = usePaymentVouchers();
 
   useEffect(() => {
-    const currentAccount =
-      readBetaSession();
-
-    setAccount(currentAccount);
-    setSessionChecked(true);
-
-    if (!currentAccount) {
+    if (!account) {
       router.replace('/beta');
     }
-  }, [router]);
+  }, [account, router]);
 
   const assignedRecords = useMemo(() => {
     if (!account) {
@@ -230,7 +222,7 @@ export default function ProjectManagerPaymentVouchersPage() {
     };
   }, [selectedVoucherId]);
 
-  if (!sessionChecked || isLoading) {
+  if (isLoading) {
     return (
       <main className={styles.statePage}>
         <h1>

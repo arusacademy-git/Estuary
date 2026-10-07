@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
 import { usePaymentVouchers } from '@/features/payment-voucher/hooks/use-payment-vouchers';
@@ -9,16 +9,10 @@ import { DirectorBulkApproval } from '@/features/payment-voucher/components/dire
 import { PaymentPageState } from '@/shared/payment-page-state';
 
 export default function DirectorBulkApprovalPage() {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const { records, isLoading } = usePaymentVouchers();
 
-  useEffect(() => {
-    setAccount(readBetaSession());
-    setChecked(true);
-  }, []);
-
-  if (!checked || isLoading) {
+  if (isLoading) {
     return <PaymentPageState title="Loading bulk approvals" copy="Preparing your assigned Payment Vouchers and saved review progress…" backHref="/beta/approvals" backLabel="Back to approvals" />;
   }
 
