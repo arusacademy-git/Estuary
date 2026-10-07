@@ -2,7 +2,6 @@
 
 import {
   useEffect,
-  useState,
 } from 'react';
 
 import type { ReactNode } from 'react';
@@ -31,35 +30,22 @@ export default function BetaShell({
   const pathname = usePathname();
   const router = useRouter();
 
-  const [account, setAccount] =
-    useState<BetaAccount | null>(null);
-
-  const [
-    isSessionLoading,
-    setIsSessionLoading,
-  ] = useState(true);
-
   const isPublicPage =
     pathname === '/beta' ||
     pathname.startsWith('/beta/recipient/');
+  const account: BetaAccount | null = readBetaSession();
 
   useEffect(() => {
-    const currentAccount = readBetaSession();
-
-    setAccount(currentAccount);
-    setIsSessionLoading(false);
-
-    if (!isPublicPage && !currentAccount) {
+    if (!isPublicPage && !account) {
       router.replace('/beta');
     }
-  }, [isPublicPage, pathname, router]);
+  }, [account, isPublicPage, router]);
 
   function handleSignOut() {
     window.localStorage.removeItem(
       BETA_SESSION_KEY,
     );
 
-    setAccount(null);
     router.push('/beta');
   }
 
@@ -67,7 +53,7 @@ export default function BetaShell({
     return children;
   }
 
-  if (isSessionLoading || !account) {
+  if (!account) {
     return (
       <main className={styles.sessionLoading}>
         Loading your Estuary workspace…

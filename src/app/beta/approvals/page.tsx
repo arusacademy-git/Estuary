@@ -87,11 +87,9 @@ export default function ApprovalsPage() {
     isLoading,
   } = usePaymentVouchers();
 
-  const [account, setAccount] =
-    useState<BetaAccount | null>(null);
-
-  const [sessionChecked, setSessionChecked] =
-    useState(false);
+  const [account] = useState<BetaAccount | null>(
+    () => readBetaSession(),
+  );
 
   const [activeTab, setActiveTab] =
     useState<DirectorWorkspaceTab>(
@@ -113,15 +111,10 @@ export default function ApprovalsPage() {
   ] = useState<string | null>(null);
 
   useEffect(() => {
-    const currentAccount = readBetaSession();
-
-    setAccount(currentAccount);
-    setSessionChecked(true);
-
-    if (!currentAccount) {
+    if (!account) {
       router.replace('/beta');
     }
-  }, [router]);
+  }, [account, router]);
 
   const assignedRecords = useMemo(() => {
     if (!account) {
@@ -323,7 +316,7 @@ export default function ApprovalsPage() {
     }
   }
 
-  if (!sessionChecked || isLoading) {
+  if (isLoading) {
     return (
       <section
         className={styles.approvalQueueState}

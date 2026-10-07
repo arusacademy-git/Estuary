@@ -1,27 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { PettyCashOverview } from '@/features/payment-request/components/petty-cash/ledger/petty-cash-overview';
 import { readBetaSession } from '@/lib/auth/beta-accounts';
 
 export default function PettyCashOverviewPage() {
-  const [account, setAccount] =
-    useState<ReturnType<typeof readBetaSession>>(null);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    setAccount(readBetaSession());
-    setChecked(true);
-  }, []);
-
-  if (!checked) {
-    return (
-      <section>
-        <h1>Loading Petty Cash overview</h1>
-      </section>
-    );
-  }
+  const [account] = useState<ReturnType<typeof readBetaSession>>(
+    () => readBetaSession(),
+  );
 
   if (
     !account ||
