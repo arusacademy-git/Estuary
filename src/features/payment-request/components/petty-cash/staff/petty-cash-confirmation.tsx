@@ -34,15 +34,15 @@ export function PettyCashConfirmation({
   const independentReviewer = request.financeReviewerId ? getBetaAccount(request.financeReviewerId) : undefined;
   const location = request.location === 'PENANG' ? 'Penang' : 'Kuala Lumpur';
   const requesterRole = request.requesterRole ?? 'staff';
-  const nextReviewer = requesterRole === 'staff' ? manager?.name ?? 'the assigned Manager' : requesterRole === 'manager' ? director?.name ?? 'the assigned Director' : requesterRole === 'director' ? 'Finance' : independentReviewer?.name ?? 'the independent reviewer';
-  const nextStage = requesterRole === 'staff' ? 'Manager review' : requesterRole === 'manager' ? 'Director preview' : requesterRole === 'director' ? 'Finance processing' : 'Independent review';
+  const nextReviewer = 'Finance';
+  const nextStage = 'Finance processing';
   const workflow = requesterRole === 'staff'
-    ? [['Manager Review', `Assigned to ${manager?.name ?? 'Manager'}`], ['Director Preview', `Assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'After Director preview'], ['Completed', 'After Finance payment']]
+    ? [['Manager Preview', `Informational preview assigned to ${manager?.name ?? 'Manager'}`], ['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Completed', 'After Finance payment']]
     : requesterRole === 'manager'
-      ? [['Director Preview', `Assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'After Director preview'], ['Completed', 'After Finance payment']]
+      ? [['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Completed', 'After Finance payment']]
       : requesterRole === 'director'
         ? [['Finance Processing', 'Sent directly to Finance'], ['Completed', 'After Finance payment']]
-        : [['Independent Review', `Assigned to ${independentReviewer?.name ?? 'reviewer'}`], ['Finance Processing', 'After independent review'], ['Completed', 'After Finance payment']];
+        : [['Independent Preview', `Informational preview assigned to ${independentReviewer?.name ?? 'reviewer'}`], ['Finance Processing', 'Available immediately'], ['Completed', 'After Finance payment']];
 
   async function copyReference() {
     try {
@@ -75,7 +75,7 @@ export function PettyCashConfirmation({
             <span className={styles.confirmationStatus}><i />{nextStage}</span>
           </div>
           <p>
-            Your request was routed to {nextReviewer}. The workflow will continue according to your requester role.
+            Your request is available to Finance now. Assigned previews are informational and do not delay payment processing.
           </p>
         </header>
 
@@ -93,7 +93,7 @@ export function PettyCashConfirmation({
           <h2>Workflow progress</h2>
           <ol className={styles.confirmationWorkflow}>
             <ConfirmationStep state="complete" number="✓" title="Request Submitted" copy={request.requesterName} />
-            {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={index === 0 ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
+            {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={title === 'Finance Processing' ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
           </ol>
         </section>
 
@@ -108,7 +108,7 @@ export function PettyCashConfirmation({
       </section>
 
       <p className={styles.confirmationNote}>
-        Need a correction? Contact the current reviewer before the request moves to Finance.
+        Need a correction? Contact Finance while the request is being processed.
       </p>
     </main>
   );
