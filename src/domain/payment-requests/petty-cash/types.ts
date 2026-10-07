@@ -32,7 +32,7 @@ export type CreatePettyCashInput = {
   managerApproverId: string;
   directorApproverId: string;
   financeReviewerId?: string;
-  financeReviewerRole?: 'director' | 'finance';
+  financeReviewerRole?: 'manager' | 'director' | 'finance';
   lines: PettyCashRequestLine[];
   notes?: string;
 };

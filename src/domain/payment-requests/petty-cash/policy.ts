@@ -23,10 +23,10 @@ export function validatePettyCashInput(input: CreatePettyCashInput) {
   }
   if (input.requesterRole === 'finance') {
     if (!input.financeReviewerId || !input.financeReviewerRole) {
-      return 'Select another authorized Finance user or a Director to review this request.';
+      return 'Select another Finance user, Manager or Director to preview this request.';
     }
     if (input.financeReviewerId === input.requesterId) {
-      return 'A Finance requester cannot review their own Petty Cash request.';
+      return 'A Finance requester cannot preview their own Petty Cash request.';
     }
   }
   if (!input.lines.length) return 'Add at least one expense.';
