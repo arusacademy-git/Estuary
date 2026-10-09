@@ -8,7 +8,7 @@ const createSchema = z.object({ organizationId: z.string().min(1), requestDate: 
 const failure = (error: unknown) => Response.json({ error: 'INVOICE_PAYMENT_DATABASE_ERROR', message: error instanceof Error ? error.message : 'Invoice Payment database operation failed.' }, { status: 500 });
 
 export async function GET(request: Request) {
-  try { const url = new URL(request.url); const role = url.searchParams.get('role'); const userId = url.searchParams.get('userId'); const includeAll = url.searchParams.get('includeAll') === '1'; const scope = (role === 'staff' || role === 'manager' || role === 'director' || role === 'finance') && userId ? { role, userId, includeAll } as const : undefined; return dataResponse(await listInvoicePaymentsFromDatabase(scope)); } catch (error) { return failure(error); }
+  try { const url = new URL(request.url); const role = url.searchParams.get('role'); const userId = url.searchParams.get('userId'); const includeAll = url.searchParams.get('includeAll') === '1'; const approvalOnly = url.searchParams.get('approvalOnly') === '1'; const scope = (role === 'staff' || role === 'manager' || role === 'director' || role === 'finance') && userId ? { role, userId, includeAll, approvalOnly } as const : undefined; return dataResponse(await listInvoicePaymentsFromDatabase(scope)); } catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {
   const parsed = createSchema.safeParse(await request.json().catch(() => null));

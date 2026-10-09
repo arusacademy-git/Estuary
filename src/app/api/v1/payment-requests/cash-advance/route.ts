@@ -17,6 +17,7 @@ export async function GET(request: Request) {
             userId,
             month: url.searchParams.get('month') ?? undefined,
             includeAll: url.searchParams.get('includeAll') === '1',
+            approvalOnly: url.searchParams.get('approvalOnly') === '1',
         }));
     } catch (error) {
         return cashAdvanceError(error, 'Cash Advances could not be loaded.');
