@@ -55,19 +55,36 @@ export function InvoicePaymentRecordDetail({
 }: {
   requestId: string;
 }) {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [account, setAccount] = useState<BetaAccount | null>(null);
   const [record, setRecord] = useState<InvoicePaymentRequestRecord | null>(
     null,
   );
-  const [checked, setChecked] = useState(() => !account);
+  const [checked, setChecked] = useState(false);
+
   useEffect(() => {
-    if (!account) return;
     let cancelled = false;
-    fetchInvoicePayment(requestId)
-      .then((value) => { if (!cancelled) setRecord(value); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
-  }, [account, requestId]);
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+
+      try {
+        const data = await fetchInvoicePayment(requestId);
+        if (!cancelled) setRecord(data);
+      } catch {
+        // Same as before: a failed load leaves record null ("not found" state)
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId]);
+
   if (!checked)
     return (
       <State

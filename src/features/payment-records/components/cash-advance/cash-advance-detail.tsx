@@ -10,6 +10,7 @@ import { CashAdvanceDetail as CashAdvanceReceipt } from '@/features/payment-requ
 import { PaymentPageState } from '@/shared/payment-page-state';
 import receiptStyles from '@/features/payment-request/components/cash-advance/cash-advance.module.css';
 
+
 function canView(record: CashAdvanceRecord, account: BetaAccount) {
   if (record.requesterId === account.id) return true;
   if (account.role === 'staff') return record.requesterId === account.id;
@@ -20,24 +21,34 @@ function canView(record: CashAdvanceRecord, account: BetaAccount) {
 
 export function CashAdvancePaymentRecordDetail({ requestId }: { requestId: string }) {
   const [record, setRecord] = useState<CashAdvanceRecord | null>(null);
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [error, setError] = useState(() => account ? '' : 'Sign in to view this Cash Advance record.');
+  // undefined = session not read yet, null = no session found
+  const [account, setAccount] = useState<BetaAccount | null | undefined>(undefined);
+  const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
-    if (!account) return;
     let cancelled = false;
 
-    fetchCashAdvance(requestId)
-      .then((result) => {
-        if (!canView(result, account)) throw new Error('This Cash Advance is not available to your account.');
-        if (!cancelled) setRecord(result);
-      })
-      .catch((caught) => {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Cash Advance could not be loaded.');
-      });
+    Promise.resolve().then(() => {
+      const current = readBetaSession();
+      if (cancelled) return;
+      setAccount(current);
+      if (!current) return;
+
+      return fetchCashAdvance(requestId)
+        .then((result) => {
+          if (!canView(result, current)) throw new Error('This Cash Advance is not available to your account.');
+          if (!cancelled) setRecord(result);
+        })
+        .catch((caught) => {
+          if (!cancelled) setFetchError(caught instanceof Error ? caught.message : 'Cash Advance could not be loaded.');
+        });
+    });
 
     return () => { cancelled = true; };
-  }, [account, requestId]);
+  }, [requestId]);
+
+  // Derived: no setError needed for the sign-in message
+  const error = account === null ? 'Sign in to view this Cash Advance record.' : fetchError;
 
   if (error) return <PaymentPageState title="Cash Advance unavailable" copy={error} backHref="/beta/payment-records/cash-advances" backLabel="Back to Cash Advances" />;
   if (!record) return <PaymentPageState title="Loading Cash Advance" copy="Reading the payment record…" backHref="/beta/payment-records/cash-advances" backLabel="Back to Cash Advances" />;

@@ -50,8 +50,8 @@ function needsAttention(record: TravelAllowanceRecord, account: BetaAccount) {
 export function TravelAllowanceRecords() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [checked, setChecked] = useState(() => !account);
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [checked, setChecked] = useState(false);
   const [records, setRecords] = useState<TravelAllowanceRecord[]>([]);
   const [status, setStatus] = useState<'ALL' | TravelAllowanceStatus>('ALL');
   const [month, setMonth] = useState('');
@@ -62,15 +62,22 @@ export function TravelAllowanceRecords() {
   const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC');
 
   useEffect(() => {
-    if (!account) return;
-
     let cancelled = false;
 
-    fetchTravelAllowances({ role: account.role, userId: account.id, includeAll: true })
-      .then((values) => {
-        if (!cancelled) setRecords(values);
-      })
-      .catch((caught: unknown) => {
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+      if (!session) {
+        setChecked(true);
+        return;
+      }
+
+      try {
+        const data = await fetchTravelAllowances({ role: session.role, userId: session.id, includeAll: true });
+        if (!cancelled) setRecords(data);
+      } catch (caught: unknown) {
         if (!cancelled) {
           setError(
             caught instanceof Error
@@ -78,15 +85,13 @@ export function TravelAllowanceRecords() {
               : 'Travel Allowance records could not be loaded.',
           );
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setChecked(true);
-      });
+      }
+    });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [account]);
+    return () => { cancelled = true; };
+  }, []);
 
   const visible = useMemo(() => account ? records.filter((record) => personalOnly ? record.requesterId === account.id : canView(record, account)) : [], [account, personalOnly, records]);
   const filtered = useMemo(() => {
@@ -118,7 +123,7 @@ export function TravelAllowanceRecords() {
     {error && <div className={styles.error} role="alert">{error}</div>}
     <section className={styles.summaryGrid}><article><span>Visible records</span><strong>{visible.length}</strong><small>Available to your role</small></article><article><span>Require attention</span><strong>{attention}</strong><small>Waiting for your action</small></article><article><span>Completed</span><strong>{completed}</strong><small>Verified by Finance</small></article></section>
     <section className={styles.recordsFilterCard}><div className={styles.recordsFilterHeading}><div><h2>Find a Travel Allowance</h2><p>Search, filter and sort your payment records.</p></div><button className={styles.clearFiltersButton} type="button" onClick={clearFilters}>Clear filters</button></div><div className={styles.recordsFilters}><label className={styles.recordsSearchField}><span>Search</span><input type="search" placeholder="TA number, employee or project" value={search} onChange={(event) => setSearch(event.target.value)} /></label><label><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as 'ALL' | TravelAllowanceStatus)}>{statuses.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label><span>Month</span><input type="month" value={month} onChange={(event) => { const value = event.target.value; setMonth(value); if (specificDate && !specificDate.startsWith(value)) setSpecificDate(''); }} /></label><label><span>Exact date</span><input type="date" value={specificDate} min={month ? `${month}-01` : undefined} max={month ? `${month}-31` : undefined} onChange={(event) => setSpecificDate(event.target.value)} /></label><label><span>Sort by</span><select value={sort} onChange={(event) => setSort(event.target.value as PaymentRecordSort)}>{PAYMENT_RECORD_SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label></div></section>
-    <section className={styles.recordsResults}><div className={styles.recordsResultsHeader}><div><h2>Travel Allowances</h2><p>Showing {filtered.length} of {visible.length} visible records</p></div><PaymentRecordZipActions archiveName="travel-allowance-forms" entries={zipEntries} recordCount={downloadableForms.length}><div className={styles.recordsViewToggle}><span>View</span><button data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}>▦ Grid</button><button data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}>☷ List</button></div></PaymentRecordZipActions></div>
+    <section className={styles.recordsResults}><div className={styles.recordsResultsHeader}><div><h2>Travel Allowances</h2><p>Showing {filtered.length} of {visible.length} visible records</p></div><div className={styles.zipActions}><PaymentRecordZipActions archiveName="travel-allowance-forms" entries={zipEntries} recordCount={downloadableForms.length}><div className={styles.recordsViewToggle}><span>View</span><button data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}>▦ Grid</button><button data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}>☷ List</button></div></PaymentRecordZipActions></div></div>
       {filtered.length === 0 ? <div className={styles.emptyState}><h2>No Travel Allowances found</h2><p>Try clearing the selected filters.</p></div> : viewMode === 'grid' ? <div className={styles.cardGrid}>{pagination.pageRecords.map((record) => <Card key={record.id} record={record} />)}</div> : <div className={styles.tableWrapper}><table><thead><tr><th>Reference</th><th>Employees</th><th>Entries</th><th>Amount</th><th>Updated</th><th>Status</th><th /></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong><small>{record.requesterRole === 'manager' ? 'Manager request' : 'Staff request'}</small></td><td>{[...new Set(record.lines.map((line) => line.employeeName))].join(', ')}</td><td>{record.lines.length}</td><td className={styles.amount}>{money(record.totalAmount)}</td><td>{new Date(record.updatedAt).toLocaleDateString('en-MY')}</td><td><Status status={record.status} /></td><td className={styles.actionCell}><Link href={`/beta/payment-records/travel-allowances/${record.id}`}>View record</Link></td></tr>)}</tbody></table></div>}
       <ListPagination currentPage={pagination.currentPage} firstRecord={pagination.firstRecord} lastRecord={pagination.lastRecord} pageCount={pagination.pageCount} pageSize={pagination.pageSize} totalRecords={pagination.totalRecords} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />
     </section>

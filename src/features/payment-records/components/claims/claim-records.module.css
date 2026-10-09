@@ -89,10 +89,15 @@
 
 .recordsFilterCard,
 .recordsResults {
-  padding: 28px;
   border: 1px solid #e2e8f0;
   border-radius: 20px;
   background: #fff;
+  padding: 28px;
+}
+
+/* Lets the filter grid respond to the card width instead of the viewport */
+.recordsFilterCard {
+  container: filters / inline-size;
 }
 
 .recordsFilterHeading,
@@ -116,14 +121,16 @@
   color: #64748b;
 }
 
+/* One line: search + status + claim type + month + exact date + sort */
 .recordsFilters {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(135px, 1fr));
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.4fr) repeat(5, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .recordsFilters label {
   display: grid;
+  min-width: 0;
   align-content: start;
   gap: 8px;
   color: #334155;
@@ -135,13 +142,15 @@
 .recordsFilters select {
   box-sizing: border-box;
   width: 100%;
-  min-height: 46px;
+  min-width: 0;
+  min-height: 48px;
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 11px;
   color: #1e293b;
   background: #fff;
   font: inherit;
+  font-size: 0.9rem;
   outline: none;
 }
 
@@ -161,6 +170,10 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.clearFiltersButton:hover {
+  background: #f8fafc;
 }
 
 .recordsViewToggle {
@@ -331,6 +344,7 @@
   background: #fee4e2 !important;
 }
 
+/* ---------- Grid view (aligned with Invoice Payment cards) ---------- */
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -353,50 +367,57 @@
   gap: 12px;
 }
 
-.cardTop>span {
-  color: #173a64;
+.cardTop>span:first-child {
+  color: #2563eb;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .recordCard h2 {
-  margin: 18px 0 5px;
-  color: #11345d;
+  margin: 15px 0 4px;
+  color: #102a4c;
+  font-size: 16px;
 }
 
 .recordCard>p {
   margin: 0;
-  color: #71849c;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .recordCard dl {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 13px;
-  margin: 20px 0;
+  gap: 15px;
+  margin: 18px 0;
+  padding: 15px;
+  border-radius: 9px;
+  background: #f7f9fc;
 }
 
-.recordCard dl div {
-  padding: 11px;
-  border-radius: 9px;
-  background: #f8fafc;
+.recordCard dt,
+.recordCard dd {
+  margin: 0;
 }
 
 .recordCard dt {
   color: #71849c;
-  font-size: 10px;
-  text-transform: uppercase;
+  font-size: 11px;
 }
 
 .recordCard dd {
-  margin: 5px 0 0;
-  color: #173a64;
-  font-size: 12px;
-  font-weight: 750;
+  margin-top: 4px;
+  color: #172b4d;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .recordCard>a {
   align-self: flex-end;
-  margin-top: auto;
+}
+
+.capitalize {
+  text-transform: capitalize;
 }
 
 .emptyState,
@@ -427,15 +448,154 @@
   background: #fff7f7;
 }
 
-@media (max-width: 1100px) {
+/* Table "View record" button (scoped to the list view only) */
+.tableWrapper a[href^='/beta/payment-records/claims/'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  min-height: 40px;
+  border: 1px solid #c7d5e6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #11345d;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.tableWrapper a[href^='/beta/payment-records/claims/']:hover {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.tableWrapper a[href^='/beta/payment-records/claims/']:active {
+  background: #dbeafe;
+  transform: translateY(0);
+}
+
+.tableWrapper a[href^='/beta/payment-records/claims/']:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 22%);
+  outline-offset: 2px;
+}
+
+.resultActions>button {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1e4775;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1e4775;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.resultActions>button:not(:disabled):hover {
+  border-color: #163a63;
+  background: #163a63;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.resultActions>button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.resultActions>button:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 22%);
+  outline-offset: 2px;
+}
+
+/* Wrapper doesn't affect layout */
+.zipActions {
+  display: contents;
+}
+
+/* Download forms button: smaller, white, navy on hover.
+   [data-active] excludes the Grid/List toggle buttons. */
+.zipActions button:not([data-active]) {
+  display: inline-flex;
+  width: auto;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #1e3a5f;
+  border-radius: 9px;
+  color: #1e3a5f;
+  background: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.zipActions button:not([data-active]):not(:disabled):hover {
+  border-color: #163a63;
+  color: #fff;
+  background: #163a63;
+}
+
+.zipActions button:not([data-active]):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.zipActions button:not([data-active]):focus-visible {
+  outline: 3px solid rgb(37 99 235 / 22%);
+  outline-offset: 2px;
+}
+
+/* ---------- Responsive ---------- */
+
+/* Filter wraps only when the card itself gets narrow */
+@container filters (max-width: 900px) {
+  .recordsFilters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container filters (max-width: 620px) {
   .recordsFilters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .recordsSearchField {
-    grid-column: 1/-1;
-  }
-
+@media (max-width: 1100px) {
   .summaryGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -458,10 +618,6 @@
   .summaryGrid,
   .cardGrid {
     grid-template-columns: 1fr;
-  }
-
-  .recordsSearchField {
-    grid-column: auto;
   }
 
   .recordsFilterCard,

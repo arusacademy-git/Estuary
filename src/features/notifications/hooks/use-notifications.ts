@@ -49,15 +49,18 @@ export function useNotifications(
   }, [recipientId]);
 
   useEffect(() => {
-    const initialRefreshId = window.setTimeout(
-      refresh,
-      0,
-    );
-    const unsubscribe =
-      subscribeToNotifications(refresh);
+    let cancelled = false;
+
+    // Initial load runs inside a callback, not directly in the effect body
+    Promise.resolve().then(() => {
+      if (!cancelled) refresh();
+    });
+
+    // Later updates come from the store, which is also a callback
+    const unsubscribe = subscribeToNotifications(refresh);
 
     return () => {
-      window.clearTimeout(initialRefreshId);
+      cancelled = true;
       unsubscribe();
     };
   }, [refresh]);
