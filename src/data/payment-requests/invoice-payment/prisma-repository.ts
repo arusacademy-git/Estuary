@@ -1,4 +1,3 @@
-/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import { ActorType, PaymentMode, PaymentType, Prisma, StateGroup } from '@prisma/client';
 
 import type { CreateInvoicePaymentRequestInput, InvoicePaymentRequestRecord, PaymentRequestStatus } from '@/domain/payment-requests/invoice-payment/types';
@@ -69,8 +68,22 @@ async function nextNumber(tx: Prisma.TransactionClient, organizationId: string, 
   return `IV${shortYear}-${String(month).padStart(2, '0')}-${String(sequence.last_sequence).padStart(2, '0')}`;
 }
 
-export async function listInvoicePaymentsFromDatabase(scope?: { role: 'staff' | 'manager' | 'director' | 'finance'; userId: string; includeAll?: boolean }) {
-  const mapped = (await prisma.submission.findMany({ where: { payment_type: PaymentType.INVOICE_PAYMENT }, include, orderBy: { updated_at: 'desc' } })).map(map);
+export async function listInvoicePaymentsFromDatabase(scope?: { role: 'staff' | 'manager' | 'director' | 'finance'; userId: string; includeAll?: boolean; approvalOnly?: boolean }) {
+  const approvalState = scope?.approvalOnly
+    ? scope.role === 'manager'
+      ? 'PENDING_MANAGER_REVIEW'
+      : scope.role === 'director'
+        ? 'PENDING_DIRECTOR_REVIEW'
+        : undefined
+    : undefined;
+  const mapped = (await prisma.submission.findMany({
+    where: {
+      payment_type: PaymentType.INVOICE_PAYMENT,
+      ...(approvalState ? { current_state_code: approvalState, current_assignee_id: scope!.userId } : {}),
+    },
+    include,
+    orderBy: { updated_at: 'desc' },
+  })).map(map);
   if (!scope) return mapped;
   if (scope.role === 'staff') return mapped.filter((item) => item.staffId === scope.userId);
   if (scope.role === 'manager') return mapped.filter((item) => item.managerApproverId === scope.userId);

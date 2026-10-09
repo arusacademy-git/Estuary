@@ -1,4 +1,3 @@
-/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import {
   ActorType,
   PaymentType,
@@ -49,6 +48,7 @@ type ListScope = {
   userId: string;
   month?: string;
   includeAll?: boolean;
+  approvalOnly?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -244,10 +244,18 @@ function monthRange(month?: string) {
 }
 
 export async function listCashAdvancesFromDatabase(scope?: ListScope) {
+  const approvalState = scope?.approvalOnly
+    ? scope.role === 'manager'
+      ? 'PENDING_MANAGER_APPROVAL'
+      : scope.role === 'director'
+        ? 'PENDING_DIRECTOR_APPROVAL'
+        : undefined
+    : undefined;
   const records = await prisma.submission.findMany({
     where: {
       payment_type: PaymentType.CASH_ADVANCE,
       created_at: monthRange(scope?.month),
+      ...(approvalState ? { current_state_code: approvalState, current_assignee_id: scope!.userId } : {}),
     },
     include,
     orderBy: { updated_at: 'desc' },

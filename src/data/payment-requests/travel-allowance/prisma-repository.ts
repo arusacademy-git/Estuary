@@ -1,4 +1,3 @@
-/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import {
   ActorType,
   PaymentType,
@@ -154,9 +153,20 @@ export async function listTravelAllowancesFromDatabase(scope?: {
   userId: string;
   month?: string;
   includeAll?: boolean;
+  approvalOnly?: boolean;
 }) {
+  const approvalState = scope?.approvalOnly
+    ? scope.role === 'manager'
+      ? 'PENDING_MANAGER_REVIEW'
+      : scope.role === 'director'
+        ? 'PENDING_DIRECTOR_APPROVAL'
+        : undefined
+    : undefined;
   const records = await prisma.submission.findMany({
-    where: { payment_type: PaymentType.TRAVEL_ALLOWANCE },
+    where: {
+      payment_type: PaymentType.TRAVEL_ALLOWANCE,
+      ...(approvalState ? { current_state_code: approvalState, current_assignee_id: scope!.userId } : {}),
+    },
     include: travelAllowanceInclude,
     orderBy: { updated_at: 'desc' },
   });

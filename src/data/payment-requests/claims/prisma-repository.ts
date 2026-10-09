@@ -1,4 +1,3 @@
-/* eslint-disable camelcase -- Prisma fields mirror the existing snake_case database schema. */
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';

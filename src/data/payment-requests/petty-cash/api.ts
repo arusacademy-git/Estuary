@@ -9,6 +9,16 @@ import type {
 
 type Envelope<T> = { data?: T; message?: string };
 
+const requestListCache = new Map<string, {
+  expiresAt: number;
+  promise: Promise<PettyCashRecord[]>;
+}>();
+const REQUEST_LIST_CACHE_MS = 2 * 60 * 1000;
+
+function invalidatePettyCashRequestLists() {
+  requestListCache.clear();
+}
+
 async function read<T>(response: Response) {
   const body = (await response.json().catch(() => null)) as Envelope<T> | null;
   if (!response.ok) throw new Error(body?.message ?? `Petty Cash request failed (${response.status}).`);
@@ -21,14 +31,18 @@ async function action(id: string, route: string, body: unknown) {
     `/api/v1/payment-requests/petty-cash/${encodeURIComponent(id)}/${route}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
   );
-  return read<PettyCashRecord>(response);
+  const record = await read<PettyCashRecord>(response);
+  invalidatePettyCashRequestLists();
+  return record;
 }
 
 export async function createPettyCashRequest(input: CreatePettyCashInput) {
   const response = await fetch('/api/v1/payment-requests/petty-cash', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
   });
-  return read<PettyCashRecord>(response);
+  const record = await read<PettyCashRecord>(response);
+  invalidatePettyCashRequestLists();
+  return record;
 }
 
 export async function fetchPettyCashRequests(scope: {
@@ -40,10 +54,22 @@ export async function fetchPettyCashRequests(scope: {
   const query = new URLSearchParams({ role: scope.role, userId: scope.userId });
   if (scope.month) query.set('month', scope.month);
   if (scope.includeAll) query.set('includeAll', '1');
-  return read<PettyCashRecord[]>(await fetch(
+  const key = query.toString();
+  const cached = requestListCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+
+  const promise = fetch(
     `/api/v1/payment-requests/petty-cash?${query}`,
     { cache: 'no-store' },
-  ));
+  ).then((response) => read<PettyCashRecord[]>(response));
+  requestListCache.set(key, { expiresAt: Date.now() + REQUEST_LIST_CACHE_MS, promise });
+
+  try {
+    return await promise;
+  } catch (error) {
+    if (requestListCache.get(key)?.promise === promise) requestListCache.delete(key);
+    throw error;
+  }
 }
 
 export async function fetchPettyCashRequest(id: string) {
