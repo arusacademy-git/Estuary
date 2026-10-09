@@ -40,8 +40,8 @@ function needsAttention(record: InvoicePaymentRequestRecord, account: BetaAccoun
 export function InvoicePaymentRecords() {
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [checked, setChecked] = useState(() => !account);
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [checked, setChecked] = useState(false);
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [status, setStatus] = useState('ALL');
   const [month, setMonth] = useState('');
@@ -51,13 +51,27 @@ export function InvoicePaymentRecords() {
   const [sort, setSort] = useState<PaymentRecordSort>('UPDATED_DESC');
 
   useEffect(() => {
-    if (!account) return;
     let cancelled = false;
-    fetchInvoicePayments({ role: account.role, userId: account.id, includeAll: true })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .finally(() => { if (!cancelled) setChecked(true); });
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+      if (!session) { setChecked(true); return; }
+
+      try {
+        const data = await fetchInvoicePayments({ role: session.role, userId: session.id, includeAll: true });
+        if (!cancelled) setRecords(data);
+      } catch {
+        // Same as before: a failed load leaves the list empty
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    });
+
     return () => { cancelled = true; };
-  }, [account]);
+  }, []);
   const visible = useMemo(() => account ? (personalOnly ? records.filter((record) => record.staffId === account.id) : visibleFor(records, account)) : [], [account, personalOnly, records]);
   const attentionCount = account ? visible.filter((record) => needsAttention(record, account)).length : 0;
   const completedCount = visible.filter((record) => record.status === 'COMPLETED').length;
@@ -105,7 +119,7 @@ export function InvoicePaymentRecords() {
         <div className={styles.recordsFilters}><label className={styles.recordsSearchField}><span>Search</span><input type="search" placeholder="IV number, vendor or project" value={search} onChange={(event) => setSearch(event.target.value)} /></label><label><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value)}>{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label><span>Month</span><input type="month" value={month} onChange={(event) => handleMonthChange(event.target.value)} /></label><label><span>Exact date</span><input type="date" value={specificDate} min={month ? `${month}-01` : undefined} max={month ? `${month}-31` : undefined} onChange={(event) => setSpecificDate(event.target.value)} /></label><label><span>Sort by</span><select value={sort} onChange={(event) => setSort(event.target.value as PaymentRecordSort)}>{PAYMENT_RECORD_SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label></div>
       </section>
       <section className={styles.recordsResults}>
-        <div className={styles.recordsResultsHeader}><div><h2>Invoice Payments</h2><p>Showing {filtered.length} of {visible.length} visible records</p></div><PaymentRecordZipActions archiveName="invoice-payment-documents" entries={zipEntries} recordCount={downloadableForms.length}><div aria-label="Choose Invoice Payment view" className={styles.recordsViewToggle} role="group"><span>View</span><button aria-pressed={viewMode === 'grid'} data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}><span aria-hidden="true">▦</span> Grid</button><button aria-pressed={viewMode === 'list'} data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}><span aria-hidden="true">☷</span> List</button></div></PaymentRecordZipActions></div>
+        <div className={styles.recordsResultsHeader}><div><h2>Invoice Payments</h2><p>Showing {filtered.length} of {visible.length} visible records</p></div><div className={styles.zipActions}><PaymentRecordZipActions archiveName="invoice-payment-documents" entries={zipEntries} recordCount={downloadableForms.length}><div aria-label="Choose Invoice Payment view" className={styles.recordsViewToggle} role="group"><span>View</span><button aria-pressed={viewMode === 'grid'} data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}><span aria-hidden="true">▦</span> Grid</button><button aria-pressed={viewMode === 'list'} data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}><span aria-hidden="true">☷</span> List</button></div></PaymentRecordZipActions></div></div>
         {filtered.length === 0 ? <div className={styles.emptyState}><h2>No Invoice Payments found</h2><p>No records match the selected filters. Try clearing the filters.</p><button className={styles.clearFiltersButton} type="button" onClick={clearFilters}>Clear filters</button></div> : viewMode === 'grid' ? <div className={styles.cardGrid}>{pagination.pageRecords.map((record) => <RecordCard key={record.id} record={record} />)}</div> : <div className={styles.tableWrapper}><table><thead><tr><th>Reference</th><th>Vendor</th><th>Project</th><th>Amount</th><th>Updated</th><th>Status</th><th><span className={styles.srOnly}>Action</span></th></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong></td><td>{record.vendorName}</td><td>{record.projectName}</td><td className={styles.amount}>{money(record.totalAmount)}</td><td>{new Date(record.updatedAt).toLocaleDateString('en-MY')}</td><td><Status status={record.status} /></td><td className={styles.actionCell}><Link href={`/beta/payment-records/invoice-payments/${record.id}`}>View record</Link></td></tr>)}</tbody></table></div>}
         <ListPagination currentPage={pagination.currentPage} firstRecord={pagination.firstRecord} lastRecord={pagination.lastRecord} pageCount={pagination.pageCount} pageSize={pagination.pageSize} totalRecords={pagination.totalRecords} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />
       </section>

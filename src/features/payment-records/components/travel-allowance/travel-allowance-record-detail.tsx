@@ -61,35 +61,44 @@ export function TravelAllowanceRecordDetail({
 }: {
   requestId: string;
 }) {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [account, setAccount] = useState<BetaAccount | null>(null);
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
-  const [checked, setChecked] = useState(() => !account);
+  const [checked, setChecked] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => {
-    if (!account) return;
 
+  useEffect(() => {
     let cancelled = false;
 
-    fetchTravelAllowance(requestId)
-      .then((value) => {
-        if (!cancelled) setRecord(value);
-      })
-      .catch((caught: unknown) =>
-        !cancelled &&
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "The record could not be loaded.",
-        ),
-      )
-      .finally(() => {
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+      if (!session) {
+        setChecked(true);
+        return;
+      }
+
+      try {
+        const data = await fetchTravelAllowance(requestId);
+        if (!cancelled) setRecord(data);
+      } catch (caught: unknown) {
+        if (!cancelled)
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "The record could not be loaded.",
+          );
+      } finally {
         if (!cancelled) setChecked(true);
-      });
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [account, requestId]);
+  }, [requestId]);
+
   if (!checked)
     return (
       <State
