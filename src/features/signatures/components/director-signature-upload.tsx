@@ -1,15 +1,15 @@
 'use client';
 
-import Image from 'next/image';
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 
-import { useUserSignature } from '../hooks/use-user-signature';
-
 import styles from './director-signature.module.css';
+
+import { useUserSignature } from '../hooks/use-user-signature';
 
 type DirectorSignatureUploadProps = {
   directorId: string;
@@ -40,9 +40,6 @@ export function DirectorSignatureUpload({
   const [selectedFile, setSelectedFile] =
     useState<File | null>(null);
 
-  const [previewUrl, setPreviewUrl] =
-    useState('');
-
   const [localError, setLocalError] =
     useState('');
 
@@ -58,6 +55,11 @@ export function DirectorSignatureUpload({
     removeSignature,
   } = useUserSignature(directorId);
 
+  const previewUrl = useMemo(
+    () => (selectedFile ? URL.createObjectURL(selectedFile) : ''),
+    [selectedFile],
+  );
+
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -71,7 +73,6 @@ export function DirectorSignatureUpload({
       event.target.files?.[0] ?? null;
 
     setSelectedFile(file);
-    setPreviewUrl(file ? URL.createObjectURL(file) : '');
     setSavedMessage('');
     setLocalError('');
   }
@@ -92,7 +93,6 @@ export function DirectorSignatureUpload({
       await uploadSignature(selectedFile);
 
       setSelectedFile(null);
-      setPreviewUrl('');
 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -117,7 +117,6 @@ export function DirectorSignatureUpload({
 
     removeSignature();
     setSelectedFile(null);
-    setPreviewUrl('');
     setSavedMessage(
       'The active signature was removed.',
     );
@@ -136,7 +135,7 @@ export function DirectorSignatureUpload({
   }
 
   const displayedImage =
-    previewUrl || signature?.imageUrl;
+  previewUrl || signature?.imageUrl;
 
   return (
     <section className={styles.signaturePanel}>
@@ -188,12 +187,9 @@ export function DirectorSignatureUpload({
 
           <div className={styles.signatureCanvas}>
             {displayedImage ? (
-              <Image
+              <img
                 src={displayedImage}
                 alt={`${directorName} signature`}
-                height={120}
-                unoptimized
-                width={320}
               />
             ) : (
               <div
@@ -280,7 +276,6 @@ export function DirectorSignatureUpload({
                 type="button"
                 onClick={() => {
                   setSelectedFile(null);
-                  setPreviewUrl('');
 
                   if (fileInputRef.current) {
                     fileInputRef.current.value = '';
