@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useSyncExternalStore,
 } from 'react';
 
 import type { ReactNode } from 'react';
@@ -16,11 +17,35 @@ import { BetaHeaderIcons } from './beta-header-icons';
 
 import {
   BETA_SESSION_KEY,
-  readBetaSession,
+  betaAccounts,
   type BetaAccount,
 } from '@/lib/auth/beta-accounts';
 
 import styles from './beta.module.css';
+
+const BETA_SESSION_EVENT = 'estuary-beta-session-change';
+
+function subscribeToBetaSession(onStoreChange: () => void) {
+  function handleStorage(event: StorageEvent) {
+    if (event.key === BETA_SESSION_KEY) onStoreChange();
+  }
+
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener(BETA_SESSION_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener(BETA_SESSION_EVENT, onStoreChange);
+  };
+}
+
+function getBetaSessionId(): string | null | undefined {
+  return window.localStorage.getItem(BETA_SESSION_KEY);
+}
+
+function getServerBetaSessionId(): undefined {
+  return undefined;
+}
 
 export default function BetaShell({
   children,
@@ -33,18 +58,26 @@ export default function BetaShell({
   const isPublicPage =
     pathname === '/beta' ||
     pathname.startsWith('/beta/recipient/');
-  const account: BetaAccount | null = readBetaSession();
+  const accountId = useSyncExternalStore(
+    subscribeToBetaSession,
+    getBetaSessionId,
+    getServerBetaSessionId,
+  );
+  const account: BetaAccount | null =
+    betaAccounts.find((candidate) => candidate.id === accountId) ?? null;
+  const isSessionHydrated = accountId !== undefined;
 
   useEffect(() => {
-    if (!isPublicPage && !account) {
+    if (isSessionHydrated && !isPublicPage && !account) {
       router.replace('/beta');
     }
-  }, [account, isPublicPage, router]);
+  }, [account, isPublicPage, isSessionHydrated, router]);
 
   function handleSignOut() {
     window.localStorage.removeItem(
       BETA_SESSION_KEY,
     );
+    window.dispatchEvent(new Event(BETA_SESSION_EVENT));
 
     router.push('/beta');
   }
@@ -53,7 +86,7 @@ export default function BetaShell({
     return children;
   }
 
-  if (!account) {
+  if (!isSessionHydrated || !account) {
     return (
       <main className={styles.sessionLoading}>
         Loading your Estuary workspace…
