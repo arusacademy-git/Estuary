@@ -11,7 +11,7 @@
     "sourceType": "module"
   },
   "rules": {
-    "camelcase": ["error", { "properties": "always" }],
+    "camelcase": "off",
     "new-cap": ["error", { "newIsCap": true, "capIsNew": false }]
   }
 }

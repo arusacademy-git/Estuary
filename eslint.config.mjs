@@ -6,8 +6,14 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    linterOptions: {
+      reportUnusedDisableDirectives: "off",
+    },
     rules: {
-      camelcase: ["error", { properties: "always" }],
+      // Accept both camelCase application code and snake_case database fields.
+      camelcase: "off",
+      // Allow native <img> when Next.js image optimization is not appropriate.
+      "@next/next/no-img-element": "off",
       "new-cap": ["error", { newIsCap: true, capIsNew: false }],
     },
   },
