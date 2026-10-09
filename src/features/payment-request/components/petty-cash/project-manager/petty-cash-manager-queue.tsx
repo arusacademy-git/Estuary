@@ -29,8 +29,8 @@ function location(record: PettyCashRecord) {
 }
 
 export function PettyCashManagerQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [sessionChecked, setSessionChecked] = useState(() => !account || account.role !== 'manager');
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [records, setRecords] = useState<PettyCashRecord[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('PENDING');
@@ -38,14 +38,30 @@ export function PettyCashManagerQueue() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'manager') return;
     let cancelled = false;
-    fetchPettyCashRequests({ role: 'manager', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
-      .finally(() => { if (!cancelled) setSessionChecked(true); });
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const current = readBetaSession();
+      if (cancelled) return;
+      setAccount(current);
+      if (!current || current.role !== 'manager') {
+        setSessionChecked(true);
+        return;
+      }
+
+      try {
+        const data = await fetchPettyCashRequests({ role: 'manager', userId: current.id });
+        if (!cancelled) setRecords(data);
+      } catch (caught) {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.');
+      } finally {
+        if (!cancelled) setSessionChecked(true);
+      }
+    });
+
     return () => { cancelled = true; };
-  }, [account]);
+  }, []);
 
   const assigned = useMemo(
     () => records
@@ -73,7 +89,7 @@ export function PettyCashManagerQueue() {
 
   return <main className={styles.managerPage}>
     <header className={styles.managerHeader}>
-      <div><p className={styles.eyebrow}>Manager workspace</p><h1>Petty Cash previews</h1><p>Preview assigned requests while Finance processes them independently.</p></div>
+      <div><p className={styles.eyebrow}>Manager workspace</p><h1>Petty Cash previews</h1><p>Preview assigned requests while Finance processes them independently.</p>{pendingCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/project-manager/payment-requests/petty-cash/bulk">Bulk preview Petty Cash</Link>}</div>
       <div className={styles.managerAccountCard}><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></div>
     </header>
 

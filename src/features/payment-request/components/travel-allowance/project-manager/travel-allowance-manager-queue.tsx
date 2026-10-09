@@ -28,19 +28,19 @@ function statusLabel(status: TravelAllowanceRecord['status']) {
 export function TravelAllowanceManagerQueue() {
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<TravelAllowanceRecord[]>([]);
-  const [checked, setChecked] = useState(() => !account || account.role !== 'manager');
+  const [checked, setChecked] = useState(
+    () => !account || account.role !== 'manager',
+  );
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!account || account.role !== 'manager') return;
-    let cancelled = false;
     fetchTravelAllowances({ role: 'manager', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .catch((caught: unknown) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
+      .then(setRecords)
+      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'))
+      .finally(() => setChecked(true));
   }, [account]);
 
   const activeCount = records.filter((record) => record.status === 'PENDING_MANAGER_REVIEW').length;
@@ -64,7 +64,7 @@ export function TravelAllowanceManagerQueue() {
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>Manager workspace</p><h1>Travel Allowance workspace</h1><span>Review Staff requests, track progress, or create a request on behalf of Staff.</span></div>
+        <div><p>Manager workspace</p><h1>Travel Allowance workspace</h1><span>Review Staff requests, track progress, or create a request on behalf of Staff.</span>{activeCount > 0 && <Link className={styles.bulkActionButton} href="/beta/project-manager/payment-requests/travel-allowances/bulk">Bulk review and approve</Link>}</div>
         <aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside>
       </header>
       {error && <div className={styles.error} role="alert">{error}</div>}

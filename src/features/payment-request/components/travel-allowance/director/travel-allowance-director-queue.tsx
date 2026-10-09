@@ -16,22 +16,35 @@ const money = (value: number) => new Intl.NumberFormat('en-MY', { style: 'curren
 function statusLabel(status: TravelAllowanceRecord['status']) { return status === 'PENDING_MANAGER_REVIEW' ? 'Pending Manager Review' : status === 'PENDING_DIRECTOR_APPROVAL' ? 'Pending Director Approval' : status === 'PENDING_FINANCE_VERIFICATION' ? 'Pending Finance Verification' : status === 'RETURNED_TO_STAFF' ? 'Returned for Correction' : 'Completed'; }
 
 export function TravelAllowanceDirectorQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [account, setAccount] = useState<BetaAccount | null>(null);
   const [records, setRecords] = useState<TravelAllowanceRecord[]>([]);
-  const [checked, setChecked] = useState(() => !account || account.role !== 'director');
+  const [checked, setChecked] = useState(false);
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'director') return;
     let cancelled = false;
-    fetchTravelAllowances({ role: 'director', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .catch((caught: unknown) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
-      .finally(() => { if (!cancelled) setChecked(true); });
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+      if (!session || session.role !== 'director') { setChecked(true); return; }
+
+      try {
+        const data = await fetchTravelAllowances({ role: 'director', userId: session.id });
+        if (!cancelled) setRecords(data);
+      } catch (caught: unknown) {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.');
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    });
+
     return () => { cancelled = true; };
-  }, [account]);
+  }, []);
 
   const activeCount = records.filter((record) => record.status === 'PENDING_DIRECTOR_APPROVAL').length;
   const forwardedCount = records.filter((record) => ['PENDING_FINANCE_VERIFICATION', 'COMPLETED'].includes(record.status)).length;
@@ -48,7 +61,7 @@ export function TravelAllowanceDirectorQueue() {
   if (!checked) return <State title="Loading Travel Allowances" copy="Reading Director assignments from the database…" />;
   if (!account || account.role !== 'director') return <State title="Director access required" copy="Sign in using a Director account." />;
   return <main className={styles.page}>
-    <header className={styles.pageHeader}><div><p>Director workspace</p><h1>Travel Allowance approvals</h1><span>Review assigned requests and forward approved allowances to Finance.</span></div><aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside></header>
+    <header className={styles.pageHeader}><div><p>Director workspace</p><h1>Travel Allowance approvals</h1><span>Review assigned requests and forward approved allowances to Finance.</span>{activeCount > 0 && <Link className={styles.bulkActionButton} href="/beta/director/payment-requests/travel-allowances/bulk">Bulk review and approve</Link>}</div><aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside></header>
     {error && <div className={styles.error} role="alert">{error}</div>}
     <section className={styles.summaryGrid}><article><span>Requires approval</span><strong>{activeCount}</strong></article><article><span>Forwarded / completed</span><strong>{forwardedCount}</strong></article><article><span>All assigned</span><strong>{records.length}</strong></article></section>
     <section className={styles.queuePanel}>

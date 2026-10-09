@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
@@ -30,12 +30,6 @@ function statusLabel(status: ClaimRecord['status']) {
   return status.replaceAll('_', ' ');
 }
 
-function claimNeedsAction(record: ClaimRecord, role: Extract<BetaRole, 'director' | 'finance'>) {
-  return role === 'director'
-    ? !record.directorReviewedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
-    : ['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_PROCESSING'].includes(record.status);
-}
-
 export function RoleClaimQueue({
   role,
   title,
@@ -50,7 +44,9 @@ export function RoleClaimQueue({
 }) {
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<ClaimRecord[]>([]);
-  const [checked, setChecked] = useState(() => !account || account.role !== role);
+  const [checked, setChecked] = useState(
+    () => !account || account.role !== role,
+  );
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
@@ -59,23 +55,24 @@ export function RoleClaimQueue({
 
   useEffect(() => {
     if (!account || account.role !== role) return;
-    let cancelled = false;
     fetchClaimRequests({ role, userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Claims could not be loaded.'); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
+      .then(setRecords)
+      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Claims could not be loaded.'))
+      .finally(() => setChecked(true));
   }, [account, role]);
 
-  const activeCount = records.filter((record) => claimNeedsAction(record, role)).length;
+  const needsAction = (record: ClaimRecord) => role === 'director'
+    ? !record.directorReviewedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
+    : ['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_PROCESSING'].includes(record.status);
+  const activeCount = records.filter(needsAction).length;
   const processedCount = records.filter((record) => {
     if (role === 'director') return Boolean(record.directorReviewedAt);
     return record.status === 'PAID';
   }).length;
-  const visible = useMemo(() => {
+  const visible = (() => {
     const term = search.trim().toLowerCase();
     return records.filter((record) => {
-      if (filter === 'ACTIVE' && !claimNeedsAction(record, role)) return false;
+      if (filter === 'ACTIVE' && !needsAction(record)) return false;
       if (filter === 'PROCESSED') {
         const processed = role === 'director'
           ? Boolean(record.directorReviewedAt)
@@ -86,7 +83,7 @@ export function RoleClaimQueue({
       return !term || [record.claimNumber, record.requesterName, claimTypeDetails(record.claimType).label]
         .some((value) => value.toLowerCase().includes(term));
     });
-  }, [claimType, filter, records, role, search]);
+  })();
   const pagination = useListPagination(visible);
 
   if (!checked) return <State title="Loading Claims" copy="Checking assigned Claims…" />;
@@ -96,7 +93,7 @@ export function RoleClaimQueue({
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>{role === 'director' ? 'Director workspace' : 'Finance workspace'}</p><h1>{title}</h1><span>{copy}</span></div>
+        <div><p>{role === 'director' ? 'Director workspace' : 'Finance workspace'}</p><h1>{title}</h1><span>{copy}</span>{role === 'director' && activeCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/director/payment-requests/claims/bulk">Bulk preview Claims</Link>}</div>
         <aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside>
       </header>
 
@@ -146,7 +143,7 @@ export function RoleClaimQueue({
                 <div><dt>Items</dt><dd>{record.lines.length}</dd></div>
                 <div><dt>Amount</dt><dd>{money(record.totalAmount)}</dd></div>
               </dl>
-              <Link href={`${basePath}/${encodeURIComponent(record.claimNumber)}`}>{claimNeedsAction(record, role) ? role === 'director' ? 'Preview Claim' : 'Process Claim' : 'View progress'}</Link>
+              <Link href={`${basePath}/${encodeURIComponent(record.claimNumber)}`}>{needsAction(record) ? role === 'director' ? 'Preview Claim' : 'Process Claim' : 'View progress'}</Link>
             </article>
           ))}</div>
         ) : (
@@ -161,7 +158,7 @@ export function RoleClaimQueue({
               <td>{record.lines.length}</td>
               <td><strong>{money(record.totalAmount)}</strong></td>
               <td><span className={styles.status} data-status={record.status}>{statusLabel(record.status)}</span></td>
-              <td><Link href={`${basePath}/${encodeURIComponent(record.claimNumber)}`}>{claimNeedsAction(record, role) ? role === 'director' ? 'Preview Claim' : 'Process Claim' : 'View progress'}</Link></td>
+              <td><Link href={`${basePath}/${encodeURIComponent(record.claimNumber)}`}>{needsAction(record) ? role === 'director' ? 'Preview Claim' : 'Process Claim' : 'View progress'}</Link></td>
             </tr>)}</tbody>
           </table></div>
         )}

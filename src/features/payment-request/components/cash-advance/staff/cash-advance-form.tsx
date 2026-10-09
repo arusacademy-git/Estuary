@@ -1,6 +1,6 @@
 'use client';
 
-import { type ChangeEvent, type FormEvent, useMemo, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
 
 import { createCashAdvance, resubmitCashAdvance } from '@/data/payment-requests/cash-advance/cash-advance-api';
 import { notifyCashAdvanceSubmitted } from '@/features/payment-request/notifications/cash-advance-notifications';
@@ -30,12 +30,10 @@ function readFile(file: File): Promise<CashAdvanceDocument> {
 }
 
 export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvanceRecord }) {
-  const [account] = useState<ReturnType<typeof readBetaSession>>(() => readBetaSession());
+  const [account, setAccount] = useState<ReturnType<typeof readBetaSession>>(null);
   const [requestDate, setRequestDate] = useState(initialRecord?.requestDate ?? today());
   const [contact, setContact] = useState(initialRecord?.requesterContact ?? '');
-  const [accountHolderName, setAccountHolderName] = useState(
-    initialRecord?.accountHolderName ?? (account?.role === 'staff' ? account.name : ''),
-  );
+  const [accountHolderName, setAccountHolderName] = useState(initialRecord?.accountHolderName ?? '');
   const [bankName, setBankName] = useState(initialRecord?.bankName ?? '');
   const [bankAccountNumber, setBankAccountNumber] = useState(initialRecord?.bankAccountNumber ?? '');
   const [projectName, setProjectName] = useState(initialRecord?.projectName ?? '');
@@ -55,6 +53,19 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(() => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+      if (!initialRecord && session?.role === 'staff') setAccountHolderName((current) => current || session.name);
+    });
+
+    return () => { cancelled = true; };
+  }, [initialRecord]);
   const { signature: activeSignature } = useUserSignature(account?.id);
   const managers = betaAccounts.filter((item) => item.role === 'manager');
   const directors = betaAccounts.filter((item) => item.role === 'director');
