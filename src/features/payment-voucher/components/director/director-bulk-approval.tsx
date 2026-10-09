@@ -670,8 +670,8 @@ export function DirectorBulkApproval({
                         </p>
                     </div>
                 ) : (
-                    <div className={styles.selectionTableWrapper}>
-                        <table className={styles.selectionTable}>
+                    <div className={`${styles.selectionTableWrapper} ${styles.voucherTableWrapper}`}>
+                        <table className={`${styles.selectionTable} ${styles.voucherFitTable}`}>
                             <thead>
                                 <tr><th aria-label="Select" /><th>Payment Voucher</th><th>Recipient</th><th>Submitter</th><th>PV date</th><th>Division</th><th>Amount</th><th>Review</th><th aria-label="Actions" /></tr>
                             </thead>
@@ -682,7 +682,7 @@ export function DirectorBulkApproval({
                                     return (
                                         <tr data-selected={isSelected} key={voucher.id}>
                                             <td className={styles.checkCell}><input aria-label={`Select ${voucher.voucherNumber}`} checked={isSelected} onChange={() => toggleVoucher(voucher.id)} type="checkbox" /></td>
-                                            <td><strong className={styles.voucherNumber}>{voucher.voucherNumber}</strong><span className={styles.tableSubtext}>{voucher.purpose}</span></td>
+                                            <td><strong className={styles.voucherNumber}>{voucher.voucherNumber}</strong></td>
                                             <td>{voucher.recipientName}</td>
                                             <td>{getAccountName(voucher.submitterId)}</td>
                                             <td>{formatDate(voucher.pvDate)}</td>
