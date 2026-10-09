@@ -1300,7 +1300,7 @@ export function FinancePaymentPanel({
                       styles.recipientSignatureImage
                     }
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {}
                     <img
                       alt={`Signature submitted by ${voucher.recipientName}`}
                       src={

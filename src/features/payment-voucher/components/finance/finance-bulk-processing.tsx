@@ -156,15 +156,15 @@ export function FinanceBulkProcessing({ finance, vouchers }: Props) {
         {!pending.length ? (
           <div className={styles.empty}><h2>No vouchers ready for bulk processing</h2><p>Director-approved Payment Vouchers will appear here.</p></div>
         ) : (
-          <div className={styles.selectionTableWrapper}>
-            <table className={styles.selectionTable}>
+          <div className={`${styles.selectionTableWrapper} ${styles.voucherTableWrapper}`}>
+            <table className={`${styles.selectionTable} ${styles.voucherFitTable}`}>
               <thead><tr><th aria-label="Select" /><th>Payment Voucher</th><th>Recipient</th><th>Submitter</th><th>PV date</th><th>Division</th><th>Amount</th><th>Review</th><th aria-label="Actions" /></tr></thead>
               <tbody>{pending.map((voucher) => {
                 const isSelected = selectedIds.includes(voucher.id);
                 const isReviewed = reviewedIds.includes(voucher.id);
                 return <tr data-selected={isSelected} key={voucher.id}>
                   <td className={styles.checkCell}><input aria-label={`Select ${voucher.voucherNumber}`} type="checkbox" checked={isSelected} onChange={() => toggle(voucher.id)} /></td>
-                  <td><strong className={styles.voucherNumber}>{voucher.voucherNumber}</strong><span className={styles.tableSubtext}>{voucher.purpose}</span></td>
+                  <td><strong className={styles.voucherNumber}>{voucher.voucherNumber}</strong></td>
                   <td>{voucher.recipientName}</td>
                   <td>{accountName(voucher.submitterId)}</td>
                   <td>{formatDate(voucher.pvDate)}</td>

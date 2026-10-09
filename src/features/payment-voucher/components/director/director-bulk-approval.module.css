@@ -169,7 +169,8 @@
 
 .recordCount {
   color: #64748b;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .selectionTableWrapper {
@@ -559,12 +560,13 @@
 .reviewModalHeader h1 {
   margin: 6px 0;
   color: #1e3a5f;
-  font-size: 30px;
+  font-size: 24px;
 }
 
 .reviewModalHeader p {
   margin: 0;
   color: #64748b;
+  font-size: 13px;
 }
 
 .reviewModalTitleRow {
@@ -597,14 +599,14 @@
 .reviewModalBody {
   display: grid;
   overflow-y: auto;
-  gap: 24px;
-  padding: 26px;
+  gap: 18px;
+  padding: 20px;
   background: #f8fafc;
 }
 
 .modalInformationSection,
 .modalBreakdownSection {
-  padding: 22px;
+  padding: 20px;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   background: #ffffff;
@@ -612,27 +614,28 @@
 
 .modalInformationSection h2,
 .modalBreakdownSection h2 {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   color: #1e3a5f;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .modalInformationGrid {
   display: grid;
   grid-template-columns:
     repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 18px 24px;
   margin: 0;
 }
 
 .modalInformationGrid dt {
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .modalInformationGrid dd {
   margin: 5px 0 0;
   color: #1e293b;
+  font-size: 13px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -641,21 +644,22 @@
   display: grid;
   grid-template-columns:
     repeat(2, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: 22px;
-  padding: 18px;
+  gap: 18px;
+  margin-top: 18px;
+  padding: 16px;
   border-radius: 10px;
   background: #f1f5f9;
 }
 
 .modalPurposeSummary span {
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .modalPurposeSummary p {
   margin: 6px 0 0;
   color: #1e293b;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
 }
@@ -669,7 +673,7 @@
 
 .modalSectionHeading span {
   color: #64748b;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .modalTableWrapper {
@@ -683,8 +687,9 @@
 
 .modalBreakdownTable th,
 .modalBreakdownTable td {
-  padding: 13px 12px;
+  padding: 11px 10px;
   border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
   text-align: left;
   white-space: nowrap;
 }
@@ -746,9 +751,19 @@
 }
 
 .markReviewedButton {
+  min-height: 40px;
+  padding: 0 14px;
   border: 0;
   background: #1e3a5f;
   color: #ffffff;
+  font-size: 13px;
+}
+
+.modalNavigationButtons button,
+.modalCancelButton {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
 }
 
 .markReviewedButton:hover:not(:disabled) {
@@ -821,4 +836,58 @@
   .summaryGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.voucherTableWrapper {
+  overflow-x: hidden;
+}
+
+.voucherFitTable,
+.approvalPanel .voucherFitTable {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 10px;
+}
+
+.voucherFitTable th,
+.voucherFitTable td,
+.approvalPanel .voucherFitTable th,
+.approvalPanel .voucherFitTable td {
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voucherFitTable th {
+  font-size: 10px;
+}
+
+.voucherFitTable th:nth-child(1),
+.voucherFitTable td:nth-child(1) { width: 4%; }
+.voucherFitTable th:nth-child(2),
+.voucherFitTable td:nth-child(2) { width: 15%; }
+.voucherFitTable th:nth-child(3),
+.voucherFitTable td:nth-child(3) { width: 12%; }
+.voucherFitTable th:nth-child(4),
+.voucherFitTable td:nth-child(4) { width: 12%; }
+.voucherFitTable th:nth-child(5),
+.voucherFitTable td:nth-child(5) { width: 11%; }
+.voucherFitTable th:nth-child(6),
+.voucherFitTable td:nth-child(6) { width: 11%; }
+.voucherFitTable th:nth-child(7),
+.voucherFitTable td:nth-child(7) { width: 10%; }
+.voucherFitTable th:nth-child(8),
+.voucherFitTable td:nth-child(8) { width: 11%; }
+.voucherFitTable th:nth-child(9),
+.voucherFitTable td:nth-child(9) { width: 14%; }
+
+.voucherFitTable .reviewButton {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 0;
+  padding: 0 8px;
+  font-size: 12px;
 }

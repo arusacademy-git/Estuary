@@ -667,3 +667,56 @@
     grid-template-columns: 1fr;
   }
 }
+
+.voucherTableWrapper {
+  overflow-x: hidden;
+}
+
+.voucherFitTable,
+.panel .voucherFitTable {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 12px;
+}
+
+.voucherFitTable th,
+.voucherFitTable td,
+.panel .voucherFitTable th,
+.panel .voucherFitTable td {
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voucherFitTable th {
+  font-size: 10px;
+}
+
+.voucherFitTable th:nth-child(1),
+.voucherFitTable td:nth-child(1) { width: 4%; }
+.voucherFitTable th:nth-child(2),
+.voucherFitTable td:nth-child(2) { width: 15%; }
+.voucherFitTable th:nth-child(3),
+.voucherFitTable td:nth-child(3) { width: 12%; }
+.voucherFitTable th:nth-child(4),
+.voucherFitTable td:nth-child(4) { width: 12%; }
+.voucherFitTable th:nth-child(5),
+.voucherFitTable td:nth-child(5) { width: 11%; }
+.voucherFitTable th:nth-child(6),
+.voucherFitTable td:nth-child(6) { width: 11%; }
+.voucherFitTable th:nth-child(7),
+.voucherFitTable td:nth-child(7) { width: 10%; }
+.voucherFitTable th:nth-child(8),
+.voucherFitTable td:nth-child(8) { width: 11%; }
+.voucherFitTable th:nth-child(9),
+.voucherFitTable td:nth-child(9) { width: 14%; }
+
+.voucherFitTable .reviewButton {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  font-size: 12px;
+}
