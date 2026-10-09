@@ -67,8 +67,9 @@ export async function GET(request: Request) {
     const userId = url.searchParams.get('userId');
     const month = url.searchParams.get('month') ?? undefined;
     const includeAll = url.searchParams.get('includeAll') === '1';
+    const approvalOnly = url.searchParams.get('approvalOnly') === '1';
     const scope = (role === 'staff' || role === 'manager' || role === 'director' || role === 'finance') && userId
-      ? { role, userId, month, includeAll } as const
+      ? { role, userId, month, includeAll, approvalOnly } as const
       : undefined;
     return dataResponse(await listTravelAllowancesFromDatabase(scope));
   } catch (error) {
