@@ -19,21 +19,35 @@ function money(value: number) {
 }
 
 export function InvoicePaymentFinanceQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [checked, setChecked] = useState(() => !account || account.role !== 'finance');
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [checked, setChecked] = useState(false);
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDING');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'finance') return;
     let cancelled = false;
-    fetchInvoicePayments({ role: 'finance', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .finally(() => { if (!cancelled) setChecked(true); });
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const session = readBetaSession();
+      if (cancelled) return;
+      setAccount(session);
+      if (!session || session.role !== 'finance') { setChecked(true); return; }
+
+      try {
+        const data = await fetchInvoicePayments({ role: 'finance', userId: session.id });
+        if (!cancelled) setRecords(data);
+      } catch {
+        // Same as before: a failed load leaves the list empty
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    });
+
     return () => { cancelled = true; };
-  }, [account]);
+  }, []);
 
   const financeRecords = useMemo(
     () => records

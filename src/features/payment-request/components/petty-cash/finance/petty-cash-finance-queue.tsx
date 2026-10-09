@@ -21,8 +21,8 @@ const location = (record: PettyCashRecord) => record.location === 'PENANG' ? 'Pe
 function date(value: string) { const parsed = new Date(value.length === 10 ? `${value}T12:00:00` : value); return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('en-MY'); }
 
 export function PettyCashFinanceQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [checked, setChecked] = useState(() => !account || account.role !== 'finance');
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [checked, setChecked] = useState(false);
   const [records, setRecords] = useState<PettyCashRecord[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('PENDING');
@@ -30,14 +30,27 @@ export function PettyCashFinanceQueue() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'finance') return;
     let cancelled = false;
-    fetchPettyCashRequests({ role: 'finance', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.'); })
-      .finally(() => { if (!cancelled) setChecked(true); });
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const current = readBetaSession();
+      if (cancelled) return;
+      setAccount(current);
+      if (!current || current.role !== 'finance') { setChecked(true); return; }
+
+      try {
+        const data = await fetchPettyCashRequests({ role: 'finance', userId: current.id });
+        if (!cancelled) setRecords(data);
+      } catch (caught) {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Requests could not be loaded.');
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    });
+
     return () => { cancelled = true; };
-  }, [account]);
+  }, []);
 
   const financeRecords = useMemo(() => [...records].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [records]);
   const pendingCount = financeRecords.filter((record) => pendingStatuses.includes(record.status) && (record.status !== 'PENDING_FINANCE_REVIEW' || record.financeReviewerId === account?.id)).length;

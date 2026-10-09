@@ -35,14 +35,10 @@ function statusLabel(record: ClaimRecord) {
   return record.status.replaceAll('_', ' ');
 }
 
-function needsManagerPreview(record: ClaimRecord) {
-  return !record.managerApprovedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
-}
-
 export function ClaimManagerQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [account, setAccount] = useState<BetaAccount | null>(null);
   const [records, setRecords] = useState<ClaimRecord[]>([]);
-  const [checked, setChecked] = useState(() => !account || account.role !== 'manager');
+  const [checked, setChecked] = useState(false);
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
@@ -50,21 +46,38 @@ export function ClaimManagerQueue() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'manager') return;
     let cancelled = false;
-    fetchClaimRequests({ role: 'manager', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Claims could not be loaded.'); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
-  }, [account]);
 
-  const activeCount = records.filter(needsManagerPreview).length;
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const current = readBetaSession();
+      if (cancelled) return;
+      setAccount(current);
+      if (!current || current.role !== 'manager') {
+        setChecked(true);
+        return;
+      }
+
+      try {
+        const data = await fetchClaimRequests({ role: 'manager', userId: current.id });
+        if (!cancelled) setRecords(data);
+      } catch (caught) {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Claims could not be loaded.');
+      } finally {
+        if (!cancelled) setChecked(true);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const needsPreview = (record: ClaimRecord) => !record.managerApprovedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
+  const activeCount = records.filter(needsPreview).length;
   const forwardedCount = records.filter((record) => Boolean(record.managerApprovedAt)).length;
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return records.filter((record) => {
-      if (filter === 'ACTIVE' && !needsManagerPreview(record)) return false;
+      if (filter === 'ACTIVE' && (record.managerApprovedAt || ['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status))) return false;
       if (filter === 'FORWARDED' && !record.managerApprovedAt) return false;
       if (claimType !== 'ALL' && record.claimType !== claimType) return false;
       return !term || [record.claimNumber, record.requesterName, claimTypeDetails(record.claimType).label]
@@ -79,7 +92,7 @@ export function ClaimManagerQueue() {
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>Manager workspace</p><h1>Claim previews</h1><span>Preview assigned Claims for tracking without delaying Finance processing.</span></div>
+        <div><p>Manager workspace</p><h1>Claim previews</h1><span>Preview assigned Claims for tracking without delaying Finance processing.</span>{activeCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/project-manager/payment-requests/claims/bulk">Bulk preview Claims</Link>}</div>
         <aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside>
       </header>
 
@@ -129,7 +142,7 @@ export function ClaimManagerQueue() {
                 <div><dt>Items</dt><dd>{record.lines.length}</dd></div>
                 <div><dt>Amount</dt><dd>{money(record.totalAmount)}</dd></div>
               </dl>
-              <Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsManagerPreview(record) ? 'Preview Claim' : 'View progress'}</Link>
+              <Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsPreview(record) ? 'Preview Claim' : 'View progress'}</Link>
             </article>
           ))}</div>
         ) : (
@@ -143,7 +156,7 @@ export function ClaimManagerQueue() {
               <td>{record.lines.length}</td>
               <td><strong>{money(record.totalAmount)}</strong></td>
               <td><span className={styles.status} data-status={record.status}>{statusLabel(record)}</span></td>
-              <td><Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsManagerPreview(record) ? 'Preview Claim' : 'View progress'}</Link></td>
+              <td><Link href={`/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`}>{needsPreview(record) ? 'Preview Claim' : 'View progress'}</Link></td>
             </tr>)}</tbody>
           </table></div>
         )}

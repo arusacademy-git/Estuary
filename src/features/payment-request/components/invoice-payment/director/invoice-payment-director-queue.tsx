@@ -19,21 +19,22 @@ function money(value: number) {
 }
 
 export function InvoicePaymentDirectorQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [checked, setChecked] = useState(() => !account || account.role !== 'director');
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [checked, setChecked] = useState(false);
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDING');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'director') return;
-    let cancelled = false;
-    fetchInvoicePayments({ role: 'director', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
-  }, [account]);
+    Promise.resolve(readBetaSession()).then((session) => {
+      setAccount(session);
+      if (!session || session.role !== 'director') { setChecked(true); return; }
+      return fetchInvoicePayments({ role: 'director', userId: session.id })
+        .then(setRecords)
+        .finally(() => setChecked(true));
+    });
+  }, []);
 
   const assigned = useMemo(
     () => records
@@ -60,7 +61,7 @@ export function InvoicePaymentDirectorQueue() {
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>Director workspace</p><h1>Invoice Payment approvals</h1><span>Review Manager-approved requests and forward them to Finance.</span></div>
+        <div><p>Director workspace</p><h1>Invoice Payment approvals</h1><span>Review Manager-approved requests and forward them to Finance.</span>{pendingCount > 0 && <Link className={styles.bulkActionButton} href="/beta/director/payment-requests/invoice-payments/bulk">Bulk review and approve</Link>}</div>
         <div className={styles.accountCard}><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></div>
       </header>
 

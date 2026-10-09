@@ -10,26 +10,43 @@ import { PaymentPageState } from '@/shared/payment-page-state';
 import { TravelAllowanceForm } from './travel-allowance-form';
 
 export function TravelAllowanceEdit({ requestId }: { requestId: string }) {
-  const [account] = useState<ReturnType<typeof readBetaSession>>(() => readBetaSession());
+  const [account] = useState(() => readBetaSession());
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
-  const [checked, setChecked] = useState(() => !account || !['staff', 'manager'].includes(account.role));
-  const [error, setError] = useState(() => !account || !['staff', 'manager'].includes(account.role)
-    ? 'Sign in using the account that submitted this request.'
-    : '');
+  const hasEditAccess = Boolean(
+    account && ['staff', 'manager'].includes(account.role),
+  );
+  const [checked, setChecked] = useState(() => !hasEditAccess);
+  const [error, setError] = useState(() =>
+    hasEditAccess
+      ? ''
+      : 'Sign in using the account that submitted this request.',
+  );
 
   useEffect(() => {
-    if (!account || !['staff', 'manager'].includes(account.role)) return;
+    if (!account || !hasEditAccess) return;
+
     let cancelled = false;
+
     fetchTravelAllowance(requestId)
       .then((item) => {
+        if (cancelled) return;
         if (item.requesterId !== account.id) throw new Error('Only the original requester can edit this Travel Allowance.');
         if (item.status !== 'RETURNED_TO_STAFF') throw new Error('This Travel Allowance is not currently returned for correction.');
-        if (!cancelled) setRecord(item);
+        setRecord(item);
       })
-      .catch((caught: unknown) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'The Travel Allowance could not be loaded.'); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
-  }, [account, requestId]);
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : 'The Travel Allowance could not be loaded.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChecked(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [account, hasEditAccess, requestId]);
 
   const detailHref = `/beta/payment-records/travel-allowances/${encodeURIComponent(requestId)}`;
   if (!checked) return <PaymentPageState title="Loading Travel Allowance correction" copy="Reading the returned Travel Allowance…" backHref={detailHref} backLabel="Back to Travel Allowance details" />;

@@ -39,21 +39,35 @@ function statusLabel(status: InvoicePaymentRequestRecord['status']) {
 }
 
 export function InvoicePaymentManagerQueue() {
-  const [account] = useState<BetaAccount | null>(() => readBetaSession());
-  const [sessionChecked, setSessionChecked] = useState(() => !account || account.role !== 'manager');
+  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [records, setRecords] = useState<InvoicePaymentRequestRecord[]>([]);
   const [filter, setFilter] = useState<Filter>('PENDING');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!account || account.role !== 'manager') return;
     let cancelled = false;
-    fetchInvoicePayments({ role: 'manager', userId: account.id })
-      .then((values) => { if (!cancelled) setRecords(values); })
-      .finally(() => { if (!cancelled) setSessionChecked(true); });
+
+    // Session lives in the browser, so it is read after mount, inside a callback
+    Promise.resolve().then(async () => {
+      const currentAccount = readBetaSession();
+      if (cancelled) return;
+      setAccount(currentAccount);
+      if (!currentAccount || currentAccount.role !== 'manager') { setSessionChecked(true); return; }
+
+      try {
+        const data = await fetchInvoicePayments({ role: 'manager', userId: currentAccount.id });
+        if (!cancelled) setRecords(data);
+      } catch {
+        // Same as before: a failed load leaves the list empty
+      } finally {
+        if (!cancelled) setSessionChecked(true);
+      }
+    });
+
     return () => { cancelled = true; };
-  }, [account]);
+  }, []);
 
   const assigned = useMemo(
     () =>
@@ -100,7 +114,7 @@ export function InvoicePaymentManagerQueue() {
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p className={styles.eyebrow}>Manager workspace</p><h1>Invoice Payment reviews</h1><p className={styles.headerCopy}>Review and forward Staff requests to the assigned Director.</p></div>
+        <div><p className={styles.eyebrow}>Manager workspace</p><h1>Invoice Payment reviews</h1><p className={styles.headerCopy}>Review and forward Staff requests to the assigned Director.</p>{pendingCount > 0 && <Link className={styles.bulkActionButton} href="/beta/project-manager/payment-requests/invoice-payments/bulk">Bulk review and approve</Link>}</div>
         <div className={styles.accountCard}><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></div>
       </header>
 

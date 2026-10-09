@@ -981,3 +981,23 @@
         margin-left: 16px;
     }
 }
+.bulkActionButton {
+  display: flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 18px;
+  border-radius: 9px;
+  background: #1e4775;
+  color: #fff;
+  padding: 0 18px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.bulkActionButton:hover {
+  background: #163a63;
+  transform: translateY(-1px);
+}
