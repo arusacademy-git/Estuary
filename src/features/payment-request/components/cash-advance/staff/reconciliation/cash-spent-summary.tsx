@@ -1,10 +1,11 @@
 import type { CashAdvanceExpense } from '@/domain/payment-requests/cash-advance/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
 import { parsePaymentAmountInput } from '@/shared/utils/payment-amount';
 import styles from '../../cash-advance.module.css';
 
 const newExpense = (): CashAdvanceExpense => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   expenseDate: '',
   supplier: '',
   description: '',

@@ -7,6 +7,7 @@ import { notifyCashAdvanceSubmitted } from '@/features/payment-request/notificat
 import { cashAdvanceRequestedTotal, validateCashAdvanceRequest } from '@/domain/payment-requests/cash-advance/policy';
 import { CASH_ADVANCE_PROJECTS, type CashAdvanceDocument, type CashAdvanceRecord, type CashAdvanceRequestLine } from '@/domain/payment-requests/cash-advance/types';
 import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { useUserSignature } from '@/features/signatures/hooks/use-user-signature';
 import { CorrectionBackLink, CorrectionEditLayout } from '@/shared/correction-edit-layout';
 import { CashAdvanceConfirmation } from './cash-advance-confirmation';
@@ -16,7 +17,7 @@ import { CashAdvanceReview } from './cash-advance-review';
 import styles from '../cash-advance.module.css';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-const makeLine = (): CashAdvanceRequestLine => ({ id: crypto.randomUUID(), description: '', purpose: '', amount: 0 });
+const makeLine = (): CashAdvanceRequestLine => ({ id: createRuntimeId(), description: '', purpose: '', amount: 0 });
 
 function readFile(file: File): Promise<CashAdvanceDocument> {
   return new Promise((resolve, reject) => {

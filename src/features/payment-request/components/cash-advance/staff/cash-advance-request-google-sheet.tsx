@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from 'react';
 import type { CashAdvanceRequestLine } from '@/domain/payment-requests/cash-advance/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { normalizeSheetCell, parseSheetCsv, retrieveSheetCsv, sheetDate, sheetMetadata, sheetMoney } from './cash-advance-google-sheet-utils';
 import styles from '../cash-advance.module.css';
 
@@ -38,7 +39,7 @@ function parseRequestSheet(csv: string): CashAdvanceRequestSheetData {
         if (!values(row, 'description') || !values(row, 'purpose') || !Number.isFinite(amount) || amount <= 0) {
             throw new Error(`Request row ${index + 1} must contain its expense breakdown, purpose and a valid amount.`);
         }
-        return { id: crypto.randomUUID(), description: values(row, 'description'), purpose: values(row, 'purpose'), amount };
+        return { id: createRuntimeId(), description: values(row, 'description'), purpose: values(row, 'purpose'), amount };
     });
     if (!lines.length) throw new Error('No completed Cash Advance request rows were found.');
     const meta = sheetMetadata(rows, rows.length);

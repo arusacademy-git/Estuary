@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CashAdvanceExpense } from '@/domain/payment-requests/cash-advance/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { resolvePaymentVoucherAccountCode } from '@/shared/constants/payment-options';
 import { normalizeSheetCell, parseSheetCsv, retrieveSheetCsv, sheetDate, sheetMoney } from '../cash-advance-google-sheet-utils';
 import styles from '../../cash-advance.module.css';
@@ -30,7 +31,7 @@ function parseSummary(csv: string) {
         if (!value(row, 'expenseDate') || !value(row, 'supplier') || !value(row, 'description') || !rawAccountType || !Number.isFinite(amount) || amount <= 0) throw new Error(`Appendix A row ${index + 1} is incomplete.`);
         if (!accountType) throw new Error(`Appendix A row ${index + 1} has an unknown Type of Account: ${rawAccountType}`);
         if (receiptLink) { try { const parsed = new URL(receiptLink); if (parsed.protocol !== 'https:') throw new Error(); } catch { throw new Error(`Appendix A row ${index + 1} has an invalid receipt link.`); } }
-        return { id: crypto.randomUUID(), expenseDate: sheetDate(value(row, 'expenseDate')), supplier: value(row, 'supplier'), description: value(row, 'description'), accountType, division: value(row, 'division'), receiptLink: receiptLink || undefined, amount } satisfies CashAdvanceExpense;
+        return { id: createRuntimeId(), expenseDate: sheetDate(value(row, 'expenseDate')), supplier: value(row, 'supplier'), description: value(row, 'description'), accountType, division: value(row, 'division'), receiptLink: receiptLink || undefined, amount } satisfies CashAdvanceExpense;
     });
     if (!expenses.length) throw new Error('No completed expenses were found in Appendix A.');
     return expenses;

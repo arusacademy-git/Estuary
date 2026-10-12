@@ -17,6 +17,7 @@ import type {
 } from '@/domain/payment-requests/cash-advance/types';
 import { notifyCashAdvanceReconciliationSubmitted } from '@/features/payment-request/notifications/cash-advance-notifications';
 import { readBetaSession } from '@/lib/auth/beta-accounts';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import styles from '../../cash-advance.module.css';
 import { BalanceReturnProof } from './balance-return-proof';
@@ -26,7 +27,7 @@ import { ParticipantAllowance } from './participant-allowance';
 import { ReconciliationReview } from './reconciliation-review';
 
 const newExpense = (): CashAdvanceExpense => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   expenseDate: '',
   supplier: '',
   description: '',

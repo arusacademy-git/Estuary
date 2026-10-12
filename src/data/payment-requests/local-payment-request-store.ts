@@ -2,6 +2,7 @@ import type {
   CreateInvoicePaymentRequestInput,
   InvoicePaymentRequestRecord,
 } from '@/domain/payment-requests/invoice-payment/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 const STORAGE_KEY = 'estuary-payment-requests-v2';
 
@@ -79,10 +80,7 @@ export function createLocalInvoicePaymentRequest(
 ) {
   const records = readRecords();
   const now = new Date().toISOString();
-  const id =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `invoice-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const id = createRuntimeId();
 
   const record: InvoicePaymentRequestRecord = {
     ...input,
