@@ -2,12 +2,13 @@
 
 import { type ReactNode, useState } from 'react';
 import { CLAIM_ACCOUNT_TYPES, CLAIM_DIVISION_TYPES, CLAIM_TYPES, type ClaimLine, type ClaimType } from '@/domain/payment-requests/claims/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import styles from './claims.module.css';
 
 export type ClaimSheetData = { claimType: ClaimType; claimantName: string; claimantPosition: string; claimDate: string; contact: string; lines: ClaimLine[] };
 
 const normalize = (value: string) => value.replace(/^\uFEFF/, '').trim().replace(/\s+/g, ' ').toLowerCase();
-const newId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+const newId = () => createRuntimeId();
 
 function parseCsv(text: string) {
     const rows: string[][] = []; let row: string[] = []; let value = ''; let quoted = false;

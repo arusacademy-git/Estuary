@@ -109,6 +109,14 @@
 - 2026-07-06: Added `docs/ESTUARY_OVERVIEW.html` — self-contained project overview and development-history page for human readers
 
 ## Verification
+- 2026-10-12 HTTP-compatible runtime IDs (GitHub issue #44):
+  - Added a shared ID generator that prefers `crypto.randomUUID()`, falls back to `crypto.getRandomValues()`, and retains a last-resort local identifier
+  - Replaced browser-side UUID calls across Cash Advance, Petty Cash, Claims, Travel Allowance, local request stores, and notifications
+  - `corepack pnpm lint` -> pass
+  - `corepack pnpm typecheck` -> pass
+  - `corepack pnpm test` -> pass (`8 files`, `18 tests`)
+  - `corepack pnpm build` -> pass (existing non-blocking Turbopack NFT warning remains)
+  - Browser smoke over the Windows NetBird HTTP address -> Cash Advance and Petty Cash forms both rendered with no console errors
 - 2026-10-12 production image OpenSSL fix (GitHub issue #42):
   - Installed OpenSSL in the shared Docker base so Prisma detects it during dependency generation and at runtime
   - Reused the same base for the production runner image; PostgreSQL configuration and data are unchanged

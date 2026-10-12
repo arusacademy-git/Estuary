@@ -21,6 +21,7 @@ import {
   type PettyCashRequestLine,
 } from '@/domain/payment-requests/petty-cash/types';
 import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { notifyPettyCashSubmitted } from '@/features/payment-request/notifications/petty-cash-notifications';
 import styles from '../petty-cash.module.css';
 import { PettyCashConfirmation } from './petty-cash-confirmation';
@@ -38,7 +39,7 @@ const today = () =>
   new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
 const makeLine = (): PettyCashRequestLine => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   expenseDate: today(),
   supplier: '',
   details: '',

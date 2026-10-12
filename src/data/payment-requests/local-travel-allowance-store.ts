@@ -4,6 +4,7 @@ import type {
   TravelAllowanceRecord,
 } from '@/domain/payment-requests/travel-allowance/types';
 import { travelLineTotal } from '@/domain/payment-requests/travel-allowance/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 const STORAGE_KEY = 'estuary-travel-allowances-v1';
 
@@ -36,9 +37,7 @@ export function createLocalTravelAllowance(input: CreateTravelAllowanceInput) {
     .sort()[0];
   const record: TravelAllowanceRecord = {
     ...input,
-    id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `travel-allowance-${Date.now()}`,
+    id: createRuntimeId(),
     requestNumber: createNextPaymentRecordReference(
       'TRAVEL_ALLOWANCE',
       records.map((item) => item.requestNumber),

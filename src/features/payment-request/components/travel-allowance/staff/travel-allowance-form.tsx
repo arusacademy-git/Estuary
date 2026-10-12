@@ -17,6 +17,7 @@ import {
   travelLineTotal,
 } from "@/domain/payment-requests/travel-allowance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { createRuntimeId } from "@/lib/ids/runtime-id";
 import {
   EMPLOYEE_OPTIONS,
   findEmployeeByName,
@@ -43,10 +44,7 @@ function today() {
 
 function newLine(employeeId = "", employeeName = ""): TravelAllowanceLine {
   return {
-    id:
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `line-${Date.now()}-${Math.random()}`,
+    id: createRuntimeId(),
     travelDate: "",
     employeeId,
     employeeName,
@@ -141,7 +139,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
       }
     }
 
-    const importedLines = data.entries.map((entry, index) => {
+    const importedLines = data.entries.map((entry) => {
       const employee = requestMode === "staff"
         ? account
         : findEmployeeByName(entry.employeeName);
@@ -150,9 +148,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
         entry.projectName as (typeof TRAVEL_ALLOWANCE_PROJECTS)[number],
       );
       return {
-        id: typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `sheet-line-${Date.now()}-${index}`,
+        id: createRuntimeId(),
         employeeId: employee.id,
         employeeName: employee.name,
         travelDate: entry.travelDate,
@@ -459,7 +455,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
                 <div className={styles.entryTop}>
                   <strong>Entry {index + 1}</strong>
                   <div className={styles.entryActions}>
-                    <button type="button" disabled={lines.length >= MAX_LINES} onClick={() => setLines((current) => [...current, { ...line, id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `line-${Date.now()}-${Math.random()}`, travelDate: "" }])}>Duplicate</button>
+                    <button type="button" disabled={lines.length >= MAX_LINES} onClick={() => setLines((current) => [...current, { ...line, id: createRuntimeId(), travelDate: "" }])}>Duplicate</button>
                     <button type="button" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}>Remove</button>
                   </div>
                 </div>

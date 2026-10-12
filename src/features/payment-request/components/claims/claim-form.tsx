@@ -28,6 +28,7 @@ import {
   type CreateClaimInput,
 } from '@/domain/payment-requests/claims/types';
 import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
 import { parsePaymentAmountInput } from '@/shared/utils/payment-amount';
 import { CorrectionBackLink, CorrectionEditLayout } from '@/shared/correction-edit-layout';
@@ -38,7 +39,7 @@ import styles from './claims.module.css';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 const makeLine = (): ClaimLine => ({
-  id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+  id: createRuntimeId(),
   expenseDate: today(), supplier: '', details: '', receiptFileName: '', receiptMimeType: '', receiptFileSize: 0,
   accountType: '', division: '', amount: 0, from: '', to: '', kilometers: 0,
 });

@@ -6,6 +6,7 @@ import type {
 import {
   isNotificationUnread,
 } from '@/domain/notifications/types';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 const NOTIFICATION_STORAGE_KEY =
   'estuary-beta-notifications';
@@ -21,16 +22,7 @@ function canUseLocalStorage() {
 }
 
 function createNotificationId() {
-  if (
-    typeof crypto !== 'undefined' &&
-    typeof crypto.randomUUID === 'function'
-  ) {
-    return crypto.randomUUID();
-  }
-
-  return `notification-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2)}`;
+  return createRuntimeId();
 }
 
 function sortNewestFirst(
