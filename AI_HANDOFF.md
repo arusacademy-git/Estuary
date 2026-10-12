@@ -109,6 +109,14 @@
 - 2026-07-06: Added `docs/ESTUARY_OVERVIEW.html` — self-contained project overview and development-history page for human readers
 
 ## Verification
+- 2026-10-12 production image OpenSSL fix (GitHub issue #42):
+  - Installed OpenSSL in the shared Docker base so Prisma detects it during dependency generation and at runtime
+  - Reused the same base for the production runner image; PostgreSQL configuration and data are unchanged
+  - `corepack pnpm lint` -> pass
+  - `corepack pnpm typecheck` -> pass
+  - `corepack pnpm test` -> pass (`7 files`, `15 tests`)
+  - `corepack pnpm build` -> pass (existing non-blocking Turbopack NFT warning remains)
+  - Docker image build deferred to the Ubuntu deployment server because Docker Desktop was not running locally
 - 2026-09-30 minimal server package:
   - `corepack pnpm lint` -> pass
   - `corepack pnpm typecheck` -> pass
