@@ -11,6 +11,7 @@ type PaymentTypeCardProps = {
   attentionCount?: number;
   href?: Route;
   available?: boolean;
+  isLoading?: boolean;
 };
 
 export function PaymentTypeCard({
@@ -21,11 +22,12 @@ export function PaymentTypeCard({
   attentionCount = 0,
   href,
   available = false,
+  isLoading = false,
 }: PaymentTypeCardProps) {
   const hasAttention = attentionCount > 0;
 
   return (
-    <article className={styles.paymentTypeCard}>
+    <article aria-busy={isLoading} className={styles.paymentTypeCard}>
       <div className={styles.paymentTypeCardHeader}>
         <span
           className={styles.paymentTypeIcon}
@@ -54,7 +56,7 @@ export function PaymentTypeCard({
       <div className={styles.paymentTypeStatistics}>
         <div>
           <span>Total records</span>
-          <strong>{totalRecords}</strong>
+          <strong className={isLoading ? styles.loadingNumber : undefined}>{isLoading ? '—' : totalRecords}</strong>
         </div>
 
         <div>
@@ -67,7 +69,7 @@ export function PaymentTypeCard({
                 : undefined
             }
           >
-            {attentionCount}
+            {isLoading ? '—' : attentionCount}
           </strong>
         </div>
       </div>

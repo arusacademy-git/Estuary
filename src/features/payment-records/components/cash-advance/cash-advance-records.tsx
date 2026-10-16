@@ -6,11 +6,13 @@ import { useSearchParams } from 'next/navigation';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { fetchCashAdvances } from '@/data/payment-requests/cash-advance/cash-advance-api';
 import { PAYMENT_RECORD_SORT_OPTIONS, sortPaymentRecords, type PaymentRecordSort } from '@/domain/payment-records/payment-record-sort';
 import type { CashAdvanceRecord, CashAdvanceStatus } from '@/domain/payment-requests/cash-advance/types';
 import { PaymentRecordZipActions } from '../shared/payment-record-zip-actions';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
+import { PaymentPageState } from '@/shared/payment-page-state';
 
 import styles from './cash-advance-records.module.css';
 
@@ -137,8 +139,10 @@ export function CashAdvanceRecords() {
     setSort('UPDATED_DESC');
   }
 
-  if (!checked) return <State title="Loading Cash Advances" copy="Reading your payment records…" />;
-  if (!account) return <State title="Sign in required" copy="Sign in to view Cash Advance records." />;
+  const recordsHref = personalOnly ? '/beta/payment-records?scope=mine' : '/beta/payment-records';
+  const recordsLabel = `Back to ${personalOnly ? 'My Requests' : 'Payment Records'}`;
+  if (!checked) return <PaymentPageState title="Loading Cash Advances" copy="Reading your payment records…" backHref={recordsHref} backLabel={recordsLabel} />;
+  if (!account) return <PaymentPageState title="Sign in required" copy="Sign in to view Cash Advance records." backHref="/beta" backLabel="Back to sign in" />;
 
   return <main className={styles.page}>
     <div className={styles.backRow}><Link href={personalOnly ? '/beta/payment-records?scope=mine' : '/beta/payment-records'}>← Back to {personalOnly ? 'My Requests' : 'Payment Records'}</Link></div>
@@ -149,7 +153,7 @@ export function CashAdvanceRecords() {
       <div className={styles.recordsFilters}><label className={styles.recordsSearchField}><span>Search</span><input onChange={(event) => setSearch(event.target.value)} placeholder="CA number, Staff, project or purpose" type="search" value={search} /></label><label><span>Status</span><select onChange={(event) => setStatus(event.target.value as 'ALL' | CashAdvanceStatus)} value={status}>{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label><span>Month</span><input onChange={(event) => handleMonthChange(event.target.value)} type="month" value={month} /></label><label><span>Exact date</span><input max={month ? `${month}-31` : undefined} min={month ? `${month}-01` : undefined} onChange={(event) => setSpecificDate(event.target.value)} type="date" value={specificDate} /></label><label><span>Sort by</span><select value={sort} onChange={(event) => setSort(event.target.value as PaymentRecordSort)}>{PAYMENT_RECORD_SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label></div>
     </section>
     <section className={styles.recordsResults}>
-      <div className={styles.recordsResultsHeader}><div><h2>Cash Advances</h2><p>Showing {filtered.length} of {visible.length} visible records</p></div><div className={styles.zipActions}><PaymentRecordZipActions archiveName="cash-advance-forms" entries={zipEntries} recordCount={downloadableForms.length}><div aria-label="Choose Cash Advance view" className={styles.recordsViewToggle} role="group"><span>View</span><button aria-pressed={viewMode === 'grid'} data-active={viewMode === 'grid'} onClick={() => setViewMode('grid')} type="button"><span aria-hidden="true">▦</span> Grid</button><button aria-pressed={viewMode === 'list'} data-active={viewMode === 'list'} onClick={() => setViewMode('list')} type="button"><span aria-hidden="true">☷</span> List</button></div></PaymentRecordZipActions></div></div>
+      <div className={styles.recordsResultsHeader}><div><h2>Cash Advances</h2><p>Showing {filtered.length} of {visible.length} visible records</p></div><div className={styles.zipActions}><PaymentRecordZipActions archiveName="cash-advance-forms" entries={zipEntries} recordCount={downloadableForms.length}><PaymentViewToggle label="Choose Cash Advance view" onChange={setViewMode} value={viewMode} /></PaymentRecordZipActions></div></div>
       {error && <div className={styles.errorState}>{error}</div>}
       {!error && filtered.length === 0 ? <div className={styles.emptyState}><h2>No Cash Advances found</h2><p>No records match the selected filters. Try clearing the filters.</p><button className={styles.clearFiltersButton} onClick={clearFilters} type="button">Clear filters</button></div> : viewMode === 'grid' ? <div className={styles.cardGrid}>{pagination.pageRecords.map((record) => <RecordCard key={record.id} record={record} />)}</div> : <div className={styles.tableWrapper}><table><thead><tr><th>Reference</th><th>Staff</th><th>Project</th><th>Amount</th><th>Updated</th><th>Status</th><th><span className={styles.srOnly}>Action</span></th></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong></td><td>{record.requesterName}</td><td>{record.projectName}</td><td className={styles.amount}>{money(record.totalAmount)}</td><td>{new Date(record.updatedAt).toLocaleDateString('en-MY')}</td><td><Status status={record.status} /></td><td className={styles.actionCell}><Link href={`/beta/payment-records/cash-advances/${encodeURIComponent(record.requestNumber)}`}>View record</Link></td></tr>)}</tbody></table></div>}
       <ListPagination currentPage={pagination.currentPage} firstRecord={pagination.firstRecord} lastRecord={pagination.lastRecord} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} pageCount={pagination.pageCount} pageSize={pagination.pageSize} totalRecords={pagination.totalRecords} />
@@ -165,6 +169,3 @@ function Status({ status }: { status: CashAdvanceStatus }) {
   return <span className={styles.statusBadge} data-status={status}>{statusLabels[status]}</span>;
 }
 
-function State({ title, copy }: { title: string; copy: string }) {
-  return <main className={styles.statePage}><h1>{title}</h1><p>{copy}</p><Link href="/beta/payment-records">Back to Payment Records</Link></main>;
-}

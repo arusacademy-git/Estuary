@@ -102,6 +102,17 @@
   font-size: 1.4rem;
 }
 
+.paymentTypeStatistics .loadingNumber,
+.paymentTypeCard[aria-busy='true'] .paymentTypeStatistics strong {
+  color: #94a3b8;
+  animation: recordLoadingPulse 1.15s ease-in-out infinite alternate;
+}
+
+@keyframes recordLoadingPulse {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+
 .paymentTypeStatistics .attentionNumber {
   color: #d97706;
 }
