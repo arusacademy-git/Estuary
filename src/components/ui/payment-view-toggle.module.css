@@ -1,0 +1,6 @@
+.toggle { display:inline-flex; min-height:42px; align-items:center; gap:3px; padding:3px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; box-shadow:0 1px 2px rgb(15 23 42 / 4%); }
+.toggle>span { padding:0 9px; color:#526987; font-size:13px; font-weight:700; }
+.toggle button { display:inline-flex; min-height:34px; align-items:center; justify-content:center; gap:4px; padding:0 10px; border:0; border-radius:9px; color:#526987; background:transparent; font:inherit; font-size:13px; font-weight:750; cursor:pointer; }
+.toggle button:hover { color:#173a64; background:#f1f5f9; }
+.toggle button[data-active='true'] { color:#fff; background:#173a64; box-shadow:0 2px 5px rgb(15 42 76 / 18%); }
+.toggle button:focus-visible { outline:3px solid rgb(37 99 235 / 25%); outline-offset:2px; }
