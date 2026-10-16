@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 
 const maximumSheetSize = 2_000_000;
+const googleSheetCacheTtlMs = 30_000;
+const googleSheetRequestTimeoutMs = 5_000;
+
+const googleSheetCache = new Map<string, {
+  csv: string;
+  expiresAt: number;
+}>();
 
 function googleSheetDetails(value: unknown) {
   if (
@@ -76,6 +83,17 @@ function googleSheetDetails(value: unknown) {
 async function fetchGoogleSheetCsv(
   exportUrls: string[],
 ) {
+  const cacheKey = exportUrls[0];
+  const cached = googleSheetCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.csv;
+  }
+
+  if (cached) {
+    googleSheetCache.delete(cacheKey);
+  }
+
   const failures: string[] = [];
 
   for (const exportUrl of exportUrls) {
@@ -85,6 +103,7 @@ async function fetchGoogleSheetCsv(
         {
           cache: 'no-store',
           redirect: 'follow',
+          signal: AbortSignal.timeout(googleSheetRequestTimeoutMs),
 
           headers: {
             Accept:
@@ -129,6 +148,11 @@ async function fetchGoogleSheetCsv(
           'The Google Sheet is too large. Keep the sheet below 2 MB.',
         );
       }
+
+      googleSheetCache.set(cacheKey, {
+        csv,
+        expiresAt: Date.now() + googleSheetCacheTtlMs,
+      });
 
       return csv;
     } catch (error) {
