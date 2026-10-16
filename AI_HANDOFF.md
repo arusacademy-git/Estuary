@@ -2,7 +2,7 @@
 
 ## Current State
 - Project: Estuary
-- Summary: Minimal one-container server package prepared for the current prototype; it connects to an existing PostgreSQL service and preserves the file-backed runtime directory on the host.
+- Summary: Production Docker build now accepts the public Google Sheet template URLs from the server-only environment file while keeping database and authentication secrets runtime-only.
 - Current Holder: GitHub issue/branch owner (non-exclusive project model)
 - Actor Model: OpenAI Codex
 - Assigned Agent:
@@ -10,8 +10,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/package-current-estuary-server
-- Last Updated: 2026-09-30T11:42:00+08:00
+- Current Branch: agent/pass-public-template-build-vars
+- Last Updated: 2026-10-16T17:33:00+08:00
 
 ## Handover Status
 - Session Status: ACTIVE
@@ -79,6 +79,7 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-10-16: Tracked by GitHub issue #58. Added explicit Docker build arguments for the 11 `NEXT_PUBLIC_*_TEMPLATE_SHEET_URL` settings, wired them from `compose.server.yaml`, and documented safe placeholders in `.env.server.example`. The real server file remains ignored, mode 600, and contains the supplied production URLs.
 - 2026-09-30: Added `docs/INTERN_UPDATE_GUIDE.md` for recovering the unpushed login-page version, using intern branches and pull requests for future work, and rebuilding the Penang Ubuntu deployment without touching PostgreSQL, `.env.server`, or runtime data.
 - 2026-09-30: Added the minimal server deployment package tracked by GitHub issue #5: a production Next.js standalone image, an app-only `compose.server.yaml` that leaves the server's existing PostgreSQL untouched, a persistent `runtime` bind mount for current JSON/PDF state, a health check, an environment template, and concise deploy/update instructions.
 - 2026-09-24: Added distinct Prisma `PaymentType` values for Internet/Commute, Medical, Mileage, PD, and Tech claims; migration generation and verification are tracked in GitHub issue #3.
