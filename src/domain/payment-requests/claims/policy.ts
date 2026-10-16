@@ -13,6 +13,25 @@ export const TECH_STANDARD_LIMIT = 500;
 export const TECH_EXTENDED_LIMIT = 1000;
 export const TECH_EXTENDED_LOCK_YEARS = 3;
 
+export function usesExtendedTechAllowance(
+    input: Pick<CreateClaimInput, 'claimType' | 'lines'>,
+) {
+    return input.claimType === 'TECH' && claimTotal(input.claimType, input.lines) > TECH_STANDARD_LIMIT;
+}
+
+export function normalizeTechAllowance(input: CreateClaimInput): CreateClaimInput {
+    return {
+        ...input,
+        techExtended: usesExtendedTechAllowance(input),
+    };
+}
+
+export function requiresTechManagerApproval(
+    input: Pick<CreateClaimInput, 'claimType' | 'lines' | 'requesterRole'>,
+) {
+    return input.requesterRole === 'staff' && usesExtendedTechAllowance(input);
+}
+
 export function mileageRate(kilometers: number) {
     if (kilometers <= 0) return 0;
     return kilometers <= 500 ? 0.5 : 0.3;

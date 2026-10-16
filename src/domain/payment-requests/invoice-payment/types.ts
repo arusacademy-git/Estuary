@@ -96,6 +96,8 @@ export type InvoicePaymentRequestRecord =
     directorReturnRemarks?: string;
     financeVerifiedAt?: string;
     financeVerifiedById?: string;
+    financePaymentDate?: string;
+    financePaymentReference?: string;
     financeReturnedAt?: string;
     financeReturnedById?: string;
     financeReturnRemarks?: string;

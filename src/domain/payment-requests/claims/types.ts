@@ -76,7 +76,7 @@ export type ClaimRecord = CreateClaimInput & {
 
 export type ClaimFinanceInput = {
   paymentDate: string;
-  paymentReference: string;
+  paymentReference?: string;
   notes?: string;
 };
 
@@ -104,7 +104,7 @@ export const CLAIM_TYPES: ReadonlyArray<{
   { value: 'MEDICAL', code: 'MC', label: 'Medical claim', description: 'Medical reimbursement within the RM500.00 calendar-year allowance.', template: 'Medical Claim Form Template.pdf' },
   { value: 'MILEAGE', code: 'MI', label: 'Mileage claim', description: 'Mileage calculated automatically from the distance of each trip.', template: 'Mileage Claim Form Template.pdf' },
   { value: 'PD', code: 'PD', label: 'PD claim', description: 'Professional development expenses up to RM500.00.', template: 'PD Claim Form Template.pdf' },
-  { value: 'TECH', code: 'TC', label: 'Tech claim', description: 'Technology expenses up to RM500.00, or RM1,000.00 with the three-year option.', template: 'Tech Claim Form Template.pdf' },
+  { value: 'TECH', code: 'TC', label: 'Tech claim', description: 'Up to RM500.00 standard; RM500.01–RM1,000.00 requires Manager approval and uses the three-year option.', template: 'Tech Claim Form Template.pdf' },
 ];
 
 export function claimTypeDetails(type: ClaimType) {

@@ -333,9 +333,9 @@ export type CreatePaymentVoucherInput =
     | 'updatedAt'
   > & {
     /*
-     * Staff may optionally provide an
-     * existing recipient reference.
-     * Otherwise the dummy store generates it.
+     * Legacy compatibility input. The database
+     * now derives the recipient reference from
+     * the generated PV number.
      */
     recipientReference?: string;
   };

@@ -64,7 +64,7 @@ export type PettyCashRecord = CreatePettyCashInput & {
 export type PettyCashFinanceInput = {
   financeId: string;
   paymentDate: string;
-  paymentReference: string;
+  paymentReference?: string;
   paymentProofLink: string;
   notes?: string;
 };

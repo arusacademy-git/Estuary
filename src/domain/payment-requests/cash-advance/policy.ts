@@ -2,10 +2,21 @@ import type {
   CashAdvanceExpense,
   CashAdvanceParticipant,
   CashAdvanceRequestLine,
+  CashAdvanceStatus,
 } from './types';
 
-export const CASH_ADVANCE_MINIMUM = 300;
 export const CASH_ADVANCE_RECONCILIATION_DAYS = 14;
+
+export function cashAdvanceInitialWorkflow(directorApproverId: string) {
+  return {
+    state: 'PENDING_DIRECTOR_APPROVAL' as const,
+    assigneeId: directorApproverId,
+  };
+}
+
+export function cashAdvanceVisibleStatus(state: string): CashAdvanceStatus {
+  return (state === 'PENDING_MANAGER_APPROVAL' ? 'PENDING_DIRECTOR_APPROVAL' : state) as CashAdvanceStatus;
+}
 
 export function cashAdvanceRequestedTotal(lines: CashAdvanceRequestLine[]) {
   return lines.reduce((total, line) => total + Number(line.amount || 0), 0);
@@ -37,11 +48,7 @@ export function addCalendarDays(dateValue: string, days: number) {
 
 export function validateCashAdvanceRequest(lines: CashAdvanceRequestLine[]) {
   if (!lines.length) return 'Add at least one requested expense.';
-  if (lines.some((line) => !line.description.trim() || !line.purpose.trim() || line.amount <= 0)) {
-    return 'Complete the description, purpose and amount for every expense.';
-  }
-  if (cashAdvanceRequestedTotal(lines) < CASH_ADVANCE_MINIMUM) {
-    return `Cash Advance requests must be at least RM ${CASH_ADVANCE_MINIMUM.toFixed(2)}.`;
-  }
+  if (lines.some((line) => !Number.isFinite(line.amount) || line.amount < 0)) return 'Every requested amount must be valid.';
+  if (cashAdvanceRequestedTotal(lines) <= 0) return 'The Cash Advance total must be greater than RM 0.00.';
   return null;
 }
