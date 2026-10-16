@@ -7,6 +7,7 @@ import {
 } from 'react';
 
 import Link from 'next/link';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 
 import {
   useRouter,
@@ -683,49 +684,7 @@ export default function FinancePage() {
               : 'Payment Vouchers'}
           </div>
 
-          <div
-            aria-label="Choose Finance queue view"
-            className={styles.viewToggle}
-            role="group"
-          >
-            <span>View</span>
-
-            <button
-              aria-pressed={
-                viewMode === 'grid'
-              }
-              data-active={
-                viewMode === 'grid'
-              }
-              onClick={() =>
-                setViewMode('grid')
-              }
-              type="button"
-            >
-              <span aria-hidden="true">
-                ▦
-              </span>
-              Grid
-            </button>
-
-            <button
-              aria-pressed={
-                viewMode === 'list'
-              }
-              data-active={
-                viewMode === 'list'
-              }
-              onClick={() =>
-                setViewMode('list')
-              }
-              type="button"
-            >
-              <span aria-hidden="true">
-                ☷
-              </span>
-              List
-            </button>
-          </div>
+          <PaymentViewToggle label="Choose Finance queue view" onChange={setViewMode} value={viewMode} />
         </div>
 
         {filteredRecords.length === 0 ? (

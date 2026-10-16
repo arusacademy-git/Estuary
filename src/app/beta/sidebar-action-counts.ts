@@ -96,7 +96,9 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
       && record.currentAssigneeId === account.id;
   }
 
-  if (record.status === 'PENDING_FINANCE_REVIEW') return record.currentAssigneeId === account.id;
+  // Finance review is a shared role queue. Invoice Payments deliberately enter
+  // this stage without being assigned to one individual Finance account.
+  if (record.status === 'PENDING_FINANCE_REVIEW') return true;
 
   return [
     'APPROVED_FOR_PAYMENT',

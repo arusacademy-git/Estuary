@@ -83,6 +83,22 @@ function addMonths(value: Date, amount: number) {
   return new Date(value.getFullYear(), value.getMonth() + amount, 1);
 }
 
+function chartMaximum(value: number) {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const step = magnitude / 4;
+  return Math.ceil(value / step) * step;
+}
+
+function scaleMoney(value: number) {
+  if (value === 0) return '0';
+  if (value >= 1000) {
+    const scaled = value / 1000;
+    return `RM${scaled.toLocaleString('en-MY', { maximumFractionDigits: scaled % 1 === 0 ? 0 : 1 })}k`;
+  }
+  return `RM${value.toLocaleString('en-MY', { maximumFractionDigits: 0 })}`;
+}
+
 function monthlyExpenditure(records: DashboardRecord[], range: AnalyticsRange) {
   const completed = records.filter((record) => completedStatuses.has(record.status) && !Number.isNaN(new Date(record.updatedAt).getTime()));
   const today = new Date();
@@ -254,6 +270,9 @@ export default function BetaDashboardPage() {
   const recent = useMemo(() => [...records].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 8), [records]);
   const expenditureMonths = useMemo(() => monthlyExpenditure(analyticsRecords, analyticsRange), [analyticsRange, analyticsRecords]);
   const expenditureMaximum = Math.max(...expenditureMonths.map((month) => month.total), 0);
+  const expenditureScaleMaximum = chartMaximum(expenditureMaximum);
+  const expenditureScaleTicks = [1, .75, .5, .25, 0].map((ratio) => expenditureScaleMaximum * ratio);
+  const expenditureByType = Object.fromEntries(typeOrder.map((type) => [type, expenditureMonths.reduce((sum, month) => sum + month.values[type], 0)])) as Record<DashboardType, number>;
   const expenditureTotal = expenditureMonths.reduce((sum, month) => sum + month.total, 0);
 
   if (loading || !account) return <div className={styles.loading}>Loading your Estuary workspace…</div>;
@@ -296,19 +315,22 @@ export default function BetaDashboardPage() {
           {(Object.keys(analyticsRangeLabels) as AnalyticsRange[]).map((range) => <button aria-pressed={analyticsRange === range} data-active={analyticsRange === range} key={range} onClick={() => setAnalyticsRange(range)} type="button">{analyticsRangeLabels[range]}</button>)}
         </div>
       </div>
-      <div className={styles.analyticsLegend} aria-label="Payment type legend">
-        {typeOrder.map((type) => <span key={type}><i data-type={type} />{typeLabels[type]} ({typeCodes[type]})</span>)}
+      <div className={styles.analyticsTypeCards} aria-label="Completed expenditure by payment type">
+        {typeOrder.map((type) => <article className={styles.analyticsTypeCard} key={type}><span><i data-type={type} />{typeCodes[type]}</span><strong>{money(expenditureByType[type])}</strong><small>{typeLabels[type]}</small></article>)}
       </div>
       {expenditureMaximum === 0 ? <div className={styles.analyticsEmpty}><h3>No completed expenditure yet</h3><p>Paid or completed records will appear in this chart.</p></div> : <>
         <div className={styles.chartViewport}>
-          <div className={styles.chart} style={{ minWidth: `${Math.max(620, expenditureMonths.length * 86)}px` }}>
-            {expenditureMonths.map((month) => <div className={styles.chartColumn} key={month.key}>
-              <strong>{month.total > 0 ? money(month.total) : ''}</strong>
-              <div className={styles.chartBar} aria-label={`${month.label}: ${money(month.total)}`}>
-                {typeOrder.map((type) => month.values[type] > 0 && <span data-type={type} key={type} style={{ height: `${(month.values[type] / expenditureMaximum) * 100}%` }} title={`${typeLabels[type]}: ${money(month.values[type])}`} />)}
-              </div>
-              <small>{month.label}</small>
-            </div>)}
+          <div className={styles.chartFrame} style={{ minWidth: `${Math.max(720, expenditureMonths.length * 104 + 58)}px` }}>
+            <div className={styles.chartScale} aria-hidden="true">{expenditureScaleTicks.map((tick) => <span key={tick}>{scaleMoney(tick)}</span>)}</div>
+            <div className={styles.chart}>
+              {expenditureMonths.map((month) => <div className={styles.chartColumn} key={month.key}>
+                <strong>{month.total > 0 ? money(month.total) : ''}</strong>
+                <div className={styles.chartBar} aria-label={`${month.label}: ${money(month.total)}`}>
+                  {typeOrder.map((type) => month.values[type] > 0 && <span data-type={type} key={type} style={{ height: `${(month.values[type] / expenditureScaleMaximum) * 100}%` }} title={`${typeLabels[type]}: ${money(month.values[type])}`} />)}
+                </div>
+                <small>{month.label}</small>
+              </div>)}
+            </div>
           </div>
         </div>
         <div className={styles.analyticsFooter}><span><i />Completed expenditure in this period</span><strong>{money(expenditureTotal)}</strong></div>

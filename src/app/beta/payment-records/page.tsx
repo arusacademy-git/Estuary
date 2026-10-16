@@ -98,7 +98,7 @@ export default function PaymentRecordsPage() {
   const router = useRouter();
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get('scope') === 'mine';
-  const { records: paymentVouchers } = usePaymentVouchers();
+  const { records: paymentVouchers, isLoading: paymentVouchersLoading } = usePaymentVouchers();
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [invoicePayments, setInvoicePayments] = useState<InvoicePaymentRequestRecord[]>([]);
   const [travelAllowances, setTravelAllowances] = useState<TravelAllowanceRecord[]>([]);
@@ -106,6 +106,7 @@ export default function PaymentRecordsPage() {
   const [pettyCashRequests, setPettyCashRequests] = useState<PettyCashRecord[]>([]);
   const [claims, setClaims] = useState<ClaimRecord[]>([]);
   const [sessionChecked, setSessionChecked] = useState(() => !account);
+  const [categoryLoading, setCategoryLoading] = useState({ invoice: true, travel: true, cashAdvance: true, pettyCash: true, claim: true });
 
   useEffect(() => {
     if (!account) {
@@ -115,22 +116,23 @@ export default function PaymentRecordsPage() {
 
     let active = true;
     let settled = 0;
-    function load<T>(request: Promise<T[]>, apply: (items: T[]) => void) {
+    function load<T>(key: keyof typeof categoryLoading, request: Promise<T[]>, apply: (items: T[]) => void) {
       request
         .then((items) => { if (active) apply(items); })
         .catch(() => undefined)
         .finally(() => {
           if (!active) return;
           settled += 1;
+          setCategoryLoading((current) => ({ ...current, [key]: false }));
           if (settled === 1) setSessionChecked(true);
         });
     }
 
-    load(fetchInvoicePayments({ role: account.role, userId: account.id, includeAll: true }), setInvoicePayments);
-    load(fetchTravelAllowances({ role: account.role, userId: account.id, includeAll: true }), setTravelAllowances);
-    load(fetchCashAdvances({ role: account.role, userId: account.id, includeAll: true }), setCashAdvances);
-    load(fetchPettyCashRequests({ role: account.role, userId: account.id, includeAll: personalOnly }), setPettyCashRequests);
-    load(fetchClaimRequests({ role: account.role, userId: account.id }), setClaims);
+    load('invoice', fetchInvoicePayments({ role: account.role, userId: account.id, includeAll: true }), setInvoicePayments);
+    load('travel', fetchTravelAllowances({ role: account.role, userId: account.id, includeAll: true }), setTravelAllowances);
+    load('cashAdvance', fetchCashAdvances({ role: account.role, userId: account.id, includeAll: true }), setCashAdvances);
+    load('pettyCash', fetchPettyCashRequests({ role: account.role, userId: account.id, includeAll: personalOnly }), setPettyCashRequests);
+    load('claim', fetchClaimRequests({ role: account.role, userId: account.id }), setClaims);
     return () => { active = false; };
   }, [account, personalOnly, router]);
 
@@ -154,12 +156,12 @@ export default function PaymentRecordsPage() {
       <header className={styles.paymentRecordsHeader}><div><p className={styles.pageEyebrow}>{personalOnly ? 'My Requests' : 'Payment Records'}</p><h1>{personalOnly ? 'Track the requests you created' : 'Track every type of payment'}</h1><p>{personalOnly ? 'Select a payment type to view only the requests that you submitted.' : 'Select a payment type to view its records, current statuses and actions that require your attention.'}</p></div><div className={styles.signedInSummary}><span>Viewing records for</span><strong>{account.name}</strong><small>{account.position}</small></div></header>
       <section className={styles.recordsSummary}><article><span>Payment types</span><strong>6</strong></article><article><span>Available in beta</span><strong>6</strong></article><article><span>{personalOnly ? 'My records' : 'Visible records'}</span><strong>{visibleVouchers.length + visibleInvoices.length + visibleTravelAllowances.length + visibleCashAdvances.length + visiblePettyCash.length + visibleClaims.length}</strong></article><article><span>Require attention</span><strong>{voucherAttention + invoiceAttention + travelAllowanceAttention + cashAdvanceAttention + claimAttention}</strong></article></section>
       <section className={styles.paymentTypesSection}><div className={styles.sectionHeading}><div><h2>Payment types</h2><p>Each payment type has its own records, requirements and workflow.</p></div></div><div className={styles.paymentTypesGrid}>
-        <PaymentTypeCard title="Payment Voucher" description="Track vouchers from requester submission through Director approval, Finance processing and completion." shortCode="PV" totalRecords={visibleVouchers.length} attentionCount={voucherAttention} href={personalOnly ? '/beta/payment-vouchers?scope=mine' : '/beta/payment-vouchers'} available />
-        <PaymentTypeCard title="Invoice Payment" description="Track invoice requests through Manager review, Director approval, Finance verification and completion." shortCode="INV" totalRecords={visibleInvoices.length} attentionCount={invoiceAttention} href={personalOnly ? '/beta/payment-records/invoice-payments?scope=mine' : '/beta/payment-records/invoice-payments'} available />
-        <PaymentTypeCard title="Claim" description="Track Claim Drafts, review stages, supporting receipts and Finance payment." shortCode="CL" totalRecords={visibleClaims.length} attentionCount={claimAttention} href={personalOnly ? '/beta/payment-records/claims?scope=mine' : '/beta/payment-records/claims'} available />
-        <PaymentTypeCard title="Cash Advance" description="Track advance requests, Manager review, Director approval, payment and reconciliation." shortCode="CA" totalRecords={visibleCashAdvances.length} attentionCount={cashAdvanceAttention} href={personalOnly ? '/beta/payment-records/cash-advances?scope=mine' : '/beta/payment-records/cash-advances'} available />
-        <PaymentTypeCard title="Travel Allowance" description="Track travel allowance requests through Manager, Director and Finance processing." shortCode="TA" totalRecords={visibleTravelAllowances.length} attentionCount={travelAllowanceAttention} href={personalOnly ? '/beta/payment-records/travel-allowances?scope=mine' : '/beta/payment-records/travel-allowances'} available />
-        <PaymentTypeCard title="Petty Cash" description="Track role-aware reviews, Director previews, Finance payment and monthly location balances." shortCode="PC" totalRecords={visiblePettyCash.length} href={personalOnly ? '/beta/payment-records/petty-cash?scope=mine' : '/beta/payment-records/petty-cash'} available />
+        <PaymentTypeCard title="Payment Voucher" description="Track vouchers from requester submission through Director approval, Finance processing and completion." shortCode="PV" totalRecords={visibleVouchers.length} attentionCount={voucherAttention} isLoading={paymentVouchersLoading} href={personalOnly ? '/beta/payment-vouchers?scope=mine' : '/beta/payment-vouchers'} available />
+        <PaymentTypeCard title="Invoice Payment" description="Track invoice requests through Manager review, Director approval, Finance verification and completion." shortCode="INV" totalRecords={visibleInvoices.length} attentionCount={invoiceAttention} isLoading={categoryLoading.invoice} href={personalOnly ? '/beta/payment-records/invoice-payments?scope=mine' : '/beta/payment-records/invoice-payments'} available />
+        <PaymentTypeCard title="Claim" description="Track Claim Drafts, review stages, supporting receipts and Finance payment." shortCode="CL" totalRecords={visibleClaims.length} attentionCount={claimAttention} isLoading={categoryLoading.claim} href={personalOnly ? '/beta/payment-records/claims?scope=mine' : '/beta/payment-records/claims'} available />
+        <PaymentTypeCard title="Cash Advance" description="Track advance requests, Manager review, Director approval, payment and reconciliation." shortCode="CA" totalRecords={visibleCashAdvances.length} attentionCount={cashAdvanceAttention} isLoading={categoryLoading.cashAdvance} href={personalOnly ? '/beta/payment-records/cash-advances?scope=mine' : '/beta/payment-records/cash-advances'} available />
+        <PaymentTypeCard title="Travel Allowance" description="Track travel allowance requests through Manager, Director and Finance processing." shortCode="TA" totalRecords={visibleTravelAllowances.length} attentionCount={travelAllowanceAttention} isLoading={categoryLoading.travel} href={personalOnly ? '/beta/payment-records/travel-allowances?scope=mine' : '/beta/payment-records/travel-allowances'} available />
+        <PaymentTypeCard title="Petty Cash" description="Track role-aware reviews, Director previews, Finance payment and monthly location balances." shortCode="PC" totalRecords={visiblePettyCash.length} isLoading={categoryLoading.pettyCash} href={personalOnly ? '/beta/payment-records/petty-cash?scope=mine' : '/beta/payment-records/petty-cash'} available />
       </div></section>
     </div>
   );
