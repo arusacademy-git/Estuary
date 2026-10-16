@@ -421,30 +421,11 @@
   line-height: 1;
 }
 
-.addLineButton {
-  min-height: 32px;
-  padding: 6px 11px;
-  border: 1px solid #bfdbfe;
-  border-radius: 7px;
-  color: #2563eb;
-  background: #eff6ff;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.addLineButton:hover {
-  border-color: #2563eb;
-  color: #2563eb;
-  background: #eff6ff;
-}
-
 .lineLabels,
 .voucherLine {
   display: grid;
   grid-template-columns:
-    minmax(150px, 1.15fr) minmax(190px, 1.75fr) minmax(70px, 0.56fr) minmax(95px, 0.78fr) minmax(80px, 0.68fr) minmax(105px, 0.78fr);
+    minmax(150px, 1.15fr) minmax(230px, 2fr) minmax(70px, 0.56fr) minmax(105px, 0.82fr) minmax(105px, 0.78fr);
   gap: 12px;
 }
 
@@ -3479,10 +3460,6 @@
   .linesHeading {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .addLineButton {
-    align-self: flex-start;
   }
 
   .voucherLine {

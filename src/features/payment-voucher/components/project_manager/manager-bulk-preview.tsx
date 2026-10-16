@@ -72,6 +72,7 @@ export function ManagerBulkPreview({ manager, vouchers }: Props) {
   const allSelected = pending.length > 0 && selectedIds.length === pending.length;
   const allReviewed = selectedIds.length > 0 && selectedIds.every((id) => reviewedIds.includes(id));
   const selectedTotal = selected.reduce((total, voucher) => total + voucher.amount, 0);
+  const reviewedCount = selectedIds.filter((id) => reviewedIds.includes(id)).length;
 
   function resetMessages() {
     setMessage('');
@@ -182,11 +183,10 @@ export function ManagerBulkPreview({ manager, vouchers }: Props) {
       </section>
 
       {selectedIds.length > 0 && (
-        <section className={styles.confirmationPanel}>
-          <div><p className={styles.eyebrow}>Preview confirmation</p><h2>Confirm {selectedIds.length} selected {selectedIds.length === 1 ? 'preview' : 'previews'}</h2><p>Every selected voucher must be reviewed. This records only that the Manager viewed it.</p></div>
-          {!allReviewed && <p className={styles.notice}>Review every selected Payment Voucher before continuing.</p>}
-          <label className={styles.confirmationCheck}><input type="checkbox" checked={confirmed} disabled={!allReviewed} onChange={(event) => setConfirmed(event.target.checked)} />I confirm that I reviewed the selected Payment Vouchers.</label>
-          <button className={`${styles.primaryButton} ${styles.fullWidthButton}`} type="button" disabled={!allReviewed || !confirmed || submitting} onClick={submit}>{submitting ? 'Saving previews…' : `Confirm ${selectedIds.length} selected`}</button>
+        <section className={`${styles.confirmationPanel} ${styles.compactConfirmation}`}>
+          <header className={styles.compactConfirmationHeader}><div><p className={styles.eyebrow}>Preview confirmation</p><h2>Confirm {selectedIds.length} selected {selectedIds.length === 1 ? 'preview' : 'previews'}</h2><p>This records that the Manager reviewed each selected Payment Voucher.</p></div><div className={styles.compactConfirmationTotal}><span>Total amount</span><strong>{formatCurrency(selectedTotal)}</strong></div></header>
+          <div className={styles.compactConfirmationProgress}><span data-complete={allReviewed}><i aria-hidden="true" />Open and mark every selected voucher as reviewed to continue</span><b>{reviewedCount} of {selectedIds.length}</b></div>
+          <footer className={styles.compactConfirmationFooter}><label className={styles.confirmationCheck}><input type="checkbox" checked={confirmed} disabled={!allReviewed} onChange={(event) => setConfirmed(event.target.checked)} />I confirm that I reviewed the selected Payment Vouchers.</label><button className={styles.primaryButton} type="button" disabled={!allReviewed || !confirmed || submitting} onClick={submit}>{submitting ? 'Saving previews…' : `Confirm ${selectedIds.length} selected`}</button></footer>
         </section>
       )}
 

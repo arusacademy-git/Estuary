@@ -2,7 +2,6 @@
 
 import {
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -22,6 +21,7 @@ import {
   PAYMENT_VOUCHER_ACCOUNT_OPTIONS,
 } from '@/shared/constants/payment-options';
 import { parsePaymentAmountInput } from '@/shared/utils/payment-amount';
+import { PaymentAmountInput } from '@/shared/payment-amount-input';
 
 import type {
   CreatePaymentVoucherInput,
@@ -39,46 +39,13 @@ type PaymentVoucherFormProps = {
   ) => void;
 };
 
-type TaxCode =
-  | 'NONE'
-  | 'SST_6'
-  | 'MANUAL';
-
 type VoucherLine = {
   id: string;
   account: string;
   description: string;
   quantity: number;
   unitPrice: number;
-  taxCode: TaxCode;
-  taxAmount: number;
 };
-
-function calculateSstAmount(
-  quantity: number,
-  unitPrice: number,
-) {
-  return Math.round(
-    quantity * unitPrice * 0.06 * 100,
-  ) / 100;
-}
-
-function inferTaxCode(
-  quantity: number,
-  unitPrice: number,
-  taxAmount: number,
-): TaxCode {
-  if (taxAmount === 0) {
-    return 'NONE';
-  }
-
-  return Math.abs(
-    taxAmount -
-    calculateSstAmount(quantity, unitPrice),
-  ) < 0.01
-    ? 'SST_6'
-    : 'MANUAL';
-}
 
 const directors = [
   {
@@ -112,8 +79,6 @@ function createVoucherLine(
     description: '',
     quantity: 1,
     unitPrice: 0,
-    taxCode: 'NONE',
-    taxAmount: 0,
   };
 }
 
@@ -136,12 +101,6 @@ function createInitialVoucherLines(
       description: line.description,
       quantity: line.quantity,
       unitPrice: line.unitAmount,
-      taxCode: inferTaxCode(
-        line.quantity,
-        line.unitAmount,
-        line.taxAmount,
-      ),
-      taxAmount: line.taxAmount,
     }),
   );
 }
@@ -187,10 +146,6 @@ export function PaymentVoucherForm({
     [initialVoucher],
   );
 
-  const nextLineNumber = useRef(
-    initialLines.length + 1,
-  );
-
   const [voucherLines, setVoucherLines] =
     useState<VoucherLine[]>(
       () => initialLines,
@@ -224,17 +179,9 @@ export function PaymentVoucherForm({
       0,
     );
 
-    const tax = voucherLines.reduce(
-      (total, line) => {
-        return total + line.taxAmount;
-      },
-      0,
-    );
-
     return {
       subtotal,
-      tax,
-      grandTotal: subtotal + tax,
+      grandTotal: subtotal,
     };
   }, [voucherLines]);
 
@@ -244,18 +191,6 @@ export function PaymentVoucherForm({
     );
   }, [totals.grandTotal]);
 
-  function addVoucherLine() {
-    const lineId =
-      `line-${nextLineNumber.current}`;
-
-    nextLineNumber.current += 1;
-
-    setVoucherLines((currentLines) => [
-      ...currentLines,
-      createVoucherLine(lineId),
-    ]);
-  }
-
   function updateVoucherLine(
     lineId: string,
     changes: Partial<VoucherLine>,
@@ -263,49 +198,10 @@ export function PaymentVoucherForm({
     setVoucherLines((currentLines) =>
       currentLines.map((line) =>
         line.id === lineId
-          ? (() => {
-            const updatedLine = {
-              ...line,
-              ...changes,
-            };
-
-            if (
-              updatedLine.taxCode ===
-              'SST_6'
-            ) {
-              updatedLine.taxAmount =
-                calculateSstAmount(
-                  updatedLine.quantity,
-                  updatedLine.unitPrice,
-                );
-            }
-
-            if (
-              changes.taxCode === 'NONE' ||
-              changes.taxCode === 'MANUAL'
-            ) {
-              updatedLine.taxAmount = 0;
-            }
-
-            return updatedLine;
-          })()
+          ? { ...line, ...changes }
           : line,
       ),
     );
-  }
-
-  function removeVoucherLine(
-    lineId: string,
-  ) {
-    setVoucherLines((currentLines) => {
-      if (currentLines.length === 1) {
-        return currentLines;
-      }
-
-      return currentLines.filter(
-        (line) => line.id !== lineId,
-      );
-    });
   }
 
   function handleReview(
@@ -354,8 +250,7 @@ export function PaymentVoucherForm({
           !line.account.trim() ||
           !line.description.trim() ||
           line.quantity <= 0 ||
-          line.unitPrice < 0 ||
-          line.taxAmount < 0
+          line.unitPrice < 0
         );
       });
 
@@ -487,7 +382,7 @@ export function PaymentVoucherForm({
 
           quantity: line.quantity,
           unitAmount: line.unitPrice,
-          taxAmount: line.taxAmount,
+          taxAmount: 0,
         }),
       ),
     };
@@ -871,20 +766,10 @@ export function PaymentVoucherForm({
               </div>
 
               <span>
-                Use one line for each payment
-                purpose or accounting category.
+                Enter the payment purpose and
+                accounting category.
               </span>
             </div>
-
-            <button
-              className={
-                styles.addLineButton
-              }
-              type="button"
-              onClick={addVoucherLine}
-            >
-              + Add line
-            </button>
           </div>
 
           <div
@@ -894,7 +779,6 @@ export function PaymentVoucherForm({
             <span>Description</span>
             <span>Quantity</span>
             <span>Unit price</span>
-            <span>Tax Code</span>
             <span>Total</span>
           </div>
 
@@ -904,8 +788,7 @@ export function PaymentVoucherForm({
             {voucherLines.map((line) => {
               const lineTotal =
                 line.quantity *
-                line.unitPrice +
-                line.taxAmount;
+                line.unitPrice;
 
               return (
                 <div
@@ -1020,88 +903,18 @@ export function PaymentVoucherForm({
                   >
                     <span>Unit price</span>
 
-                    <input
+                    <PaymentAmountInput
                       aria-label="Unit price"
-                      inputMode="decimal"
                       placeholder="0.00"
                       required
-                      type="text"
-                      value={
-                        line.unitPrice === 0
-                          ? ''
-                          : line.unitPrice
-                      }
-                      onChange={(event) =>
+                      value={line.unitPrice}
+                      onValueChange={(unitPrice) =>
                         updateVoucherLine(
                           line.id,
-                          {
-                            unitPrice:
-                              parsePaymentAmountInput(
-                                event.target
-                                  .value,
-                              ),
-                          },
+                          { unitPrice },
                         )
                       }
                     />
-                  </label>
-
-                  <label
-                    className={
-                      styles.mobileFieldLabel
-                    }
-                  >
-                    <span>Tax Code</span>
-
-                    <select
-                      aria-label="Tax code"
-                      value={line.taxCode}
-                      onChange={(event) =>
-                        updateVoucherLine(
-                          line.id,
-                          {
-                            taxCode:
-                              event.target
-                                .value as TaxCode,
-                          },
-                        )
-                      }
-                    >
-                      <option value="NONE">No tax</option>
-                      <option value="SST_6">SST 6%</option>
-                      <option value="MANUAL">Manual tax</option>
-                    </select>
-
-                    {line.taxCode === 'MANUAL' && (
-                      <input
-                        aria-label="Manual tax amount"
-                        inputMode="decimal"
-                        placeholder="Enter tax amount"
-                        type="text"
-                        value={
-                          line.taxAmount === 0
-                            ? ''
-                            : line.taxAmount
-                        }
-                        onChange={(event) =>
-                          updateVoucherLine(
-                            line.id,
-                            {
-                              taxAmount:
-                                parsePaymentAmountInput(
-                                  event.target.value,
-                                ),
-                            },
-                          )
-                        }
-                      />
-                    )}
-
-                    {line.taxCode === 'SST_6' && (
-                      <small>
-                        Tax: RM {line.taxAmount.toFixed(2)}
-                      </small>
-                    )}
                   </label>
 
                   <div
@@ -1122,19 +935,6 @@ export function PaymentVoucherForm({
                       {lineTotal.toFixed(2)}
                     </strong>
 
-                    {voucherLines.length >
-                      1 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeVoucherLine(
-                              line.id,
-                            )
-                          }
-                        >
-                          Remove
-                        </button>
-                      )}
                   </div>
                 </div>
               );
@@ -1174,17 +974,6 @@ export function PaymentVoucherForm({
                 </strong>
               </div>
 
-              <div
-                className={
-                  styles.summaryStat
-                }
-              >
-                <span>Tax</span>
-
-                <strong>
-                  RM {totals.tax.toFixed(2)}
-                </strong>
-              </div>
             </div>
 
             <div

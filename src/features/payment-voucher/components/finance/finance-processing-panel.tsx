@@ -24,6 +24,10 @@ import type {
 } from '@/domain/payment-vouchers/types';
 
 import {
+  paymentVoucherReference,
+} from '@/domain/payment-vouchers/payment-reference';
+
+import {
   completePaymentVoucher,
   markPaymentVoucherInactive,
   recordPaymentVoucherPdfGenerated,
@@ -142,7 +146,7 @@ export function FinancePaymentPanel({
     paymentReference,
     setPaymentReference,
   ] = useState(
-    voucher.paymentReference ?? '',
+    paymentVoucherReference(voucher),
   );
 
   const [
@@ -199,7 +203,7 @@ export function FinancePaymentPanel({
     );
 
     setPaymentReference(
-      voucher.paymentReference ?? '',
+      voucher.paymentReference?.trim() || voucher.voucherNumber.trim(),
     );
 
     setPaymentRemarks(
@@ -211,6 +215,7 @@ export function FinancePaymentPanel({
     voucher.id,
     voucher.paymentDate,
     voucher.paymentReference,
+    voucher.voucherNumber,
     voucher.paymentRemarks,
   ]);
 
@@ -853,17 +858,7 @@ export function FinancePaymentPanel({
                   Payment reference
                 </span>
 
-                <input
-                  onChange={(event) =>
-                    setPaymentReference(
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Example: MAYBANK-123456"
-                  required
-                  type="text"
-                  value={paymentReference}
-                />
+                <input aria-readonly="true" readOnly type="text" value={paymentReference} />
               </label>
 
               <label

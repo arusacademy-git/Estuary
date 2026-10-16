@@ -21,6 +21,7 @@ import {
   PAYMENT_METHOD_SELECT_OPTIONS,
   PAYMENT_VOUCHER_ACCOUNT_OPTIONS,
 } from '@/shared/constants/payment-options';
+import { PaymentAmountDraftInput } from '@/shared/payment-amount-input';
 
 import {
   calculateBulkPaymentVoucherAmount,
@@ -578,7 +579,7 @@ function VoucherEditor({
                 </td>
                 <td><input aria-label="Description" placeholder="Payment description" type="text" value={row.lineDescription} onChange={(event) => onUpdate('lineDescription', event.target.value)} /></td>
                 <td><input aria-label="Quantity" inputMode="decimal" type="text" value={row.quantity} onChange={(event) => onUpdate('quantity', event.target.value)} /></td>
-                <td><input aria-label="Unit price" inputMode="decimal" placeholder="Enter amount" type="text" value={row.unitAmount === '0' ? '' : row.unitAmount} onChange={(event) => onUpdate('unitAmount', event.target.value)} /></td>
+                <td><PaymentAmountDraftInput aria-label="Unit price" placeholder="Enter amount" value={row.unitAmount === '0' ? '' : row.unitAmount} onValueChange={(value) => onUpdate('unitAmount', value)} /></td>
                 <td>
                   <div className={styles.taxControl}>
                     <select
@@ -606,13 +607,11 @@ function VoucherEditor({
                     </select>
 
                     {taxCode === 'MANUAL' && (
-                      <input
+                      <PaymentAmountDraftInput
                         aria-label="Manual tax amount"
-                        inputMode="decimal"
                         placeholder="Enter tax amount"
-                        type="text"
                         value={row.taxAmount === '0' ? '' : row.taxAmount}
-                        onChange={(event) => onUpdate('taxAmount', event.target.value)}
+                        onValueChange={(value) => onUpdate('taxAmount', value)}
                       />
                     )}
 

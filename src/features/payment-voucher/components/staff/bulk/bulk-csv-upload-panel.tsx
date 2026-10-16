@@ -23,6 +23,8 @@ const requiredFields: BulkPaymentVoucherField[] = [
   'purpose', 'accountCode', 'lineDescription', 'quantity', 'unitAmount',
 ];
 
+const paymentVoucherTemplateUrl = process.env.NEXT_PUBLIC_PAYMENT_VOUCHER_TEMPLATE_SHEET_URL?.trim() ?? '';
+
 const headerAliases: Record<string, BulkPaymentVoucherField> = {
   'pv date': 'pvDate', division: 'division',
   'director email': 'directorEmail', 'approve by': 'directorEmail',
@@ -161,15 +163,22 @@ export function BulkCsvUploadPanel({ onContinue }: Props) {
       <div className={styles.pageHeading}><div>
         <p className={styles.status}>Multiple Payment Vouchers</p>
         <h1>Import from Google Sheets</h1>
-        <p className={styles.copy}>Paste a shared Google Sheets link. Estuary will read the rows and show them below before any draft Payment Vouchers are created.</p>
+        <p className={styles.copy}>Open the master PV template, make your working copy, then paste the completed sheet link for validation before any draft Payment Vouchers are created.</p>
       </div></div>
 
       {errorMessage && <div className={styles.notice} role="alert">{errorMessage}</div>}
 
+      <aside className={styles.templateSheetCallout}>
+        <div><span>Official template</span><h2>Payment Voucher master sheet</h2><p>Open the standard Google Sheet template in a new tab, make a copy for your batch and complete the voucher rows there.</p></div>
+        {paymentVoucherTemplateUrl
+          ? <a href={paymentVoucherTemplateUrl} rel="noreferrer" target="_blank">Open PV template sheet ↗</a>
+          : <span className={styles.templateSheetUnavailable}>PV template link not configured</span>}
+      </aside>
+
       <section className={styles.formSection}>
         <div className={styles.sectionHeading}>
-          <p>Step 1</p><h2>Attach the Google Sheet link</h2>
-          <span>The sheet must be shared as “Anyone with the link can view” and use the standard Estuary column headings.</span>
+          <p>Step 1</p><h2>Attach your completed sheet link</h2>
+          <span>Use a copy of the PV master sheet and share it as “Anyone with the link can view”.</span>
         </div>
         <div className={styles.googleSheetForm}>
           <label className={styles.googleSheetField}>
@@ -180,7 +189,7 @@ export function BulkCsvUploadPanel({ onContinue }: Props) {
                 setSheetUrl(event.target.value); setParsedRows([]);
                 setLoadedUrl(''); setErrorMessage('');
               }} />
-            <small>Paste the sharing link for the worksheet containing the Payment Voucher rows.</small>
+            <small>Paste the sharing link for your completed copy—not the master template.</small>
           </label>
           <button className={styles.loadSheetButton} type="button"
             disabled={isLoading || !sheetUrl.trim()} onClick={loadSheet}>

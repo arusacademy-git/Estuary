@@ -68,8 +68,7 @@ export function PaymentVoucherReview({
       (total, line) => total + line.quantity * line.unitAmount,
       0,
     );
-    const tax = voucher.lines.reduce((total, line) => total + line.taxAmount, 0);
-    return { subtotal, tax, grandTotal: subtotal + tax };
+    return { subtotal, grandTotal: subtotal };
   }, [voucher.lines]);
 
   const amountInWords = useMemo(
@@ -158,17 +157,16 @@ export function PaymentVoucherReview({
             <div className={styles.breakdownTable} role="table">
               <div className={styles.breakdownHeader} role="row">
                 <span>Account</span><span>Description</span><span>Quantity</span>
-                <span>Unit price</span><span>Tax</span><span>Total</span>
+                <span>Unit price</span><span>Total</span>
               </div>
               <div className={styles.breakdownBody}>
                 {voucher.lines.map((line, index) => {
-                  const lineTotal = line.quantity * line.unitAmount + line.taxAmount;
+                  const lineTotal = line.quantity * line.unitAmount;
                   const cells = [
                     ['Account', line.accountCode],
                     ['Description', line.description],
                     ['Quantity', String(line.quantity)],
                     ['Unit price', formatMoney(line.unitAmount)],
-                    ['Tax', formatMoney(line.taxAmount)],
                     ['Total', formatMoney(lineTotal)],
                   ];
                   return (
@@ -176,7 +174,7 @@ export function PaymentVoucherReview({
                       {cells.map(([label, cellValue]) => (
                         <div key={label} role="cell">
                           <span>{label}</span>
-                          <strong className={label === 'Account' || label === 'Unit price' || label === 'Tax' || label === 'Total' ? styles.monospace : undefined}>{cellValue}</strong>
+                          <strong className={label === 'Account' || label === 'Unit price' || label === 'Total' ? styles.monospace : undefined}>{cellValue}</strong>
                         </div>
                       ))}
                     </div>
@@ -187,7 +185,6 @@ export function PaymentVoucherReview({
 
             <div className={styles.totalsPanel}>
               <div><span>Subtotal</span><strong>{formatMoney(totals.subtotal)}</strong></div>
-              <div><span>Tax</span><strong>{formatMoney(totals.tax)}</strong></div>
               <div className={styles.grandTotal}><span>Grand total</span><strong>{formatMoney(totals.grandTotal)}</strong></div>
             </div>
 

@@ -233,7 +233,7 @@
 .breakdownHeader,
 .breakdownRow {
   display: grid;
-  grid-template-columns: 0.75fr 1.4fr 0.65fr 0.9fr 0.75fr 0.9fr;
+  grid-template-columns: 0.8fr 1.65fr 0.65fr 0.95fr 0.95fr;
   align-items: center;
 }
 
@@ -445,15 +445,15 @@
 }
 
 .primaryButton {
-  border: 1px solid #0f172a;
-  color: #fff;
-  background: #0f172a;
-  box-shadow: 0 2px 5px rgb(15 23 42 / 16%);
+  border: 1px solid #1e3a5f;
+  color: #ffffff;
+  background: #1e3a5f;
+  box-shadow: 0 2px 5px rgb(30 58 95 / 18%);
 }
 
 .primaryButton:hover:not(:disabled) {
-  border-color: #1e293b;
-  background: #1e293b;
+  border-color: #162e4a;
+  background: #162e4a;
 }
 
 .secondaryButton:disabled,
