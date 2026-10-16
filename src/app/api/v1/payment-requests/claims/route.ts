@@ -20,7 +20,7 @@ const lineSchema = z.object({
   receiptMimeType: z.string(),
   receiptFileSize: z.coerce.number().nonnegative(),
   receiptDocumentId: z.string().optional(),
-  receiptLink: z.string().url().optional(),
+  receiptLink: z.string().trim().min(1).optional(),
   accountType: z.string(),
   division: z.string(),
   amount: z.coerce.number().nonnegative(),

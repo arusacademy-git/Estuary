@@ -8,7 +8,7 @@ const paymentReceipt = z.string().trim().min(1).max(4_000_000).refine(
 );
 export async function POST(request: Request, context: Context) {
   const parsed = z.object({
-    financeId: z.string().min(1), paymentDate: z.string().min(1), paymentReference: z.string().trim().min(1),
+    financeId: z.string().min(1), paymentDate: z.string().min(1),
     paymentProofLink: paymentReceipt, notes: z.string().trim().optional(),
   }).safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ message: 'Complete the Finance payment information and upload the payment receipt.' }, { status: 400 });

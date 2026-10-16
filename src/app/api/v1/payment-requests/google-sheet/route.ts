@@ -34,11 +34,51 @@ function googleSheetDetails(value: unknown) {
 
   return {
     sourceUrl: url.toString(),
+    spreadsheetId,
+    gid,
     exportUrls: [
       `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv${gidParameter}`,
       `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv${gidParameter}`,
     ],
   };
+}
+
+type GoogleCellData = {
+  formattedValue?: string;
+  hyperlink?: string;
+  chipRuns?: Array<{ chip?: { richLinkProperties?: { uri?: string } } }>;
+  textFormatRuns?: Array<{ format?: { link?: { uri?: string } } }>;
+};
+
+async function fetchRichLinks(spreadsheetId: string, gid: string | null) {
+  const apiKey = process.env.GOOGLE_SHEETS_API_KEY?.trim();
+  if (!apiKey) return {};
+
+  const fields = 'sheets(properties(sheetId),data(rowData(values(formattedValue,hyperlink,chipRuns,textFormatRuns))))';
+  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?includeGridData=true&fields=${encodeURIComponent(fields)}`, {
+    cache: 'no-store',
+    headers: { Accept: 'application/json', 'x-goog-api-key': apiKey },
+  });
+  if (!response.ok) return {};
+
+  const body = await response.json() as {
+    sheets?: Array<{
+      properties?: { sheetId?: number };
+      data?: Array<{ rowData?: Array<{ values?: GoogleCellData[] }> }>;
+    }>;
+  };
+  const requestedSheet = body.sheets?.find((sheet) => gid === null || String(sheet.properties?.sheetId) === gid);
+  const links: Record<string, string> = {};
+
+  requestedSheet?.data?.forEach((grid) => grid.rowData?.forEach((row) => row.values?.forEach((cell) => {
+    const label = cell.formattedValue?.trim();
+    const uri = cell.chipRuns?.find((run) => run.chip?.richLinkProperties?.uri)?.chip?.richLinkProperties?.uri
+      ?? cell.hyperlink
+      ?? cell.textFormatRuns?.find((run) => run.format?.link?.uri)?.format?.link?.uri;
+    if (label && uri && /^https?:\/\//i.test(uri)) links[label] = uri;
+  })));
+
+  return links;
 }
 
 async function fetchGoogleSheetCsv(exportUrls: string[]) {
@@ -85,10 +125,11 @@ async function fetchGoogleSheetCsv(exportUrls: string[]) {
 export async function POST(request: Request) {
   try {
     const body = await request.json() as { url?: unknown };
-    const { sourceUrl, exportUrls } = googleSheetDetails(body.url);
+    const { sourceUrl, spreadsheetId, gid, exportUrls } = googleSheetDetails(body.url);
     const csv = await fetchGoogleSheetCsv(exportUrls);
+    const richLinks = await fetchRichLinks(spreadsheetId, gid);
 
-    return NextResponse.json({ data: { csv, sourceUrl } });
+    return NextResponse.json({ data: { csv, sourceUrl, richLinks } });
   } catch (error) {
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Unable to read the Google Sheet.' } },
