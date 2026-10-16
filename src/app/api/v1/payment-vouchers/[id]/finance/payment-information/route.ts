@@ -16,7 +16,7 @@ type RouteContext = {
 const paymentInformationSchema = z.object({
   financeId: z.string().trim().min(1),
   paymentDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
-  paymentReference: z.string().trim().min(1).max(200),
+  paymentReference: z.string().trim().max(200).optional(),
   paymentRemarks: z.string().trim().max(2000).optional(),
   paymentProofFileName: z.string().trim().max(255).optional(),
 });
@@ -30,7 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
     return Response.json(
       {
         error: 'INVALID_PAYMENT_INFORMATION',
-        message: 'Enter a valid payment date and payment reference.',
+        message: 'Enter a valid payment date.',
       },
       { status: 400 },
     );
