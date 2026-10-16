@@ -150,6 +150,8 @@ export function RequestBulkPreview({ role, kind }: Props) {
   const allSelected = visiblePending.length > 0 && visiblePending.every((record) => selectedIds.includes(record.id));
   const allReviewed = selectedIds.length > 0 && selectedIds.every((id) => reviewedIds.includes(id));
   const reviewRecord = pending.find((record) => record.id === reviewId) ?? null;
+  const reviewRecords = reviewId && selectedIds.includes(reviewId) ? selected : visiblePending;
+  const reviewedCount = selectedIds.filter((id) => reviewedIds.includes(id)).length;
   const label = kind === 'claims' ? 'Claim' : 'Petty Cash request';
   const pluralLabel = kind === 'claims' ? 'Claims' : 'Petty Cash requests';
   const basePath = `/beta/${role === 'manager' ? 'project-manager' : 'director'}/payment-requests/${kind}`;
@@ -297,28 +299,32 @@ export function RequestBulkPreview({ role, kind }: Props) {
       </section>
 
       {selectedIds.length > 0 && (
-        <section className={styles.confirmationPanel}>
-          <div><p className={styles.eyebrow}>Preview confirmation</p><h2>Confirm {selectedIds.length} selected {selectedIds.length === 1 ? 'preview' : 'previews'}</h2><p>Every selected record must be reviewed. This records only that the {role === 'manager' ? 'Manager' : 'Director'} viewed it.</p></div>
-          {!allReviewed && <p className={styles.notice}>Review every selected record before continuing.</p>}
-          <label className={styles.confirmationCheck}><input type="checkbox" checked={confirmed} disabled={!allReviewed} onChange={(event) => setConfirmed(event.target.checked)} />I confirm that I reviewed the selected {pluralLabel}.</label>
-          <button className={`${styles.primaryButton} ${styles.fullWidthButton}`} type="button" disabled={!allReviewed || !confirmed || submitting} onClick={submit}>{submitting ? 'Saving previews…' : `Confirm ${selectedIds.length} selected`}</button>
+        <section className={`${styles.confirmationPanel} ${styles.compactConfirmation}`}>
+          <header className={styles.compactConfirmationHeader}><div><p className={styles.eyebrow}>Preview confirmation</p><h2>Confirm {selectedIds.length} selected {selectedIds.length === 1 ? 'preview' : 'previews'}</h2><p>This records that the {role === 'manager' ? 'Manager' : 'Director'} reviewed each selected record.</p></div><div className={styles.compactConfirmationTotal}><span>Total amount</span><strong>{money(selectedTotal)}</strong></div></header>
+          <div className={styles.compactConfirmationProgress}><span data-complete={allReviewed}><i aria-hidden="true" />Open and mark every selected record as reviewed to continue</span><b>{reviewedCount} of {selectedIds.length}</b></div>
+          <footer className={styles.compactConfirmationFooter}><label className={styles.confirmationCheck}><input type="checkbox" checked={confirmed} disabled={!allReviewed} onChange={(event) => setConfirmed(event.target.checked)} />I confirm that I reviewed the selected {pluralLabel}.</label><button className={styles.primaryButton} type="button" disabled={!allReviewed || !confirmed || submitting} onClick={submit}>{submitting ? 'Saving previews…' : `Confirm ${selectedIds.length} selected`}</button></footer>
         </section>
       )}
 
       {reviewRecord && <RequestPreviewModal
         record={reviewRecord}
+        currentRecords={reviewRecords}
+        reviewed={reviewedIds.includes(reviewRecord.id)}
         viewerId={account.id}
+        onChangeRecord={setReviewId}
         onClose={() => setReviewId(null)}
         onReviewed={() => {
           setReviewedIds((current) => current.includes(reviewRecord.id) ? current : [...current, reviewRecord.id]);
-          setReviewId(null);
         }}
       />}
     </main>
   );
 }
 
-function RequestPreviewModal({ record, viewerId, onClose, onReviewed }: { record: BulkRecord; viewerId: string; onClose: () => void; onReviewed: () => void }) {
+function RequestPreviewModal({ currentRecords, record, reviewed, viewerId, onChangeRecord, onClose, onReviewed }: { currentRecords: BulkRecord[]; record: BulkRecord; reviewed: boolean; viewerId: string; onChangeRecord: (id: string) => void; onClose: () => void; onReviewed: () => void }) {
+  const currentIndex = currentRecords.findIndex((item) => item.id === record.id);
+  const previousRecord = currentIndex > 0 ? currentRecords[currentIndex - 1] : null;
+  const nextRecord = currentIndex >= 0 && currentIndex < currentRecords.length - 1 ? currentRecords[currentIndex + 1] : null;
   const evidenceCount = isClaim(record)
     ? record.lines.filter((line) => Boolean(line.receiptDocumentId || line.receiptLink)).length
     : record.lines.filter((line) => Boolean(line.proofLink)).length;
@@ -358,7 +364,7 @@ function RequestPreviewModal({ record, viewerId, onClose, onReviewed }: { record
           </section>}
         </div>
       </div>
-      <footer className={`${modalStyles.modalFooter} ${modalStyles.modalFooterEnd}`}><button type="button" onClick={onReviewed}>Mark reviewed and close</button></footer>
+      <footer className={modalStyles.modalFooter}><div className={modalStyles.modalNavigationButtons}><button disabled={!previousRecord} onClick={() => previousRecord && onChangeRecord(previousRecord.id)} type="button">Previous</button><button disabled={!nextRecord} onClick={() => nextRecord && onChangeRecord(nextRecord.id)} type="button">Next</button></div><div className={modalStyles.modalDecisionButtons}><button className={modalStyles.modalCancelButton} onClick={onClose} type="button">Close</button><button className={modalStyles.markReviewedButton} disabled={reviewed} onClick={onReviewed} type="button">{reviewed ? 'Reviewed' : 'Mark as reviewed'}</button></div></footer>
     </section>
   </div>;
 }

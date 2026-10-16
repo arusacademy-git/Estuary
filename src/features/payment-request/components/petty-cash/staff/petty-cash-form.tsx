@@ -13,7 +13,6 @@ import {
   validatePettyCashInput,
 } from '@/domain/payment-requests/petty-cash/policy';
 import {
-  DIVISION_TYPES,
   PETTY_CASH_ACCOUNT_TYPES,
   PETTY_CASH_LOCATIONS,
   type CreatePettyCashInput,
@@ -21,8 +20,9 @@ import {
   type PettyCashRequestLine,
 } from '@/domain/payment-requests/petty-cash/types';
 import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
-import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { notifyPettyCashSubmitted } from '@/features/payment-request/notifications/petty-cash-notifications';
+import { DIVISION_SELECT_OPTIONS } from '@/shared/constants/payment-options';
+import { PaymentAmountInput } from '@/shared/payment-amount-input';
 import styles from '../petty-cash.module.css';
 import { PettyCashConfirmation } from './petty-cash-confirmation';
 
@@ -39,7 +39,7 @@ const today = () =>
   new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
 const makeLine = (): PettyCashRequestLine => ({
-  id: createRuntimeId(),
+  id: crypto.randomUUID(),
   expenseDate: today(),
   supplier: '',
   details: '',
@@ -243,20 +243,17 @@ function ExpenseRow({ line, canRemove, onChange, onRemove }: ExpenseRowProps) {
       <td>
         <select value={line.division} onChange={(e) => onChange(line.id, { division: e.target.value })}>
           <option value="">Division</option>
-          {line.division && !isKnownOption(DIVISION_TYPES, line.division) && (
+          {line.division && !DIVISION_SELECT_OPTIONS.some((option) => option.value === line.division) && (
             <option value={line.division}>{line.division} (saved value)</option>
           )}
-          {DIVISION_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}
+          {DIVISION_SELECT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </td>
       <td>
-        <input
-          min="0.01"
-          step="0.01"
-          type="number"
-          placeholder="0.00"
-          value={line.amount || ''}
-          onChange={(e) => onChange(line.id, { amount: Number(e.target.value) })}
+        <PaymentAmountInput
+          aria-label="Expense amount"
+          value={line.amount}
+          onValueChange={(amount) => onChange(line.id, { amount })}
         />
       </td>
       <td>

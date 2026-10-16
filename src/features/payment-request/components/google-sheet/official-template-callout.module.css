@@ -1,0 +1,131 @@
+.callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 28px 30px;
+  border: 1px solid #cfe0f4;
+  border-radius: 14px;
+  background: #f5f9ff;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.copy>span {
+  display: block;
+  margin-bottom: 9px;
+  color: #537092;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.copy h2 {
+  margin: 0;
+  color: #082b57;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.copy p {
+  max-width: 780px;
+  margin: 7px 0 0;
+  color: #587091;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.actions label {
+  display: grid;
+  min-width: 205px;
+  gap: 6px;
+  color: #526987;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.actions select {
+  box-sizing: border-box;
+  min-height: 44px;
+  border: 1px solid #bfcfe3;
+  border-radius: 9px;
+  padding: 0 36px 0 12px;
+  color: #173a64;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  text-transform: none;
+}
+
+.actions a,
+.unavailable {
+  display: inline-flex;
+  min-height: 42px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #173f70;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.actions a {
+  color: #0c3768;
+  background: #fff;
+  text-decoration: none;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.actions a:hover {
+  border-color: #2563eb;
+  color: #1d5dcc;
+  background: #eff6ff;
+}
+
+.unavailable {
+  border-color: #d4dde8;
+  color: #718096;
+  background: #edf2f7;
+}
+
+@media (max-width: 860px) {
+  .callout,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions label {
+    min-width: 0;
+  }
+
+  .actions a,
+  .unavailable {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .callout {
+    padding: 22px 20px;
+  }
+
+  .copy h2 {
+    font-size: 19px;
+  }
+}

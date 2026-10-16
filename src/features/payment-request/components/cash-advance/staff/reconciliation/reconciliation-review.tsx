@@ -1,4 +1,5 @@
 import type { CashAdvanceDocument, CashAdvanceExpense } from '@/domain/payment-requests/cash-advance/types';
+import { DocumentReferenceChip } from '@/shared/document-reference-chip';
 import styles from '../../cash-advance.module.css';
 
 type ReconciliationReviewProps = {
@@ -28,7 +29,7 @@ export function ReconciliationReview(props: ReconciliationReviewProps) {
     </section>
     <section className={styles.receiptSection}>
       <div className={styles.receiptSectionTitle}><h2>Cash Spent Summary</h2><span>{props.expenses.length} entries</span></div>
-      <div className={styles.tableShell}><table className={`${styles.lineTable} ${styles.reconciliationTable}`}><thead><tr><th>Date</th><th>Supplier</th><th>Description</th><th>Type of account</th><th>Division</th><th>Receipt link</th><th>Amount</th></tr></thead><tbody>{props.expenses.map((expense) => <tr key={expense.id}><td>{expense.expenseDate}</td><td>{expense.supplier}</td><td>{expense.description}</td><td>{expense.accountType}</td><td>{expense.division || '—'}</td><td>{expense.receiptLink || '—'}</td><td className={styles.amount}>RM {expense.amount.toFixed(2)}</td></tr>)}</tbody></table></div>
+      <div className={styles.tableShell}><table className={`${styles.lineTable} ${styles.reconciliationTable}`}><thead><tr><th>Date</th><th>Supplier</th><th>Description</th><th>Type of account</th><th>Division</th><th>Receipt link</th><th>Amount</th></tr></thead><tbody>{props.expenses.map((expense) => <tr key={expense.id}><td>{expense.expenseDate}</td><td>{expense.supplier}</td><td>{expense.description}</td><td>{expense.accountType}</td><td>{expense.division || '—'}</td><td>{expense.receiptLink ? <DocumentReferenceChip value={expense.receiptLink} /> : '—'}</td><td className={styles.amount}>RM {expense.amount.toFixed(2)}</td></tr>)}</tbody></table></div>
     </section>
     {props.includesParticipants && <section className={styles.receiptSection}><div className={styles.receiptSectionTitle}><h2>Participant Allowance</h2><span>Evidence attached</span></div>{props.participantProofLink ? <a className={styles.secondary} href={props.participantProofLink} rel="noreferrer" target="_blank">Open Participant Allowance Google Sheet ↗</a> : <div className={styles.documentRow}><span className={styles.documentIcon}>↥</span><div className={styles.documentCopy}><strong>{props.participantProof?.fileName}</strong><small>Participant-signed form for Finance review</small></div></div>}</section>}
     {props.outcome === 'UNDERSPEND' && <section className={styles.receiptSection}><div className={styles.receiptSectionTitle}><h2>Balance Return</h2></div><dl className={styles.detailGrid}><div><dt>Return date</dt><dd>{props.balanceReturnDate}</dd></div><div><dt>Bank reference</dt><dd>{props.balanceReturnReference}</dd></div><div><dt>Proof</dt><dd>{props.balanceReturnProof?.fileName}</dd></div></dl></section>}

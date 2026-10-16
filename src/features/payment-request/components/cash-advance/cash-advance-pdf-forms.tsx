@@ -8,7 +8,7 @@ function formHref(requestNumber: string, form: FormRow['key'], download = false)
 }
 
 export function CashAdvancePdfForms({ record }: { record: CashAdvanceRecord }) {
-    const rows: FormRow[] = [{ key: 'request', title: 'Cash Advance Request Form', note: 'Signed Staff, Manager and Director request' }];
+    const rows: FormRow[] = [{ key: 'request', title: 'Cash Advance Request Form', note: record.requesterRole === 'director' ? 'Signed requester and approving Director request' : 'Signed requester, Manager and Director request' }];
     if (record.reconciliation) rows.push({ key: 'summary', title: 'Summary of Cash Advance Spent', note: 'Generated from the submitted reconciliation' });
     if (record.reconciliation?.includesParticipantAllowance) rows.push({ key: 'participant', title: 'Participant Allowance', note: 'Included because participant allowances were recorded' });
     const packHref = `/api/v1/payment-requests/cash-advance/${encodeURIComponent(record.requestNumber)}/forms?form=pack`;

@@ -23,10 +23,10 @@ export function CashAdvanceStaffQueue() {
       const current = readBetaSession();
       if (cancelled) return;
       setAccount(current);
-      if (!current || current.role !== 'staff') return;
+      if (!current) return;
 
-      return fetchCashAdvances({ role: 'staff', userId: current.id })
-        .then((data) => { if (!cancelled) setRecords(data); })
+      return fetchCashAdvances({ role: current.role, userId: current.id })
+        .then((data) => { if (!cancelled) setRecords(data.filter((record) => record.requesterId === current.id)); })
         .catch((caught) => {
           if (!cancelled) setFetchError(caught instanceof Error ? caught.message : 'Cash Advances could not be loaded.');
         });
@@ -36,7 +36,7 @@ export function CashAdvanceStaffQueue() {
   }, []);
 
   // Derived: no setError needed for the sign-in message
-  const signInError = account !== undefined && (!account || account.role !== 'staff') ? 'Sign in using a Staff account.' : '';
+  const signInError = account !== undefined && !account ? 'Sign in to view your Cash Advances.' : '';
   const error = signInError || fetchError;
 
   return <section className={styles.card}><div className={styles.header}><div><h1>Cash Advances</h1><p className={styles.muted}>Track requests, payment and reconciliation.</p></div><Link className={styles.primary} href="/beta/payment-requests/cash-advance/new">+ New Cash Advance</Link></div>{error && <div className={styles.error}>{error}</div>}{!records.length ? <div className={styles.empty}>No Cash Advances found.</div> : <table className={styles.queue}><thead><tr><th>Reference</th><th>Project</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>{records.map((record) => <tr key={record.id}><td>{record.requestNumber}</td><td>{record.projectName}</td><td>RM {record.totalAmount.toFixed(2)}</td><td><CashAdvanceStatusBadge status={record.status} /></td><td><Link className={styles.secondary} href={`/beta/payment-requests/cash-advance/${record.id}`}>View</Link></td></tr>)}</tbody></table>}</section>;

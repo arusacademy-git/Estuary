@@ -2,16 +2,24 @@ import type { CashAdvanceRecord } from '@/domain/payment-requests/cash-advance/t
 import { betaAccounts } from '@/lib/auth/beta-accounts';
 import styles from './cash-advance.module.css';
 
-const labels = [
+const standardLabels = [
   'Request Submitted',
-  'Manager Review',
+  'Manager Preview',
   'Director Review',
   'Finance Payment',
   'Reconciliation',
   'Completed',
 ] as const;
 
-type ProgressState = 'done' | 'active' | 'returned' | '';
+const directorRequestLabels = [
+  'Request Submitted',
+  'Director Review',
+  'Finance Payment',
+  'Reconciliation',
+  'Completed',
+] as const;
+
+type ProgressState = 'done' | 'active' | 'informational' | 'returned' | '';
 
 function accountName(id?: string) {
   if (!id) return undefined;
@@ -28,6 +36,15 @@ function formatDate(value?: string) {
 }
 
 function currentIndex(record: CashAdvanceRecord) {
+  if (record.requesterRole === 'director') {
+    if (record.status === 'PENDING_DIRECTOR_APPROVAL') return 1;
+    if (record.status === 'PENDING_FINANCE_PROCESSING') return 2;
+    if (record.status === 'PENDING_RECONCILIATION' || record.status === 'PENDING_FINANCE_RECONCILIATION') return 3;
+    if (record.status === 'COMPLETED') return 4;
+    if (record.returnedStage === 'RECONCILIATION') return 3;
+    if (record.directorApprovedAt) return 2;
+    return 1;
+  }
   if (record.status === 'PENDING_MANAGER_APPROVAL') return 1;
   if (record.status === 'PENDING_DIRECTOR_APPROVAL') return 2;
   if (record.status === 'PENDING_FINANCE_PROCESSING') return 3;
@@ -45,37 +62,38 @@ function actorDate(actor: string | undefined, value?: string) {
 }
 
 function stepDetail(record: CashAdvanceRecord, index: number, state: ProgressState) {
+  const directorRequest = record.requesterRole === 'director';
+  const workflowIndex = directorRequest && index > 0 ? index + 1 : index;
   if (state === 'returned') {
     const returnedBy = actorDate(accountName(record.returnedById), record.returnedAt) ?? 'An approver';
     const correction = record.returnedStage === 'RECONCILIATION' ? 'reconciliation' : 'request';
     return `${returnedBy} returned the ${correction}. The original requester must correct and resubmit it.`;
   }
 
-  if (index === 0) {
-    return `Signed by ${actorDate(record.requesterName, record.staffSignedAt ?? record.createdAt)} and sent to the assigned Manager.`;
+  if (workflowIndex === 0) {
+    return `Signed by ${actorDate(record.requesterName, record.staffSignedAt ?? record.createdAt)} and sent to the assigned Director.`;
   }
 
-  if (index === 1) {
+  if (workflowIndex === 1) {
     const manager = accountName(record.managerApproverId) ?? 'the assigned Manager';
-    if (state === 'done') return `Approved by ${actorDate(manager, record.managerApprovedAt)} and forwarded to the Director.`;
-    if (state === 'active') return `Waiting for ${manager} to review, sign, or return the request.`;
-    return 'Starts after the Staff request is submitted.';
+    if (state === 'done') return `Previewed by ${actorDate(manager, record.managerPreviewedAt ?? record.managerApprovedAt)}.`;
+    return `${manager} can preview this request for information. Director approval is not blocked.`;
   }
 
-  if (index === 2) {
+  if (workflowIndex === 2) {
     const director = accountName(record.directorApproverId) ?? 'the assigned Director';
     if (state === 'done') return `Approved by ${actorDate(director, record.directorApprovedAt)} and forwarded to Finance.`;
     if (state === 'active') return `Waiting for ${director} to review, sign, or return the request.`;
-    return 'Starts after Manager approval.';
+    return 'Starts immediately after the requester submits the request.';
   }
 
-  if (index === 3) {
-    if (state === 'done') return `Payment recorded by ${actorDate(accountName(record.financePaidById) ?? 'Finance', record.financePaidAt)}. Staff can now reconcile the spending.`;
+  if (workflowIndex === 3) {
+    if (state === 'done') return `Payment recorded by ${actorDate(accountName(record.financePaidById) ?? 'Finance', record.financePaidAt)}. The requester can now reconcile the spending.`;
     if (state === 'active') return 'Finance will record the payment or return the request for correction.';
     return 'Starts after Director approval.';
   }
 
-  if (index === 4) {
+  if (workflowIndex === 4) {
     if (record.reconciliation?.submittedAt && state === 'done') return `Submitted by ${actorDate(record.requesterName, record.reconciliation.submittedAt)} and verified by Finance.`;
     if (record.reconciliation?.submittedAt) return `Submitted by ${actorDate(record.requesterName, record.reconciliation.submittedAt)}. Waiting for Finance verification.`;
     if (state === 'active') return 'The original requester must record actual expenses and provide balance-return proof when required.';
@@ -88,6 +106,7 @@ function stepDetail(record: CashAdvanceRecord, index: number, state: ProgressSta
 }
 
 export function CashAdvanceProgress({ record }: { record: CashAdvanceRecord }) {
+  const labels = record.requesterRole === 'director' ? directorRequestLabels : standardLabels;
   const activeIndex = currentIndex(record);
   const returned = record.status === 'RETURNED_TO_STAFF';
   const completed = record.status === 'COMPLETED';
@@ -100,7 +119,10 @@ export function CashAdvanceProgress({ record }: { record: CashAdvanceRecord }) {
       </div>
       <ol className={styles.progress}>
         {labels.map((label, index) => {
-          const state: ProgressState = completed
+          const managerPreview = record.requesterRole !== 'director' && index === 1;
+          const state: ProgressState = managerPreview
+            ? (record.managerPreviewedAt || record.managerApprovedAt ? 'done' : 'informational')
+            : completed
             ? 'done'
             : returned && index === activeIndex
               ? 'returned'
@@ -113,7 +135,7 @@ export function CashAdvanceProgress({ record }: { record: CashAdvanceRecord }) {
             <li className={state ? styles[state] : undefined} key={label}>
               <span className={styles.dot}>{state === 'done' ? '✓' : state === 'returned' ? '×' : ''}</span>
               <span className={styles.stepCopy}>
-                <strong>{label}</strong>
+                <span className={styles.stepTitle}><strong>{label}</strong>{managerPreview && <em>Informational</em>}</span>
                 <small>{stepDetail(record, index, state)}</small>
               </span>
             </li>

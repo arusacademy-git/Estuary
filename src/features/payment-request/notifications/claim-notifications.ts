@@ -1,6 +1,7 @@
 import { createLocalNotification } from '@/data/notifications/local-notification-store';
 import type { CreateNotificationInput } from '@/domain/notifications/types';
 import type { ClaimRecord } from '@/domain/payment-requests/claims/types';
+import { requiresTechManagerApproval } from '@/domain/payment-requests/claims/policy';
 import { betaAccounts, type BetaAccount } from '@/lib/auth/beta-accounts';
 
 function createSafely(input: CreateNotificationInput) { try { createLocalNotification(input); } catch (error) { console.error('The Claim changed, but its notification could not be created.', error); } }
@@ -21,7 +22,9 @@ export function notifyClaimSubmitted(record: ClaimRecord, actor: BetaAccount) {
   }
 }
 export function notifyClaimManagerApproved(record: ClaimRecord, actor: BetaAccount) {
-  createSafely({ recipientId: record.requesterId, actorId: actor.id, type: 'CLAIM_MANAGER_APPROVED', entityType: 'EXPENSE_CLAIM', entityId: record.id, referenceNumber: record.claimNumber, title: 'Manager preview recorded', message: `${actor.name} completed the informational preview for ${record.claimNumber}. Finance processing continues independently.`, href: recordHref(record) });
+  const approvalRequired = requiresTechManagerApproval(record);
+  createSafely({ recipientId: record.requesterId, actorId: actor.id, type: 'CLAIM_MANAGER_APPROVED', entityType: 'EXPENSE_CLAIM', entityId: record.id, referenceNumber: record.claimNumber, title: approvalRequired ? 'Tech Claim approved by Manager' : 'Manager preview recorded', message: approvalRequired ? `${actor.name} approved ${record.claimNumber}. It is now ready for Finance processing.` : `${actor.name} completed the informational preview for ${record.claimNumber}. Finance processing continues independently.`, href: recordHref(record) });
+  if (approvalRequired) notifyFinance(record, actor, 'CLAIM_SUBMITTED');
 }
 export function notifyClaimDirectorForwarded(record: ClaimRecord, actor: BetaAccount) { createSafely({ recipientId: record.requesterId, actorId: actor.id, type: 'CLAIM_DIRECTOR_FORWARDED', entityType: 'EXPENSE_CLAIM', entityId: record.id, referenceNumber: record.claimNumber, title: 'Director preview recorded', message: `${actor.name} completed the informational preview for ${record.claimNumber}. Finance processing continues independently.`, href: recordHref(record) }); }
 export function notifyClaimReturned(record: ClaimRecord, actor: BetaAccount, stage: 'Manager' | 'Director' | 'Finance') {

@@ -1,6 +1,7 @@
-import { claimLineAmount } from '@/domain/payment-requests/claims/policy';
+import { claimLineAmount, requiresTechManagerApproval } from '@/domain/payment-requests/claims/policy';
 import { claimTypeDetails, type ClaimRecord } from '@/domain/payment-requests/claims/types';
 import { getBetaAccount } from '@/lib/auth/beta-accounts';
+import { DocumentReferenceChip } from '@/shared/document-reference-chip';
 
 import styles from './claim-workflow.module.css';
 
@@ -74,7 +75,7 @@ export function ClaimReviewDetails({
           <td>{line.details}</td>
           <td>{line.accountType || '—'}</td>
           <td>{line.division || '—'}</td>
-          <td>{line.receiptDocumentId ? <a href={`/api/v1/payment-requests/claims/documents/${encodeURIComponent(line.receiptDocumentId)}?userId=${encodeURIComponent(userId)}`} rel="noreferrer" target="_blank">Preview receipt ↗</a> : line.receiptLink ? <a href={line.receiptLink} rel="noreferrer" target="_blank">Open receipt link ↗</a> : '—'}</td>
+          <td>{line.receiptDocumentId ? <DocumentReferenceChip href={`/api/v1/payment-requests/claims/documents/${encodeURIComponent(line.receiptDocumentId)}?userId=${encodeURIComponent(userId)}`} value={line.receiptFileName || 'Receipt document'} /> : line.receiptLink ? <DocumentReferenceChip href={line.receiptLink} value={line.receiptFileName || line.receiptLink} /> : '—'}</td>
           <td><strong>{money(claimLineAmount(record.claimType, line))}</strong></td>
         </tr>)}</tbody>
       </table></div>
@@ -94,7 +95,8 @@ export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
     <header><p>Payment progress</p><span>Step {currentIndex + 1} of {stages.length}</span></header>
     <ol>{stages.map((stage, index) => {
       const returned = record.status === 'RETURNED_TO_CLAIMANT' && stage === current;
-      const informational = (stage === 'manager' && !record.managerApprovedAt) || (stage === 'director' && !record.directorReviewedAt);
+      const requiredManagerApproval = stage === 'manager' && requiresTechManagerApproval(record);
+      const informational = (stage === 'manager' && !requiredManagerApproval && !record.managerApprovedAt) || (stage === 'director' && !record.directorReviewedAt);
       const explicitlyComplete = stage === 'manager' ? Boolean(record.managerApprovedAt) : stage === 'director' ? Boolean(record.directorReviewedAt) : false;
       const complete = explicitlyComplete || (stage !== 'manager' && stage !== 'director' && (record.status === 'PAID' || index < currentIndex));
       const state = returned ? 'returned' : complete ? 'complete' : informational && record.status !== 'DRAFT' ? 'informational' : index === currentIndex ? 'active' : 'pending';
@@ -119,7 +121,7 @@ function currentStage(record: ClaimRecord): Stage {
 
 function stageTitle(stage: Stage, record: ClaimRecord) {
   if (stage === 'submitted') return record.requesterRole === 'manager' ? 'Claim Submitted by Manager' : record.requesterRole === 'director' ? 'Claim Submitted by Director' : record.requesterRole === 'finance' ? 'Claim Submitted by Finance' : 'Claim Submitted';
-  if (stage === 'manager') return 'Manager Review';
+  if (stage === 'manager') return requiresTechManagerApproval(record) ? 'Manager Approval' : 'Manager Review';
   if (stage === 'director') return 'Director Preview';
   if (stage === 'finance') return 'Finance Processing';
   return 'Completed';
@@ -139,6 +141,7 @@ function stageDescription(
   if (stage === 'manager') {
     const name = getBetaAccount(record.managerApprovedById ?? record.managerApproverId ?? null)?.name ?? 'the assigned Manager';
     if (state === 'complete') return `Reviewed and approved by ${name}${record.managerApprovedAt ? ` · ${claimDate(record.managerApprovedAt)}` : ''}`;
+    if (requiresTechManagerApproval(record)) return state === 'active' ? `Awaiting approval by ${name} · Finance is blocked` : 'Waiting for required Manager approval';
     return state === 'informational' ? `Available for ${name} to preview · Finance is not blocked` : state === 'active' ? `Awaiting preview by ${name}` : 'Waiting for Manager preview';
   }
 

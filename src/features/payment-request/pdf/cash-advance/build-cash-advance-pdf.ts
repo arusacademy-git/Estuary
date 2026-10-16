@@ -141,7 +141,7 @@ async function appendRequest(
 
     lines.forEach((line, rowIndex) => {
       const centerY = 366.7 - rowIndex * 13.35;
-      drawCell(page, regular, line.description, 166, centerY, 321, 6.2);
+      drawCell(page, regular, line.accountType ? `${line.accountType} — ${line.description}` : line.description, 166, centerY, 321, 6.2);
       drawWrappedCell(page, regular, line.purpose, 487, centerY, 129, 13.35);
       drawCell(page, regular, line.amount.toFixed(2), 616, centerY, 131, 6.4, 'right');
     });
@@ -164,7 +164,7 @@ async function appendRequest(
 
 async function appendSummary(output: PDFDocument, record: CashAdvanceRecord, root: string, regular: PDFFont, bold: PDFFont) {
   const reconciliation = record.reconciliation;
-  if (!reconciliation) throw new Error('The Cash Spent Summary is available after Staff submits reconciliation.');
+  if (!reconciliation) throw new Error('The Cash Spent Summary is available after the requester submits reconciliation.');
   const expensePages = chunks(reconciliation.expenses, SUMMARY_ROWS);
   for (const [pageIndex, expenses] of expensePages.entries()) {
     const page = await templatePage(output, path.join(root, 'Summary of Cash Advance Spent Template.pdf'));

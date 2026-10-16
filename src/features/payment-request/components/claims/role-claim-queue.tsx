@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { fetchClaimRequests } from '@/data/payment-requests/claims/api';
 import { CLAIM_TYPES, claimTypeDetails, type ClaimRecord } from '@/domain/payment-requests/claims/types';
 import { readBetaSession, type BetaAccount, type BetaRole } from '@/lib/auth/beta-accounts';
+import { FinanceBulkProcessLink } from '@/features/payment-request/components/bulk/finance-bulk-process-link';
 
 import { claimDate } from './claim-review-shared';
 import styles from './claim-workflow.module.css';
@@ -93,7 +95,7 @@ export function RoleClaimQueue({
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>{role === 'director' ? 'Director workspace' : 'Finance workspace'}</p><h1>{title}</h1><span>{copy}</span>{role === 'director' && activeCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/director/payment-requests/claims/bulk">Bulk preview Claims</Link>}</div>
+        <div><p>{role === 'director' ? 'Director workspace' : 'Finance workspace'}</p><h1>{title}</h1><span>{copy}</span>{role === 'director' && activeCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/director/payment-requests/claims/bulk">Bulk preview Claims</Link>}{role === 'finance' && activeCount > 0 && <FinanceBulkProcessLink className={styles.bulkPreviewButton} href="/beta/finance/payment-requests/claims/bulk">Bulk process Claims</FinanceBulkProcessLink>}</div>
         <aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside>
       </header>
 
@@ -120,11 +122,7 @@ export function RoleClaimQueue({
         </div>
         <div className={styles.queueDisplayBar}>
           <span>Showing {visible.length} {visible.length === 1 ? 'Claim' : 'Claims'}</span>
-          <div className={styles.viewToggle} role="group" aria-label="Claims view">
-            <span>View</span>
-            <button data-active={viewMode === 'grid'} onClick={() => setViewMode('grid')} type="button">▦ Grid</button>
-            <button data-active={viewMode === 'list'} onClick={() => setViewMode('list')} type="button">☷ List</button>
-          </div>
+          <PaymentViewToggle label="Choose Claims view" onChange={setViewMode} value={viewMode} />
         </div>
         {visible.length === 0 ? (
           <div className={styles.empty}><h2>No Claims found</h2><p>There are no Claims matching this filter.</p></div>

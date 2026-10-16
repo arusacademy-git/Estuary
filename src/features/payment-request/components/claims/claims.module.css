@@ -2014,6 +2014,10 @@
     gap: 13px;
 }
 
+.googleSheetFieldsSingle {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .googleSheetFields label {
     display: grid;
     gap: 7px;

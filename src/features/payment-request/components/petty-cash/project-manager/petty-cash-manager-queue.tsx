@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
 import { fetchPettyCashRequests } from '@/data/payment-requests/petty-cash/api';
 import type { PettyCashRecord } from '@/domain/payment-requests/petty-cash/types';
@@ -111,10 +112,7 @@ export function PettyCashManagerQueue() {
           <button aria-pressed={filter === 'FORWARDED'} data-active={filter === 'FORWARDED'} type="button" onClick={() => setFilter('FORWARDED')}>Previewed <span>{forwardedCount}</span></button>
           <button aria-pressed={filter === 'ALL'} data-active={filter === 'ALL'} type="button" onClick={() => setFilter('ALL')}>All <span>{assigned.length}</span></button>
         </div>
-        <div className={styles.managerViewToggle} role="group" aria-label="Choose queue view">
-          <button aria-pressed={viewMode === 'grid'} data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}>▦ Grid</button>
-          <button aria-pressed={viewMode === 'list'} data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}>☷ List</button>
-        </div>
+        <PaymentViewToggle label="Choose Petty Cash queue view" onChange={setViewMode} value={viewMode} />
       </div>
 
       {error ? <div className={styles.error}>{error}</div> : visible.length === 0 ? <div className={styles.managerEmpty}><h2>No Petty Cash requests found</h2><p>There are no assigned requests matching this filter.</p></div> : viewMode === 'grid' ? <div className={styles.managerCardGrid}>{pagination.pageRecords.map((record) => <RequestCard key={record.id} record={record} />)}</div> : <div className={styles.managerTableWrapper}><table><thead><tr><th>Request</th><th>Staff</th><th>Location</th><th>Entries</th><th>Amount</th><th>Status</th><th><span className={styles.srOnly}>Action</span></th></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong><small>{date(record.requestDate)}</small></td><td>{record.requesterName}</td><td>{location(record)}</td><td>{record.lines.length}</td><td className={styles.managerAmount}>{money(record.totalAmount)}</td><td><PettyCashStatusBadge status={record.status} /></td><td className={styles.managerActionCell}><Link href={`/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`}>{record.managerApprovedAt ? 'View details' : 'Preview request'}</Link></td></tr>)}</tbody></table></div>}

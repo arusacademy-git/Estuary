@@ -17,12 +17,11 @@ import {
   travelLineTotal,
 } from "@/domain/payment-requests/travel-allowance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { createRuntimeId } from "@/lib/ids/runtime-id";
 import {
   EMPLOYEE_OPTIONS,
   findEmployeeByName,
 } from "@/shared/constants/employee-options";
-import { parsePaymentAmountInput } from "@/shared/utils/payment-amount";
+import { PaymentAmountInput } from "@/shared/payment-amount-input";
 import { CorrectionBackLink, CorrectionEditLayout } from "@/shared/correction-edit-layout";
 import { TravelAllowanceConfirmation } from "./travel-allowance-confirmation";
 import {
@@ -44,7 +43,10 @@ function today() {
 
 function newLine(employeeId = "", employeeName = ""): TravelAllowanceLine {
   return {
-    id: createRuntimeId(),
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `line-${Date.now()}-${Math.random()}`,
     travelDate: "",
     employeeId,
     employeeName,
@@ -81,8 +83,7 @@ function readDocument(file: File): Promise<PaymentRequestDocument> {
   });
 }
 
-export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: "staff" | "manager"; initialRecord?: TravelAllowanceRecord }) {
-  const requestMode = initialRecord?.requesterRole ?? mode;
+export function TravelAllowanceForm({ initialRecord }: { initialRecord?: TravelAllowanceRecord }) {
   const [account, setAccount] =
     useState<ReturnType<typeof readBetaSession>>(null);
   const [requestDate, setRequestDate] = useState(initialRecord?.requestDate ?? today());
@@ -103,15 +104,10 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
   useEffect(() => {
     const session = readBetaSession();
     setAccount(session);
-    if (session?.role === "manager" && requestMode === "manager" && !initialRecord) {
-      setManagerApproverId(session.id);
-    }
-  }, [initialRecord, requestMode]);
+  }, []);
 
   const directors = betaAccounts.filter((item) => item.role === "director");
-  const managers = betaAccounts.filter((item) => item.role === "manager");
   const employees = EMPLOYEE_OPTIONS;
-  const [managerApproverId, setManagerApproverId] = useState(initialRecord?.managerApproverId ?? "");
   const total = useMemo(
     () => lines.reduce((sum, line) => sum + travelLineTotal(line), 0),
     [lines],
@@ -129,28 +125,26 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
       return;
     }
 
-    if (requestMode === "manager") {
-      const unmatchedEntry = data.entries.findIndex(
-        (entry) => !findEmployeeByName(entry.employeeName),
-      );
-      if (unmatchedEntry >= 0) {
-        setError(`Travel entry ${unmatchedEntry + 1} does not match an Estuary Staff name.`);
-        return;
-      }
+    const unmatchedEntry = data.entries.findIndex(
+      (entry) => !findEmployeeByName(entry.employeeName),
+    );
+    if (unmatchedEntry >= 0) {
+      setError(`Travel entry ${unmatchedEntry + 1} does not match an Estuary Staff name.`);
+      return;
     }
 
-    const importedLines = data.entries.map((entry) => {
-      const employee = requestMode === "staff"
-        ? account
-        : findEmployeeByName(entry.employeeName);
+    const importedLines = data.entries.map((entry, index) => {
+      const employee = findEmployeeByName(entry.employeeName);
       if (!employee) return newLine();
       const standardProject = TRAVEL_ALLOWANCE_PROJECTS.includes(
         entry.projectName as (typeof TRAVEL_ALLOWANCE_PROJECTS)[number],
       );
       return {
-        id: createRuntimeId(),
+        id: typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `sheet-line-${Date.now()}-${index}`,
         employeeId: employee.id,
-        employeeName: employee.name,
+        employeeName: entry.employeeName.trim(),
         travelDate: entry.travelDate,
         projectName: entry.projectName,
         isOtherProject: !standardProject,
@@ -167,13 +161,8 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
       setError("Complete the request date, contact and Project Director on this page.");
       return;
     }
-    if (requestMode === "staff" && !managerApproverId) {
-      setError("Select the Manager reviewer on this page.");
-      return;
-    }
     setRequestDate(nextRequestDate);
     setContact(nextContact);
-    if (requestMode === "manager") setManagerApproverId(account.id);
     setLines(importedLines);
     setError("");
     setSheetImportMessage("");
@@ -220,27 +209,21 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
   }
 
   function validationMessage() {
-    if (!account || account.role !== requestMode)
-      return `Sign in using a ${requestMode === "staff" ? "Staff" : "Manager"} account.`;
+    if (!account || account.role !== "manager")
+      return "Sign in using a Manager account.";
     if (!requestDate || !contact.trim() || !projectDirectorId)
       return "Complete the request date, contact and Project Director.";
-    if (requestMode === "staff" && !managerApproverId)
-      return "Select the Manager reviewer.";
     if (!lines.length) return "Add at least one travel entry.";
     const incomplete = lines.find(
       (line) =>
-        !line.employeeId || !line.employeeName.trim() || !line.travelDate || !line.projectName.trim() || !line.reason.trim(),
+        !line.employeeId || !line.employeeName.trim() || !line.travelDate || !line.projectName.trim() || (entryMode === "MANUAL" && !line.reason.trim()),
     );
     if (incomplete)
       return "Complete the travel date, Project Name and reason for every entry.";
-    const noAllowance = lines.find(
-      (line) => line.meals.length === 0 && line.specialAllowance <= 0,
-    );
-    if (noAllowance)
-      return "Select at least one meal or enter a special allowance for every entry.";
+    if (total <= 0) return "The Travel Allowance total must be greater than RM 0.00.";
     const missingReason = lines.find(
       (line) =>
-        line.specialAllowance > 0 && !line.specialAllowanceReason?.trim(),
+        entryMode === "MANUAL" && line.specialAllowance > 0 && !line.specialAllowanceReason?.trim(),
     );
     if (missingReason) return "Explain the reason for every special allowance.";
     return null;
@@ -266,10 +249,10 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
         requestDate,
         requesterId: account.id,
         requesterName: account.name,
-        requesterRole: requestMode,
+        requesterRole: "manager",
         requesterPosition: account.position,
         contact: contact.trim(),
-        managerApproverId: requestMode === "staff" ? managerApproverId : account.id,
+        managerApproverId: account.id,
         projectDirectorId,
         currency: "MYR",
         lines,
@@ -328,7 +311,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
       <header className={styles.pageHeader}>
         <div>
           <p>Payment Requests / Travel Allowance</p>
-          <h1>{initialRecord ? `Edit ${initialRecord.requestNumber}` : requestMode === "manager" ? "New Travel Allowance on behalf of Staff" : "New Travel Allowance"}</h1>
+          <h1>{initialRecord ? `Edit ${initialRecord.requestNumber}` : "New Travel Allowance on behalf of Staff"}</h1>
           <span>
             Enter each project-travel meal allowance. Estuary will calculate and
             generate the official TA form.
@@ -351,7 +334,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
           completionFields={<>
             <label><span>Request date <em>*</em></span><input type="date" value={requestDate} onChange={(event) => setRequestDate(event.target.value)} /></label>
             <label><span>Contact <em>*</em></span><input value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Phone number or extension" /></label>
-            <label><span>Manager reviewer <em>*</em></span>{requestMode === "manager" ? <input disabled value={account?.name ?? "Loading…"} /> : <select value={managerApproverId} onChange={(event) => setManagerApproverId(event.target.value)}><option value="">Choose a Manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name} - {manager.position}</option>)}</select>}</label>
+            <label><span>Submitting Manager <em>*</em></span><input disabled value={account?.name ?? "Loading…"} /></label>
             <label><span>Project Director <em>*</em></span><select value={projectDirectorId} onChange={(event) => setProjectDirectorId(event.target.value)}><option value="">Choose a Director</option>{directors.map((director) => <option key={director.id} value={director.id}>{director.name} - {director.position}</option>)}</select></label>
           </>}
           onCancel={() => setEntryMode("MANUAL")}
@@ -378,7 +361,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
         <section className={styles.section}>
           <div className={styles.sectionHeading}>
             <h2>Requester and approval</h2>
-            <p>{requestMode === "manager" ? "You are submitting this request on behalf of Staff." : "Your profile is used as the requester."}</p>
+            <p>You are submitting this request on behalf of Staff.</p>
           </div>
           <div className={styles.fields}>
             <label>
@@ -390,7 +373,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
               />
             </label>
             <label>
-              <span>{requestMode === "manager" ? "Submitted by Manager" : "Staff name"}</span>
+              <span>Submitted by Manager</span>
               <input disabled value={account?.name ?? "Loading…"} />
             </label>
             <label>
@@ -406,15 +389,8 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
               />
             </label>
             <label className={styles.full}>
-              <span>Manager reviewer <em>*</em></span>
-              {requestMode === "manager" ? (
-                <input disabled value={account?.name ?? "Loading…"} />
-              ) : (
-                <select value={managerApproverId} onChange={(event) => setManagerApproverId(event.target.value)}>
-                  <option value="">Choose a Manager</option>
-                  {managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name} - {manager.position}</option>)}
-                </select>
-              )}
+              <span>Submitting Manager <em>*</em></span>
+              <input disabled value={account?.name ?? "Loading…"} />
             </label>
             <label className={styles.full}>
               <span>Project Director in charge <em>*</em></span>
@@ -455,7 +431,7 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
                 <div className={styles.entryTop}>
                   <strong>Entry {index + 1}</strong>
                   <div className={styles.entryActions}>
-                    <button type="button" disabled={lines.length >= MAX_LINES} onClick={() => setLines((current) => [...current, { ...line, id: createRuntimeId(), travelDate: "" }])}>Duplicate</button>
+                    <button type="button" disabled={lines.length >= MAX_LINES} onClick={() => setLines((current) => [...current, { ...line, id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `line-${Date.now()}-${Math.random()}`, travelDate: "" }])}>Duplicate</button>
                     <button type="button" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}>Remove</button>
                   </div>
                 </div>
@@ -548,20 +524,10 @@ export function TravelAllowanceForm({ mode = "staff", initialRecord }: { mode?: 
                 <div className={styles.specialRow}>
                   <label>
                     <span>Special allowance (RM)</span>
-                    <input
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      type="text"
-                      value={line.specialAllowance || ""}
-                      onChange={(event) =>
-                        updateLine(line.id, {
-                          specialAllowance: Math.max(
-                            0,
-                            parsePaymentAmountInput(
-                              event.target.value,
-                            ),
-                          ),
-                        })
+                    <PaymentAmountInput
+                      value={line.specialAllowance}
+                      onValueChange={(specialAllowance) =>
+                        updateLine(line.id, { specialAllowance })
                       }
                     />
                   </label>
@@ -667,6 +633,8 @@ function TravelAllowanceReview({
   onBack: () => void;
   onSubmit: () => void;
 }) {
+  const employeeNames = [...new Set(lines.map((line) => line.employeeName.trim()).filter(Boolean))];
+
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
@@ -683,7 +651,7 @@ function TravelAllowanceReview({
         <div className={styles.reviewHero}>
           <div>
             <span>Travel Allowance request</span>
-            <h2>{accountName}</h2>
+            <h2>{employeeNames.join(", ") || "Travel Allowance employees"}</h2>
             <p>
               {lines.length} travel {lines.length === 1 ? "entry" : "entries"}{" "}
               requested on{" "}
@@ -696,6 +664,10 @@ function TravelAllowanceReview({
           </div>
         </div>
         <dl className={styles.reviewMeta}>
+          <div>
+            <dt>{employeeNames.length === 1 ? "Employee" : "Employees"}</dt>
+            <dd>{employeeNames.join(", ") || "None"}</dd>
+          </div>
           <div>
             <dt>Submitted by</dt>
             <dd>{accountName}</dd>
@@ -738,7 +710,7 @@ function TravelAllowanceReview({
                   <td>{line.employeeName}</td>
                   <td>{line.travelDate}</td>
                   <td>{line.projectName}</td>
-                  <td>{line.reason}</td>
+                  <td>{line.reason || "—"}</td>
                   <td>
                     {line.meals
                       .map((meal) => meal[0] + meal.slice(1).toLowerCase())

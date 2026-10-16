@@ -17,6 +17,8 @@ const date = (value: string) => {
 
 export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord }) {
   const [copied, setCopied] = useState(false);
+  const directorRequest = record.requesterRole === 'director';
+  const nextReviewerId = record.directorApproverId;
   async function copyReference() {
     try {
       await navigator.clipboard.writeText(record.requestNumber);
@@ -39,9 +41,9 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
               <small>REF ID</small><strong>{record.requestNumber}</strong>
               <button type="button" onClick={copyReference}>{copied ? 'Copied' : 'Copy'}</button>
             </span>
-            <span className={styles.confirmationStatus}><i />Pending Manager Review</span>
+            <span className={styles.confirmationStatus}><i />Pending Director Approval</span>
           </div>
-          <p>Your signed request was routed to {accountName(record.managerApproverId)} for review.</p>
+          <p>Your signed request was routed to {accountName(nextReviewerId)} for review.</p>
         </header>
 
         <section className={styles.confirmationSection}>
@@ -50,7 +52,7 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
             <div><dt>Amount requested</dt><dd className={styles.confirmationAmount}>{money(record.totalAmount)}</dd><small>{record.lines.length} expense {record.lines.length === 1 ? 'entry' : 'entries'}</small></div>
             <div><dt>Project</dt><dd>{record.projectName}</dd><small>Submitted by {record.requesterName}</small></div>
             <div><dt>Request date</dt><dd>{date(record.requestDate)}</dd><small>Cash Advance request</small></div>
-            <div><dt>Next reviewer</dt><dd>{accountName(record.managerApproverId)}</dd><small>Manager reviewer</small></div>
+            <div><dt>Next reviewer</dt><dd>{accountName(nextReviewerId)}</dd><small>Approving Director</small></div>
           </dl>
         </section>
 
@@ -58,8 +60,8 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
           <h2>Workflow progress</h2>
           <ol className={styles.confirmationWorkflow}>
             <ConfirmationStep state="complete" title="Request Submitted" copy={record.requesterName} />
-            <ConfirmationStep state="active" title="Manager Review" copy={`Assigned to ${accountName(record.managerApproverId)}`} />
-            <ConfirmationStep title="Director Review" copy="Awaiting Manager review" />
+            {!directorRequest && <ConfirmationStep state="informational" title="Manager Preview" copy={`Available to ${accountName(record.managerApproverId)}`} />}
+            <ConfirmationStep state="active" title="Director Review" copy={`Assigned to ${accountName(record.directorApproverId)}`} />
             <ConfirmationStep title="Finance Payment" copy="Awaiting Director approval" />
             <ConfirmationStep title="Reconciliation" copy="After payment" />
             <ConfirmationStep title="Completed" copy="Awaiting reconciliation" />
@@ -77,7 +79,7 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
 }
 
 function ConfirmationStep({ state = 'pending', title, copy }: {
-  state?: 'complete' | 'active' | 'pending'; title: string; copy: string;
+  state?: 'complete' | 'active' | 'informational' | 'pending'; title: string; copy: string;
 }) {
-  return <li className={styles.confirmationStep} data-state={state}><span>{state === 'complete' ? '✓' : ''}</span><strong>{title}</strong><small>{copy}</small></li>;
+  return <li className={styles.confirmationStep} data-state={state}><span>{state === 'complete' ? '✓' : ''}</span><strong>{title}{state === 'informational' && <em>Informational</em>}</strong><small>{copy}</small></li>;
 }

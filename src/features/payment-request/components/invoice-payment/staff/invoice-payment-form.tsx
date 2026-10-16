@@ -20,6 +20,7 @@ import {
 import { readBetaSession } from '@/lib/auth/beta-accounts';
 import { amountToMalayWords } from '@/lib/currency/amount-words';
 import { notifyManagerInvoicePaymentSubmitted } from '@/features/payment-request/notifications/invoice-payment-notifications';
+import { PaymentAmountDraftInput } from '@/shared/payment-amount-input';
 
 import {
   InvoicePaymentReview,
@@ -33,6 +34,12 @@ import styles from './invoice-payment-form.module.css';
 const MAX_DOCUMENT_COUNT = 5;
 const MAX_TOTAL_DOCUMENT_SIZE = 2.5 * 1024 * 1024;
 const ACCEPTED_DOCUMENT_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
+const INVOICE_PAYMENT_CREATOR_ROLES = new Set([
+  'staff',
+  'manager',
+  'director',
+  'finance',
+]);
 
 type InvoiceTaxCode = 'NONE' | 'SST_6' | 'MANUAL';
 
@@ -196,8 +203,8 @@ export function InvoicePaymentForm({ initialRecord }: { initialRecord?: InvoiceP
   }
 
   function validateForm() {
-    if (!account || account.role !== 'staff') {
-      return 'A signed-in Staff account is required.';
+    if (!account || !INVOICE_PAYMENT_CREATOR_ROLES.has(account.role)) {
+      return 'A signed-in Staff, Manager, Director or Finance account is required.';
     }
     if (!requestDate || !projectName.trim() || !title.trim() || !purpose.trim()) {
       return 'Complete the request date, project, title and purpose.';
@@ -230,9 +237,6 @@ export function InvoicePaymentForm({ initialRecord }: { initialRecord?: InvoiceP
     }
     if (requestedAmount <= 0 || requestedAmount > invoiceValue) {
       return 'The amount requested must be greater than RM 0.00 and cannot exceed the invoice total.';
-    }
-    if (!documents.length) {
-      return 'Attach at least one e-invoice or supporting document.';
     }
     return null;
   }
@@ -346,10 +350,10 @@ export function InvoicePaymentForm({ initialRecord }: { initialRecord?: InvoiceP
           </p>
         </section>
 
-        <FormSection title="Request Overview" copy="Staff and project information for Finance tracking">
+        <FormSection title="Request Overview" copy="Requester and project information for Finance tracking">
           <div className={styles.fieldGrid}>
             <Field label="Request date" required><input required type="date" value={requestDate} onChange={(event) => setRequestDate(event.target.value)} /></Field>
-            <Field label="Staff name"><input disabled value={account?.name ?? 'No Staff session found'} /></Field>
+            <Field label="Requester name"><input disabled value={account?.name ?? 'No signed-in account found'} /></Field>
             <Field
               className={styles.fullWidth}
               label="Project name"
@@ -415,7 +419,7 @@ export function InvoicePaymentForm({ initialRecord }: { initialRecord?: InvoiceP
               <thead><tr><th>Currency</th><th>Invoice Total <em>*</em></th><th>Tax Code</th><th>Amount Requested <em>*</em></th></tr></thead>
               <tbody><tr>
                 <td><input aria-label="Currency" disabled value="MYR" /></td>
-                <td><input aria-label="Invoice total" required inputMode="decimal" type="text" placeholder="Enter invoice total" value={invoiceTotal} onChange={(event) => setInvoiceTotal(event.target.value)} /><small>Final total including Tax/SST</small></td>
+                <td><PaymentAmountDraftInput aria-label="Invoice total" required placeholder="Enter invoice total" value={invoiceTotal} onValueChange={setInvoiceTotal} /><small>Final total including Tax/SST</small></td>
                 <td>
                   <select aria-label="Tax code" value={taxCode} onChange={(event) => {
                     const nextTaxCode = event.target.value as InvoiceTaxCode;
@@ -425,11 +429,11 @@ export function InvoicePaymentForm({ initialRecord }: { initialRecord?: InvoiceP
                   }}>
                     <option value="NONE">No tax</option><option value="SST_6">SST 6%</option><option value="MANUAL">Manual tax</option>
                   </select>
-                  {taxCode === 'MANUAL' && <input aria-label="Manual tax amount" inputMode="decimal" type="text" placeholder="Enter tax amount" value={taxAmount} onChange={(event) => setTaxAmount(event.target.value)} />}
+                  {taxCode === 'MANUAL' && <PaymentAmountDraftInput aria-label="Manual tax amount" placeholder="Enter tax amount" value={taxAmount} onValueChange={setTaxAmount} />}
                   {taxCode === 'SST_6' && <small>Included SST: RM {Number(taxAmount || 0).toFixed(2)}</small>}
                 </td>
                 <td>
-                  {paymentPortion === 'OTHER' ? <input aria-label="Amount requested" required inputMode="decimal" type="text" placeholder="Enter requested amount" value={otherRequestedAmount} onChange={(event) => setOtherRequestedAmount(event.target.value)} /> : <input aria-label="Amount requested" disabled placeholder="Select payment portion" value={paymentPortion ? requestedAmount.toFixed(2) : ''} />}
+                  {paymentPortion === 'OTHER' ? <PaymentAmountDraftInput aria-label="Amount requested" required placeholder="Enter requested amount" value={otherRequestedAmount} onValueChange={setOtherRequestedAmount} /> : <input aria-label="Amount requested" disabled placeholder="Select payment portion" value={paymentPortion ? requestedAmount.toFixed(2) : ''} />}
                   <small>{paymentPortion === 'OTHER' ? 'Custom payment portion' : 'Calculated automatically'}</small>
                 </td>
               </tr></tbody>
@@ -441,7 +445,7 @@ export function InvoicePaymentForm({ initialRecord }: { initialRecord?: InvoiceP
           </div>
         </FormSection>
 
-        <FormSection title="Supporting Documents" copy="Attach the e-invoice and any supporting proof" required>
+        <FormSection title="Supporting Documents" copy="Optionally attach supporting proof for this request">
           <div className={styles.uploadField}>
             <input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" id="invoice-documents" multiple type="file" onChange={selectDocuments} />
             <label className={styles.uploadArea} htmlFor="invoice-documents"><strong>{isReadingFiles ? 'Reading files…' : 'Choose supporting documents'}</strong><span>PDF, PNG or JPG · maximum 5 files · 2.5 MB combined</span></label>
