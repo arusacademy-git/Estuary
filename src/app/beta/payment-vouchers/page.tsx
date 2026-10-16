@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 
 import {
   readBetaSession,
@@ -26,6 +27,7 @@ import {
 
 import styles from '@/features/payment-voucher/components/payment-voucher.module.css';
 import overrides from './payment-voucher-records-overrides.module.css';
+import { PreloadedLink } from '@/shared/preloaded-link';
 
 const statusOptions = [
   {
@@ -288,6 +290,18 @@ export default function PaymentVoucherRecordsPage() {
     sort,
   ]);
 
+  const awaitingRecipientSignatureCount = useMemo(
+    () =>
+      account?.role === 'staff'
+        ? records.filter(
+          (voucher) =>
+            voucher.submitterId === account.id &&
+            voucher.status === 'AWAITING_RECIPIENT_SIGNATURE',
+        ).length
+        : 0,
+    [account, records],
+  );
+
   const downloadableSignedRecords = useMemo(
     () => filteredRecords.filter(canDownloadSignedPaymentVoucher),
     [filteredRecords],
@@ -369,6 +383,15 @@ export default function PaymentVoucherRecordsPage() {
             View and track Payment Vouchers that are
             relevant to your account.
           </p>
+
+          {awaitingRecipientSignatureCount > 0 && (
+            <PreloadedLink
+              className={overrides.staffBulkActionButton}
+              href="/beta/payment-vouchers/signature-follow-up"
+            >
+              Bulk recipient signature follow-up
+            </PreloadedLink>
+          )}
         </div>
 
       </header>
@@ -558,49 +581,7 @@ export default function PaymentVoucherRecordsPage() {
                 : `↓ Download signed PVs (${downloadableSignedRecords.length})`}
             </button>
 
-            <div
-              aria-label="Choose Payment Voucher view"
-              className={styles.recordsViewToggle}
-              role="group"
-            >
-              <span>View</span>
-
-            <button
-              aria-pressed={
-                viewMode === 'grid'
-              }
-              data-active={
-                viewMode === 'grid'
-              }
-              onClick={() =>
-                setViewMode('grid')
-              }
-              type="button"
-            >
-              <span aria-hidden="true">
-                ▦
-              </span>
-              Grid
-            </button>
-
-            <button
-              aria-pressed={
-                viewMode === 'list'
-              }
-              data-active={
-                viewMode === 'list'
-              }
-              onClick={() =>
-                setViewMode('list')
-              }
-              type="button"
-            >
-              <span aria-hidden="true">
-                ☷
-              </span>
-              List
-            </button>
-            </div>
+            <PaymentViewToggle label="Choose Payment Voucher view" onChange={setViewMode} value={viewMode} />
           </div>
         </div>
 

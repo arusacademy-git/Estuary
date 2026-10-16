@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -557,47 +558,7 @@ export default function ApprovalsPage() {
                 : 'records'}
             </span>
 
-            <div
-              aria-label="Choose approval view"
-              className={
-                styles.approvalViewToggle
-              }
-              role="group"
-            >
-              <span>View</span>
-
-              <button
-                aria-pressed={
-                  viewMode === 'grid'
-                }
-                data-active={
-                  viewMode === 'grid'
-                }
-                onClick={() =>
-                  setViewMode('grid')
-                }
-                type="button"
-              >
-                <span aria-hidden="true">▦</span>
-                Grid
-              </button>
-
-              <button
-                aria-pressed={
-                  viewMode === 'list'
-                }
-                data-active={
-                  viewMode === 'list'
-                }
-                onClick={() =>
-                  setViewMode('list')
-                }
-                type="button"
-              >
-                <span aria-hidden="true">☷</span>
-                List
-              </button>
-            </div>
+            <PaymentViewToggle label="Choose approval view" onChange={setViewMode} value={viewMode} />
           </div>
 
           <PaginatedPaymentVoucherRecordList

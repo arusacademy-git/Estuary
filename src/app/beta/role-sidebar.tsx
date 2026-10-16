@@ -34,15 +34,21 @@ const roleLabels: Record<BetaRole, string> = {
 
 const standardRequests: NavigationItem[] = [
   { label: 'Invoice Payment', href: '/beta/payment-requests/invoice-payment/new' },
-  { label: 'Travel Allowance', href: '/beta/payment-requests/travel-allowance/new' },
   { label: 'Cash Advance', href: '/beta/payment-requests/cash-advance/new' },
 ];
 
-function paymentRequest(includePettyCash = false): NavigationItem {
+function paymentRequest(
+  includePettyCash = false,
+  travelAllowanceHref?: string,
+): NavigationItem {
   return {
     label: 'Payment Request',
     children: [
-      ...standardRequests,
+      ...standardRequests.slice(0, 1),
+      ...(travelAllowanceHref
+        ? [{ label: 'Travel Allowance', href: travelAllowanceHref }]
+        : []),
+      ...standardRequests.slice(1),
       { label: 'Claims', href: '/beta/payment-requests/claims/new' },
       ...(includePettyCash
         ? [{ label: 'Petty Cash', href: '/beta/payment-requests/petty-cash/new' }]
@@ -103,7 +109,10 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
       label: 'Create payments',
       items: [
         { label: 'Payment Voucher', href: '/beta/payment-vouchers/new' },
-        paymentRequest(true),
+        paymentRequest(
+          true,
+          '/beta/project-manager/payment-requests/travel-allowances/new',
+        ),
       ],
     },
     {

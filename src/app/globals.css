@@ -86,3 +86,72 @@ img {
   color: var(--surface);
   background: var(--ink-strong);
 }
+.betaHeaderIconGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.betaHeaderIconButton {
+  position: relative;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.betaHeaderIconButton:hover {
+  color: #1e3a5f;
+  background: #f1f5f9;
+}
+
+.betaHeaderIconButton:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 18%);
+  outline-offset: 1px;
+}
+
+.betaHeaderNotificationCount {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #dc2626;
+  padding: 0 3px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.betaHeaderDivider {
+  width: 1px;
+  height: 30px;
+  margin: 0 12px;
+  background: #e2e8f0;
+}
+
+@media (max-width: 600px) {
+  .betaHeaderIconButton {
+    width: 34px;
+    height: 34px;
+  }
+
+  .betaHeaderDivider {
+    margin: 0 7px;
+  }
+}
