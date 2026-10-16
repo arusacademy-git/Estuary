@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
 import { fetchInvoicePayments } from '@/data/payment-requests/invoice-payment/api';
 import type {
@@ -136,10 +137,7 @@ export function InvoicePaymentManagerQueue() {
             <button data-active={filter === 'FORWARDED'} type="button" onClick={() => setFilter('FORWARDED')}>Forwarded <span>{forwardedCount}</span></button>
             <button data-active={filter === 'ALL'} type="button" onClick={() => setFilter('ALL')}>All <span>{assigned.length}</span></button>
           </div>
-          <div className={styles.viewToggle} role="group" aria-label="Choose queue view">
-            <button aria-pressed={viewMode === 'grid'} data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}>▦ Grid</button>
-            <button aria-pressed={viewMode === 'list'} data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}>☷ List</button>
-          </div>
+          <PaymentViewToggle label="Choose Invoice Payment queue view" onChange={setViewMode} value={viewMode} />
         </div>
 
         {visible.length === 0 ? (

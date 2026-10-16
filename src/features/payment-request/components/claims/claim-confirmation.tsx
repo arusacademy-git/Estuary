@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, type CSSProperties } from 'react';
 
 import { claimTypeDetails, type ClaimRecord } from '@/domain/payment-requests/claims/types';
+import { requiresTechManagerApproval } from '@/domain/payment-requests/claims/policy';
 import { getBetaAccount } from '@/lib/auth/beta-accounts';
 
 import styles from './claim-confirmation.module.css';
@@ -45,7 +46,13 @@ function currentStage(record: ClaimRecord): WorkflowStage {
 }
 
 function stageState(record: ClaimRecord, stages: WorkflowStage[], stage: WorkflowStage): WorkflowState {
-  if (stage === 'manager') return record.managerApprovedAt ? 'complete' : record.status === 'DRAFT' ? 'pending' : 'informational';
+  if (stage === 'manager') return record.managerApprovedAt
+    ? 'complete'
+    : record.status === 'DRAFT'
+      ? 'pending'
+      : requiresTechManagerApproval(record) && record.status === 'PENDING_MANAGER_APPROVAL'
+        ? 'active'
+        : 'informational';
   if (stage === 'director') return record.directorReviewedAt ? 'complete' : record.status === 'DRAFT' ? 'pending' : 'informational';
   const selectedStage = currentStage(record);
   const selectedIndex = stages.indexOf(selectedStage);
@@ -146,7 +153,7 @@ export function ClaimConfirmation({ record, onCreateAnother }: { record: ClaimRe
                 key={stage}
                 state={stageState(record, stages, stage)}
                 number={String(index + 1)}
-                title={stageTitle(stage, isDraft)}
+                title={stageTitle(stage, isDraft, record)}
                 copy={stageCopy(stage, record, manager?.name, director?.name)}
               />
             ))}
@@ -166,15 +173,17 @@ export function ClaimConfirmation({ record, onCreateAnother }: { record: ClaimRe
       <p className={styles.note}>
         {isDraft
           ? 'This Draft is private to your role and can be edited before submission.'
-          : 'Manager and Director previews are informational; Finance processing starts immediately.'}
+          : requiresTechManagerApproval(record)
+            ? 'Manager approval is required for this extended Tech Claim before Finance processing can begin.'
+            : 'Manager and Director previews are informational; Finance processing starts immediately.'}
       </p>
     </main>
   );
 }
 
-function stageTitle(stage: WorkflowStage, isDraft: boolean) {
+function stageTitle(stage: WorkflowStage, isDraft: boolean, record?: ClaimRecord) {
   if (stage === 'submitted') return isDraft ? 'Draft Saved' : 'Claim Submitted';
-  if (stage === 'manager') return 'Manager Preview';
+  if (stage === 'manager') return record && requiresTechManagerApproval(record) ? 'Manager Approval' : 'Manager Preview';
   if (stage === 'director') return 'Director Preview';
   if (stage === 'finance') return 'Finance Processing';
   return 'Completed';
@@ -182,7 +191,9 @@ function stageTitle(stage: WorkflowStage, isDraft: boolean) {
 
 function stageCopy(stage: WorkflowStage, record: ClaimRecord, managerName?: string, directorName?: string) {
   if (stage === 'submitted') return `${record.requesterName} · ${formatDate(record.createdAt)}`;
-  if (stage === 'manager') return `Optional preview by ${managerName ?? 'Manager'} · Finance is not blocked`;
+  if (stage === 'manager') return requiresTechManagerApproval(record)
+    ? `Approval required from ${managerName ?? 'Manager'} before Finance processing`
+    : `Optional preview by ${managerName ?? 'Manager'} · Finance is not blocked`;
   if (stage === 'director') return `Optional preview by ${directorName ?? 'Director'} · Finance is not blocked`;
   if (stage === 'finance') return 'Document verification and payment';
   return 'Claim paid and closed';

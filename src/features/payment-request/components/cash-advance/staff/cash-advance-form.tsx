@@ -7,9 +7,9 @@ import { notifyCashAdvanceSubmitted } from '@/features/payment-request/notificat
 import { cashAdvanceRequestedTotal, validateCashAdvanceRequest } from '@/domain/payment-requests/cash-advance/policy';
 import { CASH_ADVANCE_PROJECTS, type CashAdvanceDocument, type CashAdvanceRecord, type CashAdvanceRequestLine } from '@/domain/payment-requests/cash-advance/types';
 import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
-import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { useUserSignature } from '@/features/signatures/hooks/use-user-signature';
 import { CorrectionBackLink, CorrectionEditLayout } from '@/shared/correction-edit-layout';
+import { BANK_NAME_SELECT_OPTIONS } from '@/shared/constants/payment-options';
 import { CashAdvanceConfirmation } from './cash-advance-confirmation';
 import { CashAdvanceRequestGoogleSheet, type CashAdvanceRequestSheetData } from './cash-advance-request-google-sheet';
 import { CashAdvanceRequestLines } from './cash-advance-request-lines';
@@ -17,7 +17,7 @@ import { CashAdvanceReview } from './cash-advance-review';
 import styles from '../cash-advance.module.css';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-const makeLine = (): CashAdvanceRequestLine => ({ id: createRuntimeId(), description: '', purpose: '', amount: 0 });
+const makeLine = (): CashAdvanceRequestLine => ({ id: crypto.randomUUID(), accountType: '', description: '', purpose: '', amount: 0 });
 
 function readFile(file: File): Promise<CashAdvanceDocument> {
   return new Promise((resolve, reject) => {
@@ -62,7 +62,8 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
       const session = readBetaSession();
       if (cancelled) return;
       setAccount(session);
-      if (!initialRecord && session?.role === 'staff') setAccountHolderName((current) => current || session.name);
+      if (!initialRecord && session) setAccountHolderName((current) => current || session.name);
+      if (!initialRecord && session?.role === 'director') setManagerId('');
     });
 
     return () => { cancelled = true; };
@@ -70,6 +71,10 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
   const { signature: activeSignature } = useUserSignature(account?.id);
   const managers = betaAccounts.filter((item) => item.role === 'manager');
   const directors = betaAccounts.filter((item) => item.role === 'director');
+  const isDirectorRequest = account?.role === 'director';
+  const availableDirectors = isDirectorRequest
+    ? directors.filter((item) => item.id !== account.id)
+    : directors;
   const total = useMemo(() => cashAdvanceRequestedTotal(lines), [lines]);
 
   function updateLine(id: string, patch: Partial<CashAdvanceRequestLine>) {
@@ -80,8 +85,8 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
     const nextRequestDate = requestDate || data.requestDate;
     const nextContact = contact || data.contact;
     const nextPurpose = purpose.trim() || Array.from(new Set(data.lines.map((line) => line.purpose.trim()).filter(Boolean))).join('; ');
-    if (!nextRequestDate || !nextContact.trim() || !managerId || !directorId || !nextPurpose) {
-      setError('Complete the request date, contact, Manager, Director and purpose on this page.');
+    if (!nextRequestDate || !nextContact.trim() || (!isDirectorRequest && !managerId) || !directorId || !nextPurpose) {
+      setError(`Complete the request date, contact, ${isDirectorRequest ? '' : 'Manager, '}Director and purpose on this page.`);
       return;
     }
     if (!(isOtherProject ? otherProject.trim() : projectName)) {
@@ -123,10 +128,12 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
   }
 
   function validate() {
-    if (!account || account.role !== 'staff') return 'Sign in using the Staff account.';
-    if (!requestDate || !contact.trim() || !managerId || !directorId || !purpose.trim()) return 'Complete the request, contact, approvers and purpose.';
-    if (!accountHolderName.trim() || !bankName.trim() || !bankAccountNumber.trim()) return 'Complete the Staff bank account details for payment.';
+    if (!account) return 'Sign in to create a Cash Advance request.';
+    if (!requestDate || !contact.trim() || (!isDirectorRequest && !managerId) || !directorId || !purpose.trim()) return 'Complete the request, contact, approvers and purpose.';
+    if (isDirectorRequest && directorId === account.id) return 'Choose another Director to approve this request.';
+    if (!accountHolderName.trim() || !bankName.trim() || !bankAccountNumber.trim()) return 'Complete the requester bank account details for payment.';
     if (!(isOtherProject ? otherProject.trim() : projectName)) return 'Select or enter the Project Name.';
+    if (entryMode === 'MANUAL' && lines.some((line) => !line.accountType?.trim() || !line.description.trim() || !line.purpose.trim() || line.amount <= 0)) return 'Complete the Account, description, purpose and amount for every expense.';
     return validateCashAdvanceRequest(lines);
   }
 
@@ -140,7 +147,7 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
   async function submit() {
     const message = validate();
     if (message || !account) return setError(message ?? 'The request is incomplete.');
-    if (!activeSignature || !confirmed) return setError('Save your digital signature in Settings and confirm the Staff declaration before submitting.');
+    if (!activeSignature || !confirmed) return setError('Save your digital signature in Settings and confirm the requester declaration before submitting.');
     setSaving(true); setError('');
     const input = {
       organizationId: 'beta-arus-org', requestDate, requesterId: account.id, requesterName: account.name,
@@ -170,7 +177,7 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
     directorName={directors.find((item) => item.id === directorId)?.name ?? directorId}
     error={error}
     lines={lines}
-    managerName={managers.find((item) => item.id === managerId)?.name ?? managerId}
+    managerName={isDirectorRequest ? undefined : managers.find((item) => item.id === managerId)?.name ?? managerId}
     onBack={() => setStage('FORM')}
     onConfirmedChange={setConfirmed}
     onSubmit={submit}
@@ -179,27 +186,27 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
     requestDate={requestDate}
     saving={saving}
     signature={activeSignature}
-    staffName={account?.name ?? ''}
+    requesterName={account?.name ?? ''}
     total={total}
   />;
 
   return (
     <main className={styles.requestPage}>
       {initialRecord && <CorrectionBackLink href={`/beta/payment-records/cash-advances/${encodeURIComponent(initialRecord.requestNumber)}`} label="Cash Advance details" />}
-      <header className={styles.requestHeader}><div><p>Payment Requests / Cash Advance</p><h1>{initialRecord ? `Edit ${initialRecord.requestNumber}` : 'New Cash Advance'}</h1><span>Request funds for approved work-related expenses of RM300 and above.</span></div><strong>{initialRecord ? 'Correction' : 'Draft'}</strong></header>
+      <header className={styles.requestHeader}><div><p>Payment Requests / Cash Advance</p><h1>{initialRecord ? `Edit ${initialRecord.requestNumber}` : 'New Cash Advance'}</h1><span>Request funds for approved work-related expenses.</span></div><strong>{initialRecord ? 'Correction' : 'Draft'}</strong></header>
       {!initialRecord && <nav className={styles.entryModeTabs} aria-label="Cash Advance entry method"><button data-active={entryMode === 'MANUAL'} onClick={() => setEntryMode('MANUAL')} type="button">Manual form</button><button data-active={entryMode === 'GOOGLE_SHEET'} onClick={() => setEntryMode('GOOGLE_SHEET')} type="button">Google Sheet Link</button></nav>}
       {error && entryMode === 'GOOGLE_SHEET' && <div className={styles.error}>{error}</div>}
       {entryMode === 'GOOGLE_SHEET' ? <CashAdvanceRequestGoogleSheet
         completionFields={<>
           <div className={styles.field}><label>Request date</label><input type="date" value={requestDate} onChange={(event) => setRequestDate(event.target.value)} /></div>
           <div className={styles.field}><label>Contact</label><input value={contact} onChange={(event) => setContact(event.target.value)} placeholder="Phone or email" /></div>
-          <div className={styles.field}><label>Project Name</label><select value={isOtherProject ? '__OTHER__' : projectName} onChange={(event) => { setIsOtherProject(event.target.value === '__OTHER__'); setProjectName(event.target.value === '__OTHER__' ? '' : event.target.value); }}><option value="">Choose project</option>{CASH_ADVANCE_PROJECTS.map((project) => <option key={project}>{project}</option>)}<option value="__OTHER__">Other</option></select></div>
-          {isOtherProject && <div className={styles.field}><label>Other Project Name</label><input value={otherProject} onChange={(event) => setOtherProject(event.target.value)} /></div>}
-          <div className={styles.field}><label>Manager approver</label><select value={managerId} onChange={(event) => setManagerId(event.target.value)}><option value="">Choose Manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
-          <div className={`${styles.field} ${styles.full}`}><label>Director approver</label><select value={directorId} onChange={(event) => setDirectorId(event.target.value)}><option value="">Choose Director</option>{directors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
+          <div className={`${styles.field} ${isDirectorRequest ? styles.full : ''}`}><label>Project Name</label><select value={isOtherProject ? '__OTHER__' : projectName} onChange={(event) => { setIsOtherProject(event.target.value === '__OTHER__'); setProjectName(event.target.value === '__OTHER__' ? '' : event.target.value); }}><option value="">Choose project</option>{CASH_ADVANCE_PROJECTS.map((project) => <option key={project}>{project}</option>)}<option value="__OTHER__">Other</option></select></div>
+          {isOtherProject && <div className={`${styles.field} ${isDirectorRequest ? styles.full : ''}`}><label>Other Project Name</label><input value={otherProject} onChange={(event) => setOtherProject(event.target.value)} /></div>}
+          {!isDirectorRequest && <div className={styles.field}><label>Manager preview (informational)</label><select value={managerId} onChange={(event) => setManagerId(event.target.value)}><option value="">Choose Manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>}
+          <div className={`${styles.field} ${styles.full}`}><label>{isDirectorRequest ? 'Approving Director' : 'Director approver'}</label><select value={directorId} onChange={(event) => setDirectorId(event.target.value)}><option value="">{isDirectorRequest ? 'Choose another Director' : 'Choose Director'}</option>{availableDirectors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
           <div className={`${styles.field} ${styles.full}`}><label>Purpose</label><textarea value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="Purpose of this Cash Advance" /></div>
           <div className={styles.field}><label>Account holder</label><input value={accountHolderName} onChange={(event) => setAccountHolderName(event.target.value)} /></div>
-          <div className={styles.field}><label>Bank name</label><input value={bankName} onChange={(event) => setBankName(event.target.value)} /></div>
+          <div className={styles.field}><label>Bank name</label><select value={bankName} onChange={(event) => setBankName(event.target.value)}><option value="">Choose bank</option>{bankName && !BANK_NAME_SELECT_OPTIONS.some((option) => option.value === bankName) && <option value={bankName}>{bankName}</option>}{BANK_NAME_SELECT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
           <div className={styles.field}><label>Account number</label><input value={bankAccountNumber} onChange={(event) => setBankAccountNumber(event.target.value)} /></div>
         </>}
         onApply={applyGoogleSheet}
@@ -219,18 +226,18 @@ export function CashAdvanceForm({ initialRecord }: { initialRecord?: CashAdvance
           {sheetMessage && <div className={styles.notice}>{sheetMessage}</div>}
           {error && <div className={styles.error}>{error}</div>}
           <div className={styles.formReceipt}>
-            <section className={styles.receiptSection}><div className={styles.sectionHeading}><div><div><h2>Request information</h2><p>Staff, project and approval assignment</p></div></div></div><div className={styles.grid}>
+            <section className={styles.receiptSection}><div className={styles.sectionHeading}><div><div><h2>Request information</h2><p>Requester, project and approval assignment</p></div></div></div><div className={styles.grid}>
               <div className={styles.field}><label>Request date <em>*</em></label><input type="date" value={requestDate} onChange={(e) => setRequestDate(e.target.value)} /></div>
               <div className={styles.field}><label>Contact <em>*</em></label><input placeholder="e.g. +60 12-345 6789" value={contact} onChange={(e) => setContact(e.target.value)} /></div>
-              <div className={styles.field}><label>Project Name <em>*</em></label><select value={isOtherProject ? '__OTHER__' : projectName} onChange={(e) => { setIsOtherProject(e.target.value === '__OTHER__'); setProjectName(e.target.value === '__OTHER__' ? '' : e.target.value); }}><option value="">Choose project</option>{CASH_ADVANCE_PROJECTS.map((project) => <option key={project}>{project}</option>)}<option value="__OTHER__">Other</option></select></div>
-              {isOtherProject && <div className={styles.field}><label>Other Project Name <em>*</em></label><input value={otherProject} onChange={(e) => setOtherProject(e.target.value)} /></div>}
-              <div className={styles.field}><label>Manager approver <em>*</em></label><select value={managerId} onChange={(e) => setManagerId(e.target.value)}><option value="">Choose Manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
-              <div className={`${styles.field} ${styles.full}`}><label>Director approver <em>*</em></label><select value={directorId} onChange={(e) => setDirectorId(e.target.value)}><option value="">Choose Director</option>{directors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
+              <div className={`${styles.field} ${isDirectorRequest ? styles.full : ''}`}><label>Project Name <em>*</em></label><select value={isOtherProject ? '__OTHER__' : projectName} onChange={(e) => { setIsOtherProject(e.target.value === '__OTHER__'); setProjectName(e.target.value === '__OTHER__' ? '' : e.target.value); }}><option value="">Choose project</option>{CASH_ADVANCE_PROJECTS.map((project) => <option key={project}>{project}</option>)}<option value="__OTHER__">Other</option></select></div>
+              {isOtherProject && <div className={`${styles.field} ${isDirectorRequest ? styles.full : ''}`}><label>Other Project Name <em>*</em></label><input value={otherProject} onChange={(e) => setOtherProject(e.target.value)} /></div>}
+              {!isDirectorRequest && <div className={styles.field}><label>Manager preview (informational) <em>*</em></label><select value={managerId} onChange={(e) => setManagerId(e.target.value)}><option value="">Choose Manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>}
+              <div className={`${styles.field} ${styles.full}`}><label>{isDirectorRequest ? 'Approving Director' : 'Director approver'} <em>*</em></label><select value={directorId} onChange={(e) => setDirectorId(e.target.value)}><option value="">{isDirectorRequest ? 'Choose another Director' : 'Choose Director'}</option>{availableDirectors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
               <div className={`${styles.field} ${styles.full}`}><label>Purpose of Cash Advance <em>*</em></label><textarea placeholder="Explain the main project requirement or context necessitating this Cash Advance…" value={purpose} onChange={(e) => setPurpose(e.target.value)} /></div>
             </div></section>
-            <section className={styles.receiptSection}><div className={styles.sectionHeading}><div><div><h2>Payment account</h2><p>Use the Staff requester’s bank account that will receive this Cash Advance.</p></div></div></div><div className={styles.grid3}>
+            <section className={styles.receiptSection}><div className={styles.sectionHeading}><div><div><h2>Payment account</h2><p>Use the requester’s bank account that will receive this Cash Advance.</p></div></div></div><div className={styles.grid3}>
               <div className={styles.field}><label>Account holder name <em>*</em></label><input placeholder="Name as registered with the bank" value={accountHolderName} onChange={(e) => setAccountHolderName(e.target.value)} /></div>
-              <div className={styles.field}><label>Bank name <em>*</em></label><input placeholder="e.g. Maybank" value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+              <div className={styles.field}><label>Bank name <em>*</em></label><select value={bankName} onChange={(event) => setBankName(event.target.value)}><option value="">Choose bank</option>{bankName && !BANK_NAME_SELECT_OPTIONS.some((option) => option.value === bankName) && <option value={bankName}>{bankName}</option>}{BANK_NAME_SELECT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
               <div className={styles.field}><label>Account number <em>*</em></label><input inputMode="numeric" placeholder="Bank account number" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} /></div>
             </div></section>
             <CashAdvanceRequestLines lines={lines} onAdd={() => setLines((current) => [...current, makeLine()])} onChange={updateLine} onRemove={(id) => setLines((current) => current.filter((item) => item.id !== id))} total={total} />

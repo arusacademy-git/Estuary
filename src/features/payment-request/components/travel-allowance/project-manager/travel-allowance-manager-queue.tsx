@@ -4,14 +4,17 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
 import { fetchTravelAllowances } from '@/data/payment-requests/travel-allowance/api';
 import type { TravelAllowanceRecord } from '@/domain/payment-requests/travel-allowance/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
 
+import { TravelAllowanceQueueCard } from '../travel-allowance-queue-card';
 import styles from '../travel-allowance-workflow.module.css';
 
 type Filter = 'ACTIVE' | 'FORWARDED' | 'ALL';
+type ViewMode = 'grid' | 'list';
 
 function money(value: number) {
   return new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(value);
@@ -32,6 +35,7 @@ export function TravelAllowanceManagerQueue() {
     () => !account || account.role !== 'manager',
   );
   const [filter, setFilter] = useState<Filter>('ACTIVE');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
@@ -80,13 +84,19 @@ export function TravelAllowanceManagerQueue() {
             <label><span>Search</span><input type="search" placeholder="TA number, employee or project" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
           </div>
         </div>
-        <div className={styles.tabs}>
-          <button data-active={filter === 'ACTIVE'} type="button" onClick={() => setFilter('ACTIVE')}>Requires review <span>{activeCount}</span></button>
-          <button data-active={filter === 'FORWARDED'} type="button" onClick={() => setFilter('FORWARDED')}>Forwarded <span>{forwardedCount}</span></button>
-          <button data-active={filter === 'ALL'} type="button" onClick={() => setFilter('ALL')}>All <span>{records.length}</span></button>
+        <div className={styles.toolbar}>
+          <div className={styles.tabs} role="group" aria-label="Travel Allowance filters">
+            <button data-active={filter === 'ACTIVE'} type="button" onClick={() => setFilter('ACTIVE')}>Requires review <span>{activeCount}</span></button>
+            <button data-active={filter === 'FORWARDED'} type="button" onClick={() => setFilter('FORWARDED')}>Forwarded <span>{forwardedCount}</span></button>
+            <button data-active={filter === 'ALL'} type="button" onClick={() => setFilter('ALL')}>All <span>{records.length}</span></button>
+          </div>
+          <PaymentViewToggle label="Choose Travel Allowance queue view" onChange={setViewMode} value={viewMode} />
         </div>
         {visible.length === 0 ? <div className={styles.empty}><h2>No Travel Allowances found</h2><p>There are no requests matching this filter.</p></div> : (
-          <div className={styles.tableWrapper}><table>
+          viewMode === 'grid' ? <div className={styles.cardGrid}>{pagination.pageRecords.map((record) => {
+            const needsAction = record.status === 'PENDING_MANAGER_REVIEW' && record.managerApproverId === account.id;
+            return <TravelAllowanceQueueCard actionLabel={needsAction ? 'Review request' : 'View progress'} href={`/beta/project-manager/payment-requests/travel-allowances/${record.id}`} key={record.id} record={record} />;
+          })}</div> : <div className={styles.tableWrapper}><table>
             <thead><tr><th>Reference</th><th>Staff</th><th>First travel date</th><th>Entries</th><th>Amount</th><th>Status</th><th /></tr></thead>
             <tbody>{pagination.pageRecords.map((record) => {
               const firstDate = [...record.lines].sort((a, b) => a.travelDate.localeCompare(b.travelDate))[0]?.travelDate;

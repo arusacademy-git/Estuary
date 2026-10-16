@@ -7,7 +7,10 @@ function createSafely(input: CreateNotificationInput) { try { createLocalNotific
 const staffHref = (record: CashAdvanceRecord) => `/beta/payment-records/cash-advances/${encodeURIComponent(record.requestNumber)}`;
 
 export function notifyCashAdvanceSubmitted(record: CashAdvanceRecord, actor: BetaAccount) {
-  createSafely({ recipientId: record.managerApproverId, actorId: actor.id, type: 'CASH_ADVANCE_SUBMITTED', entityType: 'CASH_ADVANCE', entityId: record.id, referenceNumber: record.requestNumber, title: 'Cash Advance requires review', message: `${actor.name} submitted ${record.requestNumber}. Manager approval is required.`, href: `/beta/project-manager/payment-requests/cash-advance/${encodeURIComponent(record.requestNumber)}` });
+  createSafely({ recipientId: record.directorApproverId, actorId: actor.id, type: 'CASH_ADVANCE_SUBMITTED', entityType: 'CASH_ADVANCE', entityId: record.id, referenceNumber: record.requestNumber, title: 'Cash Advance requires Director approval', message: `${actor.name} submitted ${record.requestNumber}. Your Director approval is required.`, href: `/beta/director/payment-requests/cash-advance/${encodeURIComponent(record.requestNumber)}` });
+  if (record.requesterRole !== 'director') {
+    createSafely({ recipientId: record.managerApproverId, actorId: actor.id, type: 'CASH_ADVANCE_SUBMITTED', entityType: 'CASH_ADVANCE', entityId: record.id, referenceNumber: record.requestNumber, title: 'Cash Advance available to preview', message: `${actor.name} submitted ${record.requestNumber}. This Manager preview is informational and does not block Director approval.`, href: `/beta/project-manager/payment-requests/cash-advance/${encodeURIComponent(record.requestNumber)}` });
+  }
 }
 export function notifyCashAdvanceManagerApproved(record: CashAdvanceRecord, actor: BetaAccount) {
   createSafely({ recipientId: record.directorApproverId, actorId: actor.id, type: 'CASH_ADVANCE_MANAGER_APPROVED', entityType: 'CASH_ADVANCE', entityId: record.id, referenceNumber: record.requestNumber, title: 'Cash Advance requires Director approval', message: `${actor.name} approved ${record.requestNumber}. Director approval is required.`, href: `/beta/director/payment-requests/cash-advance/${encodeURIComponent(record.requestNumber)}` });

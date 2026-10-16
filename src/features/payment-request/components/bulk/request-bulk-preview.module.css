@@ -372,6 +372,31 @@
   justify-content: flex-end;
 }
 
+.modalNavigationButtons,
+.modalDecisionButtons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modalFooter .modalNavigationButtons button,
+.modalFooter .modalCancelButton {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #1e3a5f;
+}
+
+.modalFooter .modalNavigationButtons button:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+
+.modalFooter .markReviewedButton:disabled {
+  border-color: #16a34a;
+  background: #16a34a;
+  cursor: default;
+}
+
 .modalFooter button {
   min-height: 42px;
   border: 1px solid #174a83;
@@ -432,6 +457,12 @@
 
   .modalFooter button {
     width: 100%;
+  }
+
+  .modalNavigationButtons,
+  .modalDecisionButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .bulkFilterControls {

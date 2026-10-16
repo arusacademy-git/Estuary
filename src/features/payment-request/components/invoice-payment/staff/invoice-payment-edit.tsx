@@ -26,14 +26,14 @@ export function InvoicePaymentEdit({ requestId }: { requestId: string }) {
             const session = readBetaSession();
             if (cancelled) return;
             setAccount(session);
-            if (!session || session.role !== 'staff') {
+            if (!session) {
                 setChecked(true);
                 return;
             }
 
             try {
                 const item = await fetchInvoicePayment(requestId);
-                if (item.staffId !== session.id) throw new Error('Only the original Staff requester can edit this Invoice Payment.');
+                if (item.staffId !== session.id) throw new Error('Only the original requester can edit this Invoice Payment.');
                 if (item.status !== 'RETURNED_TO_STAFF') throw new Error('This Invoice Payment is not currently returned for correction.');
                 if (!cancelled) setRecord(item);
             } catch (caught: unknown) {
@@ -47,8 +47,8 @@ export function InvoicePaymentEdit({ requestId }: { requestId: string }) {
     }, [requestId]);
 
     // Derived: no setError needed for the sign-in message
-    const signInError = account !== undefined && (!account || account.role !== 'staff')
-        ? 'Sign in using the Staff account that submitted this request.'
+    const signInError = account !== undefined && !account
+        ? 'Sign in using the account that submitted this request.'
         : '';
     const error = signInError || fetchError;
 

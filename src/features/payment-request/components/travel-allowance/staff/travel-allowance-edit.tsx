@@ -13,7 +13,7 @@ export function TravelAllowanceEdit({ requestId }: { requestId: string }) {
   const [account] = useState(() => readBetaSession());
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
   const hasEditAccess = Boolean(
-    account && ['staff', 'manager'].includes(account.role),
+    account?.role === 'manager',
   );
   const [checked, setChecked] = useState(() => !hasEditAccess);
   const [error, setError] = useState(() =>
@@ -51,5 +51,5 @@ export function TravelAllowanceEdit({ requestId }: { requestId: string }) {
   const detailHref = `/beta/payment-records/travel-allowances/${encodeURIComponent(requestId)}`;
   if (!checked) return <PaymentPageState title="Loading Travel Allowance correction" copy="Reading the returned Travel Allowance…" backHref={detailHref} backLabel="Back to Travel Allowance details" />;
   if (!record) return <PaymentPageState title="Travel Allowance correction unavailable" copy={error} backHref={detailHref} backLabel="Back to Travel Allowance details" />;
-  return <TravelAllowanceForm initialRecord={record} mode={record.requesterRole} />;
+  return <TravelAllowanceForm initialRecord={record} />;
 }

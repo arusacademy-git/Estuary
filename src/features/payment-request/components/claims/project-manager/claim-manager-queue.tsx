@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { fetchClaimRequests } from '@/data/payment-requests/claims/api';
 import { CLAIM_TYPES, claimTypeDetails, type ClaimRecord } from '@/domain/payment-requests/claims/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
@@ -92,15 +93,15 @@ export function ClaimManagerQueue() {
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>Manager workspace</p><h1>Claim previews</h1><span>Preview assigned Claims for tracking without delaying Finance processing.</span>{activeCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/project-manager/payment-requests/claims/bulk">Bulk preview Claims</Link>}</div>
+        <div><p>Manager workspace</p><h1>Claim reviews</h1><span>Extended staff Tech Claims above RM500 require approval. Other Claim previews remain informational.</span>{activeCount > 0 && <Link className={styles.bulkPreviewButton} href="/beta/project-manager/payment-requests/claims/bulk">Bulk review Claims</Link>}</div>
         <aside><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></aside>
       </header>
 
       {error && <div className={styles.error} role="alert">{error}</div>}
 
       <section className={styles.summaryGrid}>
-        <article><span>Awaiting preview</span><strong>{activeCount}</strong></article>
-        <article><span>Previewed</span><strong>{forwardedCount}</strong></article>
+        <article><span>Awaiting action</span><strong>{activeCount}</strong></article>
+        <article><span>Reviewed</span><strong>{forwardedCount}</strong></article>
         <article><span>All Manager records</span><strong>{records.length}</strong></article>
       </section>
 
@@ -113,17 +114,13 @@ export function ClaimManagerQueue() {
           </div>
         </div>
         <div className={styles.tabs}>
-          <button data-active={filter === 'ACTIVE'} onClick={() => setFilter('ACTIVE')} type="button">Awaiting preview <span>{activeCount}</span></button>
-          <button data-active={filter === 'FORWARDED'} onClick={() => setFilter('FORWARDED')} type="button">Previewed <span>{forwardedCount}</span></button>
+          <button data-active={filter === 'ACTIVE'} onClick={() => setFilter('ACTIVE')} type="button">Awaiting action <span>{activeCount}</span></button>
+          <button data-active={filter === 'FORWARDED'} onClick={() => setFilter('FORWARDED')} type="button">Reviewed <span>{forwardedCount}</span></button>
           <button data-active={filter === 'ALL'} onClick={() => setFilter('ALL')} type="button">All <span>{records.length}</span></button>
         </div>
         <div className={styles.queueDisplayBar}>
           <span>Showing {visible.length} {visible.length === 1 ? 'Claim' : 'Claims'}</span>
-          <div className={styles.viewToggle} role="group" aria-label="Claims view">
-            <span>View</span>
-            <button data-active={viewMode === 'grid'} onClick={() => setViewMode('grid')} type="button">▦ Grid</button>
-            <button data-active={viewMode === 'list'} onClick={() => setViewMode('list')} type="button">☷ List</button>
-          </div>
+          <PaymentViewToggle label="Choose Claims view" onChange={setViewMode} value={viewMode} />
         </div>
         {visible.length === 0 ? (
           <div className={styles.empty}><h2>No Claims found</h2><p>There are no assigned Claims matching this filter.</p></div>

@@ -3837,7 +3837,9 @@
   box-shadow: none;
 }
 .bulkPreviewButton {
-  display: inline-flex;
+  display: flex;
+  width: max-content;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   min-height: 44px;

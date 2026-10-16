@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { approveClaimByManager, fetchClaimRequest } from '@/data/payment-requests/claims/api';
 import { notifyClaimManagerApproved } from '@/features/payment-request/notifications/claim-notifications';
+import { requiresTechManagerApproval } from '@/domain/payment-requests/claims/policy';
 import type { ClaimRecord } from '@/domain/payment-requests/claims/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
 
@@ -35,7 +36,9 @@ export function ClaimManagerReview({ requestId }: { requestId: string }) {
       const updated = await approveClaimByManager(record.id, account.id);
       notifyClaimManagerApproved(updated, account);
       setRecord(updated);
-      setSuccess('Manager preview recorded. Finance processing is not affected.');
+      setSuccess(requiresTechManagerApproval(record)
+        ? 'Tech Claim approved and forwarded to Finance.'
+        : 'Manager preview recorded. Finance processing is not affected.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The Claim could not be approved.');
     } finally { setSaving(false); }
@@ -47,6 +50,7 @@ export function ClaimManagerReview({ requestId }: { requestId: string }) {
   if (record.managerApproverId !== account.id && record.requesterId !== account.id) return <State title="Claim unavailable" copy="This Claim is not assigned to or created by your Manager account." />;
 
   const actionable = !record.managerApprovedAt && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status) && record.managerApproverId === account.id;
+  const approvalRequired = requiresTechManagerApproval(record);
   return (
     <main className={styles.page}>
       <div className={styles.back}><Link href={baseHref}>← Back to Claims</Link></div>
@@ -57,12 +61,12 @@ export function ClaimManagerReview({ requestId }: { requestId: string }) {
         <aside className={styles.rail}>
           <section className={styles.actionCard}>
             <p>Manager action</p>
-            <h2>{actionable ? 'Informational preview' : 'Preview recorded'}</h2>
+            <h2>{actionable ? approvalRequired ? 'Approve extended Tech Claim' : 'Informational preview' : approvalRequired ? 'Approval recorded' : 'Preview recorded'}</h2>
             {actionable ? <>
-              <span>Review the Claim details and receipts for tracking. Finance can process the Claim before or after this preview.</span>
-              <button className={styles.primary} disabled={saving} onClick={approve} type="button">Mark preview complete →</button>
+              <span>{approvalRequired ? 'This staff Tech Claim is above RM500. Review and approve it before Finance can process payment.' : 'Review the Claim details and receipts for tracking. Finance can process the Claim before or after this preview.'}</span>
+              <button className={styles.primary} disabled={saving} onClick={approve} type="button">{approvalRequired ? 'Approve and send to Finance →' : 'Mark preview complete →'}</button>
             </> : <>
-              <span>Manager preview is recorded. Current payment status: {claimStatusLabel(record.status)}.</span>
+              <span>{approvalRequired ? 'Manager approval is recorded.' : 'Manager preview is recorded.'} Current payment status: {claimStatusLabel(record.status)}.</span>
             </>}
           </section>
           <ClaimWorkflow record={record} />

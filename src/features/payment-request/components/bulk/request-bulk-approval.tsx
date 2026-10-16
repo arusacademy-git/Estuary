@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import {
   approveCashAdvanceByDirector,
-  approveCashAdvanceByManager,
   fetchCashAdvances,
+  previewCashAdvanceByManager,
 } from '@/data/payment-requests/cash-advance/cash-advance-api';
 import {
   fetchInvoicePayments,
@@ -23,7 +23,6 @@ import type { InvoicePaymentRequestRecord } from '@/domain/payment-requests/invo
 import { travelLineTotal, type TravelAllowanceRecord } from '@/domain/payment-requests/travel-allowance/types';
 import {
   notifyCashAdvanceDirectorApproved,
-  notifyCashAdvanceManagerApproved,
 } from '@/features/payment-request/notifications/cash-advance-notifications';
 import {
   notifyDirectorInvoicePaymentApprovedByManager,
@@ -41,7 +40,8 @@ import modalStyles from './request-bulk-preview.module.css';
 
 type ApprovalRole = 'manager' | 'director';
 type ApprovalKind = 'travel-allowances' | 'invoice-payments' | 'cash-advance';
-type ApprovalRecord = TravelAllowanceRecord | InvoicePaymentRequestRecord | CashAdvanceRecord;
+export type RequestApprovalRecord = TravelAllowanceRecord | InvoicePaymentRequestRecord | CashAdvanceRecord;
+type ApprovalRecord = RequestApprovalRecord;
 
 type Props = {
   role: ApprovalRole;
@@ -120,7 +120,7 @@ function isEligible(record: ApprovalRecord, role: ApprovalRole, accountId: strin
       : record.status === 'PENDING_DIRECTOR_REVIEW' && record.directorApproverId === accountId;
   }
   return role === 'manager'
-    ? record.status === 'PENDING_MANAGER_APPROVAL' && record.managerApproverId === accountId
+    ? record.managerApproverId === accountId && !record.managerPreviewedAt
     : record.status === 'PENDING_DIRECTOR_APPROVAL' && record.directorApproverId === accountId;
 }
 
@@ -176,8 +176,11 @@ export function RequestBulkApproval({ role, kind }: Props) {
   const allSelected = pending.length > 0 && selectedIds.length === pending.length;
   const allReviewed = selectedIds.length > 0 && selectedIds.every((id) => reviewedIds.includes(id));
   const reviewRecord = pending.find((record) => record.id === reviewId) ?? null;
+  const reviewRecords = reviewId && selectedIds.includes(reviewId) ? selected : pending;
+  const reviewedCount = selectedIds.filter((id) => reviewedIds.includes(id)).length;
   const labels = kindLabels[kind];
-  const needsSignature = kind === 'cash-advance';
+  const informationalCashAdvance = kind === 'cash-advance' && role === 'manager';
+  const needsSignature = kind === 'cash-advance' && role === 'director';
   const signatureReady = !needsSignature || (!signatureLoading && Boolean(signature));
   const basePath = `/beta/${role === 'manager' ? 'project-manager' : 'director'}/payment-requests/${kind}`;
 
@@ -215,12 +218,10 @@ export function RequestBulkApproval({ role, kind }: Props) {
       return updated;
     }
 
-    if (!signature) throw new Error('Upload your signature in Settings before approving Cash Advances.');
     if (role === 'manager') {
-      const updated = await approveCashAdvanceByManager(record.id, current.id, signature.id);
-      notifyCashAdvanceManagerApproved(updated, current);
-      return updated;
+      return previewCashAdvanceByManager(record.id, current.id);
     }
+    if (!signature) throw new Error('Upload your signature in Settings before approving Cash Advances.');
     const updated = await approveCashAdvanceByDirector(record.id, current.id, signature.id);
     notifyCashAdvanceDirectorApproved(updated, current);
     return updated;
@@ -256,8 +257,10 @@ export function RequestBulkApproval({ role, kind }: Props) {
     setReviewedIds((current) => current.filter((id) => failed.includes(id)));
     setConfirmed(false);
     setSubmitting(false);
-    if (succeeded.length) setMessage(`${succeeded.length} ${succeeded.length === 1 ? labels.singular : labels.plural} approved and forwarded.`);
-    if (failed.length) setError(`${failed.length} selected ${failed.length === 1 ? 'record could' : 'records could'} not be approved. Please review the remaining selection and retry.`);
+    if (succeeded.length) setMessage(informationalCashAdvance
+      ? `${succeeded.length} ${succeeded.length === 1 ? labels.singular : labels.plural} marked as previewed.`
+      : `${succeeded.length} ${succeeded.length === 1 ? labels.singular : labels.plural} approved and forwarded.`);
+    if (failed.length) setError(`${failed.length} selected ${failed.length === 1 ? 'record could' : 'records could'} not be ${informationalCashAdvance ? 'marked as previewed' : 'approved'}. Please review the remaining selection and retry.`);
   }
 
   if (!checked) return <State title="Loading bulk approvals" copy={`Preparing assigned ${labels.plural}…`} />;
@@ -265,7 +268,7 @@ export function RequestBulkApproval({ role, kind }: Props) {
 
   return <main className={styles.page}>
     <header className={styles.header}>
-      <div><p className={styles.eyebrow}>{role === 'manager' ? 'Manager' : 'Director'} workspace</p><h1>Bulk {labels.singular} approval</h1><p>Review every selected record, then approve and forward the batch to the next workflow stage.</p></div>
+      <div><p className={styles.eyebrow}>{role === 'manager' ? 'Manager' : 'Director'} workspace</p><h1>Bulk {labels.singular} {informationalCashAdvance ? 'preview' : 'approval'}</h1><p>{informationalCashAdvance ? 'Review assigned Cash Advances for information. Director approval continues independently.' : 'Review every selected record, then approve and forward the batch to the next workflow stage.'}</p></div>
       <Link className={styles.backButton} href={basePath}>Back to {labels.plural}</Link>
     </header>
 
@@ -274,15 +277,15 @@ export function RequestBulkApproval({ role, kind }: Props) {
     {needsSignature && !signatureLoading && !signature && <div className={styles.error}>A saved signature is required for Cash Advance approval. <Link href="/beta/settings/signature">Upload signature</Link></div>}
 
     <section className={styles.summaryGrid}>
-      <article className={styles.summaryCard}><span>Pending approval</span><strong>{pending.length}</strong><p>Eligible records at your workflow stage.</p></article>
+      <article className={styles.summaryCard}><span>{informationalCashAdvance ? 'Available to preview' : 'Pending approval'}</span><strong>{pending.length}</strong><p>{informationalCashAdvance ? 'Informational records assigned to you.' : 'Eligible records at your workflow stage.'}</p></article>
       <article className={styles.summaryCard}><span>Selected</span><strong>{selectedIds.length}</strong><p>Records selected in this batch.</p></article>
       <article className={styles.summaryCard}><span>Reviewed</span><strong>{selectedIds.filter((id) => reviewedIds.includes(id)).length}</strong><p>Selected records fully reviewed.</p></article>
       <article className={styles.summaryCard}><span>Selected total</span><strong>{money(selectedTotal)}</strong><p>Combined value advancing in this batch.</p></article>
     </section>
 
     <section className={styles.panel}>
-      <div className={styles.toolbar}><label className={styles.selectAll}><input type="checkbox" checked={allSelected} disabled={!pending.length} onChange={() => { setSelectedIds(allSelected ? [] : pending.map((record) => record.id)); resetConfirmation(); }} />Select all pending approvals</label><span>{pending.length} {pending.length === 1 ? 'record' : 'records'}</span></div>
-      {!pending.length ? <div className={styles.empty}><h2>No pending approvals</h2><p>There are no eligible {labels.plural} at your current stage.</p></div> : <div className={styles.selectionTableWrapper}>
+      <div className={styles.toolbar}><label className={styles.selectAll}><input type="checkbox" checked={allSelected} disabled={!pending.length} onChange={() => { setSelectedIds(allSelected ? [] : pending.map((record) => record.id)); resetConfirmation(); }} />Select all {informationalCashAdvance ? 'available previews' : 'pending approvals'}</label><span>{pending.length} {pending.length === 1 ? 'record' : 'records'}</span></div>
+      {!pending.length ? <div className={styles.empty}><h2>No {informationalCashAdvance ? 'available previews' : 'pending approvals'}</h2><p>There are no eligible {labels.plural} at your current stage.</p></div> : <div className={styles.selectionTableWrapper}>
         <table className={`${styles.selectionTable} ${modalStyles.previewTable}`}><thead><tr><th aria-label="Select" /><th>Reference</th><th>Requester</th><th>Project / context</th><th>Date</th><th>Items</th><th>Amount</th><th>Review</th><th aria-label="Actions" /></tr></thead><tbody>{pending.map((record) => {
           const reviewed = reviewedIds.includes(record.id);
           return <tr data-selected={selectedIds.includes(record.id)} key={record.id}><td className={styles.checkCell}><input aria-label={`Select ${record.requestNumber}`} checked={selectedIds.includes(record.id)} onChange={() => toggle(record.id)} type="checkbox" /></td><td><strong className={styles.voucherNumber}>{record.requestNumber}</strong><span className={styles.tableSubtext}>{recordSummary(record)}</span></td><td>{requester(record)}</td><td>{context(record)}</td><td>{date(record.requestDate)}</td><td>{itemCount(record)}</td><td className={styles.amountCell}>{money(record.totalAmount)}</td><td>{reviewed ? <span className={styles.reviewed}>Reviewed</span> : <span className={styles.notReviewed}>Not reviewed</span>}</td><td className={styles.actionCell}><button className={styles.reviewButton} onClick={() => { setReviewId(record.id); setConfirmed(false); }} type="button">View details</button></td></tr>;
@@ -290,28 +293,30 @@ export function RequestBulkApproval({ role, kind }: Props) {
       </div>}
     </section>
 
-    {selectedIds.length > 0 && <section className={styles.confirmationPanel}>
-      <div><p className={styles.eyebrow}>Approval confirmation</p><h2>Approve {selectedIds.length} selected {selectedIds.length === 1 ? 'record' : 'records'}</h2><p>This action advances every successful record to its next workflow stage and sends the normal notifications.</p></div>
-      {!allReviewed && <p className={styles.notice}>Open and mark every selected record as reviewed before continuing.</p>}
-      <label className={styles.confirmationCheck}><input checked={confirmed} disabled={!allReviewed || !signatureReady} onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />I confirm that I reviewed and approve the selected {labels.plural}.</label>
-      <button className={`${styles.primaryButton} ${styles.fullWidthButton}`} disabled={!allReviewed || !confirmed || !signatureReady || submitting} onClick={submit} type="button">{submitting ? 'Approving records…' : `Approve and forward ${selectedIds.length} selected`}</button>
+    {selectedIds.length > 0 && <section className={`${styles.confirmationPanel} ${styles.compactConfirmation}`}>
+      <header className={styles.compactConfirmationHeader}><div><p className={styles.eyebrow}>{informationalCashAdvance ? 'Preview confirmation' : 'Approval confirmation'}</p><h2>{informationalCashAdvance ? 'Mark' : 'Approve'} {selectedIds.length} selected {selectedIds.length === 1 ? 'record' : 'records'}{informationalCashAdvance ? ' as previewed' : ''}</h2><p>{informationalCashAdvance ? 'This records the optional Manager preview without changing or delaying Director approval.' : 'Each successful record moves to its next workflow stage and sends the usual notifications.'}</p></div><div className={styles.compactConfirmationTotal}><span>Total amount</span><strong>{money(selectedTotal)}</strong></div></header>
+      <div className={styles.compactConfirmationProgress}><span data-complete={allReviewed}><i aria-hidden="true" />Open and mark every selected record as reviewed to continue</span><b>{reviewedCount} of {selectedIds.length}</b></div>
+      <footer className={styles.compactConfirmationFooter}><label className={styles.confirmationCheck}><input checked={confirmed} disabled={!allReviewed || !signatureReady} onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />I confirm that I reviewed {informationalCashAdvance ? 'the selected' : 'and approve the selected'} {labels.plural}.</label><button className={styles.primaryButton} disabled={!allReviewed || !confirmed || !signatureReady || submitting} onClick={submit} type="button">{submitting ? (informationalCashAdvance ? 'Saving previews…' : 'Approving records…') : informationalCashAdvance ? `Mark ${selectedIds.length} as previewed` : `Approve and forward ${selectedIds.length} selected`}</button></footer>
     </section>}
 
-    {reviewRecord && <ApprovalReviewModal record={reviewRecord} onClose={() => setReviewId(null)} onReviewed={() => { setReviewedIds((current) => current.includes(reviewRecord.id) ? current : [...current, reviewRecord.id]); setReviewId(null); }} />}
+    {reviewRecord && <ApprovalReviewModal currentRecords={reviewRecords} record={reviewRecord} reviewed={reviewedIds.includes(reviewRecord.id)} onChangeRecord={setReviewId} onClose={() => setReviewId(null)} onReviewed={() => setReviewedIds((current) => current.includes(reviewRecord.id) ? current : [...current, reviewRecord.id])} />}
   </main>;
 }
 
-function ApprovalReviewModal({ record, onClose, onReviewed }: { record: ApprovalRecord; onClose: () => void; onReviewed: () => void }) {
+function ApprovalReviewModal({ currentRecords, record, reviewed, onChangeRecord, onClose, onReviewed }: { currentRecords: ApprovalRecord[]; record: ApprovalRecord; reviewed: boolean; onChangeRecord: (id: string) => void; onClose: () => void; onReviewed: () => void }) {
+  const currentIndex = currentRecords.findIndex((item) => item.id === record.id);
+  const previousRecord = currentIndex > 0 ? currentRecords[currentIndex - 1] : null;
+  const nextRecord = currentIndex >= 0 && currentIndex < currentRecords.length - 1 ? currentRecords[currentIndex + 1] : null;
   return <div className={modalStyles.backdrop} onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }} role="presentation"><section aria-label={`${record.requestNumber} review`} aria-modal="true" className={modalStyles.modal} role="dialog">
     <header className={modalStyles.modalHeader}><div className={modalStyles.receiptHeading}><div><p>Approval review</p><h2>{recordTypeLabel(record)} details</h2></div><span>Reference: {record.requestNumber}</span></div><button aria-label="Close review" onClick={onClose} type="button">×</button></header>
     <div className={modalStyles.modalBody}>
-      <RecordDetails record={record} />
+      <RequestRecordDetails record={record} />
     </div>
-    <footer className={modalStyles.modalFooter}><p>Marking this record as reviewed unlocks it for the final batch approval.</p><button onClick={onReviewed} type="button">Mark reviewed and close</button></footer>
+    <footer className={modalStyles.modalFooter}><div className={modalStyles.modalNavigationButtons}><button disabled={!previousRecord} onClick={() => previousRecord && onChangeRecord(previousRecord.id)} type="button">Previous</button><button disabled={!nextRecord} onClick={() => nextRecord && onChangeRecord(nextRecord.id)} type="button">Next</button></div><div className={modalStyles.modalDecisionButtons}><button className={modalStyles.modalCancelButton} onClick={onClose} type="button">Close</button><button className={modalStyles.markReviewedButton} disabled={reviewed} onClick={onReviewed} type="button">{reviewed ? 'Reviewed' : 'Mark as reviewed'}</button></div></footer>
   </section></div>;
 }
 
-function RecordDetails({ record }: { record: ApprovalRecord }) {
+export function RequestRecordDetails({ record }: { record: RequestApprovalRecord }) {
   if (isInvoice(record)) {
     const portion = record.paymentPortion === 'UPFRONT_50'
       ? '50% upfront payment'
@@ -354,7 +359,7 @@ function RecordDetails({ record }: { record: ApprovalRecord }) {
     ]} /></DetailSection>
     <DetailSection title={`Advance lines (${record.lines.length})`}><div className={modalStyles.lineTableWrapper}><table className={modalStyles.lineTable}><thead><tr><th>#</th><th>Description</th><th>Purpose</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{line.description}</td><td>{line.purpose}</td><td>{money(line.amount)}</td></tr>)}</tbody></table></div></DetailSection>
     <DetailSection title="Signature progress"><DetailGrid values={[
-      ['Staff signature', record.staffSignatureKey ? 'Available' : 'Missing'], ['Staff signed', date(record.staffSignedAt)], ['Manager signature', record.managerSignatureKey ? 'Available' : 'Pending'], ['Director signature', record.directorSignatureKey ? 'Available' : 'Pending'],
+      ['Requester signature', record.staffSignatureKey ? 'Available' : 'Missing'], ['Requester signed', date(record.staffSignedAt)], ['Manager preview', record.managerPreviewedAt ? `Previewed ${date(record.managerPreviewedAt)}` : 'Informational — optional'], ['Director signature', record.directorSignatureKey ? 'Available' : 'Pending'],
     ]} /></DetailSection>
     <DetailSection title={`Supporting documents (${record.supportingDocuments.length})`}><Documents documents={record.supportingDocuments} /></DetailSection>
   </div>;

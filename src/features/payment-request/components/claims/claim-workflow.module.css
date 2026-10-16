@@ -897,10 +897,32 @@
 
 .queuePanel .tableWrapper table {
   width: 100%;
-  min-width: 860px;
+  min-width: 1120px;
   table-layout: auto;
   border-collapse: collapse;
   background: #fff;
+}
+
+.queuePanel .tableWrapper th:nth-child(2),
+.queuePanel .tableWrapper td:nth-child(2) {
+  min-width: 170px;
+}
+
+.queuePanel .tableWrapper th:nth-child(3),
+.queuePanel .tableWrapper td:nth-child(3) {
+  min-width: 90px;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.queuePanel .tableWrapper th:nth-child(4),
+.queuePanel .tableWrapper td:nth-child(4) {
+  min-width: 150px;
+}
+
+.queuePanel .tableWrapper th:nth-child(8),
+.queuePanel .tableWrapper td:nth-child(8) {
+  min-width: 190px;
 }
 
 .queuePanel .tableWrapper th,
@@ -1018,7 +1040,9 @@
   }
 }
 .bulkPreviewButton {
-  display: inline-flex;
+  display: flex;
+  width: max-content;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   min-height: 44px;

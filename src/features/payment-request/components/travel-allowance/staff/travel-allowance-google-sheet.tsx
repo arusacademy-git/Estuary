@@ -1,7 +1,8 @@
 'use client';
 
 import { type ReactNode, useState } from 'react';
-import type { TravelMealType } from '@/domain/payment-requests/travel-allowance/types';
+import { TRAVEL_MEAL_RATES, type TravelMealType } from '@/domain/payment-requests/travel-allowance/types';
+import { OfficialTemplateCallout } from '@/features/payment-request/components/google-sheet/official-template-callout';
 import styles from './travel-allowance.module.css';
 
 export type TravelAllowanceSheetEntry = {
@@ -29,6 +30,8 @@ type Props = {
   onApply: (data: TravelAllowanceSheetData) => void;
   onRetrieved?: (data: TravelAllowanceSheetData) => void;
 };
+
+const travelAllowanceTemplateUrl = process.env.NEXT_PUBLIC_TRAVEL_ALLOWANCE_TEMPLATE_SHEET_URL?.trim() ?? '';
 
 const aliases: Record<string, string> = {
   'employee name': 'employeeName', 'staff name': 'employeeName',
@@ -145,6 +148,14 @@ function mealsFrom(values: Record<string, string>): TravelMealType[] {
   return selected;
 }
 
+function entryTotal(entry: TravelAllowanceSheetEntry) {
+  return entry.meals.reduce((total, meal) => total + TRAVEL_MEAL_RATES[meal], 0) + entry.specialAllowance;
+}
+
+function employeeSummary(entries: TravelAllowanceSheetEntry[]) {
+  return [...new Set(entries.map((entry) => entry.employeeName.trim()).filter(Boolean))].join(', ');
+}
+
 function sheetData(csv: string): TravelAllowanceSheetData {
   const rows = parseCsv(csv);
   if (rows.length < 2) throw new Error('The sheet does not contain a Travel Allowance form.');
@@ -161,7 +172,7 @@ function sheetData(csv: string): TravelAllowanceSheetData {
     const field = headerField(heading);
     if (field) indexes.set(field, index);
   });
-  const required = ['travelDate', 'employeeName', 'projectName', 'reason', 'meals', 'specialAllowance', 'specialAllowanceReason'];
+  const required = ['travelDate', 'employeeName', 'projectName'];
   const missing = required.filter((field) => !indexes.has(field));
   if (missing.length) throw new Error(`The Travel Allowance sheet is missing columns: ${missing.join(', ')}.`);
 
@@ -180,24 +191,18 @@ function sheetData(csv: string): TravelAllowanceSheetData {
   const fallbackYear = requestDate ? Number(requestDate.slice(0, 4)) : new Date().getFullYear();
   const entries = populated.map((values, index) => {
     const specialAllowance = moneyValue(values.specialAllowance || '');
-    if (!values.travelDate || !values.projectName || !values.reason) {
-      throw new Error(`Travel entry ${index + 1} is missing its travel date, project or reason.`);
+    if (!values.employeeName || !values.travelDate || !values.projectName) {
+      throw new Error(`Travel entry ${index + 1} needs an employee, travel date and division.`);
     }
     if (!Number.isFinite(specialAllowance) || specialAllowance < 0) {
       throw new Error(`Travel entry ${index + 1} has an invalid special allowance.`);
     }
     const meals = mealsFrom(values);
-    if (!meals.length && specialAllowance <= 0) {
-      throw new Error(`Travel entry ${index + 1} must contain at least one meal or a special allowance.`);
-    }
-    if (specialAllowance > 0 && !values.specialAllowanceReason) {
-      throw new Error(`Travel entry ${index + 1} needs a special allowance reason.`);
-    }
     return {
-      employeeName: values.employeeName || metadata.requesterName,
+      employeeName: values.employeeName,
       travelDate: dateToIso(values.travelDate, fallbackYear),
       projectName: values.projectName,
-      reason: values.reason,
+      reason: values.reason ?? '',
       meals,
       specialAllowance,
       specialAllowanceReason: values.specialAllowanceReason ?? '',
@@ -239,9 +244,16 @@ export function TravelAllowanceGoogleSheet({ completionFields, disabled = false,
 
   return <section className={styles.sheetCard}>
     <div className={styles.sheetHeader}><div><p>Travel Allowance</p><h2>Retrieve from Google Sheets</h2><span>One shared sheet creates one Travel Allowance request. Each populated row becomes a travel entry.</span></div><button type="button" onClick={onCancel}>Back to manual form</button></div>
+    <OfficialTemplateCallout
+      actionLabel="Open TA template sheet ↗"
+      description="Open the standard Travel Allowance Google Sheet in a new tab, make your own copy and complete the travel rows there."
+      title="Travel Allowance master sheet"
+      unavailableLabel="TA template link not configured"
+      url={travelAllowanceTemplateUrl}
+    />
     {error && <div className={styles.error} role="alert">{error}</div>}
     <div className={styles.sheetLinkRow}><label><span>Google Sheets link</span><input type="url" value={url} placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=..." onChange={(event) => { setUrl(event.target.value); setData(null); setError(''); }} /></label><button type="button" disabled={loading || !url.trim()} onClick={load}>{loading ? 'Retrieving…' : 'Retrieve sheet'}</button></div>
     <p className={styles.sheetHint}>The sheet must use the official Travel Allowance template and be shared as “Anyone with the link can view”. The Manager and Project Director are selected in Estuary after retrieval.</p>
-    {data && <><div className={styles.sheetSummary}><div><span>Travel entries</span><strong>{data.entries.length}</strong></div><div><span>Name</span><strong>{data.requesterName || 'Signed-in user'}</strong></div><div><span>Position</span><strong>{data.requesterPosition || 'From user profile'}</strong></div><div><span>Request date</span><strong>{data.requestDate || 'Choose below'}</strong></div></div><div className={styles.sheetTableWrap}><table><thead><tr><th>#</th><th>Employee</th><th>Travel date</th><th>Division</th><th>Reason</th><th>Meals</th><th>Special</th></tr></thead><tbody>{data.entries.map((entry, index) => <tr key={`${entry.travelDate}-${index}`}><td>{index + 1}</td><td>{entry.employeeName || 'Signed-in Staff'}</td><td>{entry.travelDate}</td><td>{entry.projectName}</td><td>{entry.reason}</td><td>{entry.meals.join(', ') || '—'}</td><td>RM {entry.specialAllowance.toFixed(2)}</td></tr>)}</tbody></table></div><section className={styles.sheetCompletion}><div><h3>Complete request routing</h3><p>Choose the request details and approvers here before continuing.</p></div><div className={styles.sheetCompletionGrid}>{completionFields}</div></section><button className={styles.applySheetButton} disabled={disabled} type="button" onClick={() => onApply(data)}>Continue to review</button></>}
+    {data && <><div className={styles.sheetSummary}><div><span>Travel entries</span><strong>{data.entries.length}</strong></div><div><span>Employees</span><strong>{employeeSummary(data.entries) || 'No employees found'}</strong></div><div><span>Position</span><strong>{data.requesterPosition || 'From sheet'}</strong></div><div><span>Request date</span><strong>{data.requestDate || 'Choose below'}</strong></div></div><div className={styles.sheetTableWrap}><table><thead><tr><th>#</th><th>Employee</th><th>Travel date</th><th>Division</th><th>Reason</th><th>Meals</th><th>Special</th><th>Amount</th></tr></thead><tbody>{data.entries.map((entry, index) => <tr key={`${entry.travelDate}-${index}`}><td>{index + 1}</td><td>{entry.employeeName}</td><td>{entry.travelDate}</td><td>{entry.projectName}</td><td>{entry.reason || '—'}</td><td>{entry.meals.join(', ') || '—'}</td><td>RM {entry.specialAllowance.toFixed(2)}</td><td><strong>RM {entryTotal(entry).toFixed(2)}</strong></td></tr>)}</tbody></table></div><section className={styles.sheetCompletion}><div><h3>Complete request routing</h3><p>Choose the request details and approvers here before continuing.</p></div><div className={styles.sheetCompletionGrid}>{completionFields}</div></section><button className={styles.applySheetButton} disabled={disabled} type="button" onClick={() => onApply(data)}>Continue to review</button></>}
   </section>;
 }

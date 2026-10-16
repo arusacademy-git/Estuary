@@ -120,7 +120,7 @@ export function InvoicePaymentReview({
           <dl className={styles.fourColumn}>
             <Value label="Request date" value={formatDate(requestDate)} />
             <div>
-              <dt>Staff requester</dt>
+              <dt>Requester</dt>
               <dd className={styles.staffValue}><span>{staffInitials}</span>{staffName}</dd>
             </div>
             <Value label="Project name" value={projectName} />
@@ -189,6 +189,16 @@ export function InvoicePaymentReview({
                 </button>
               </div>
             ))}
+
+            {!documents.length && (
+              <div>
+                <span className={`${styles.documentIcon} ${styles.fileIcon}`} aria-hidden="true">—</span>
+                <div>
+                  <small>Optional supporting files</small>
+                  <strong>No supporting documents attached</strong>
+                </div>
+              </div>
+            )}
           </div>
         </ReviewSection>
 

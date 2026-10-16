@@ -24,7 +24,6 @@ export function PettyCashFinanceReview({ requestId }: { requestId: string }) {
   const [record, setRecord] = useState<PettyCashRecord | null>(null);
   const [checked, setChecked] = useState(false);
   const [paymentDate, setPaymentDate] = useState(today());
-  const [paymentReference, setPaymentReference] = useState('');
   const [paymentProofLink, setPaymentProofLink] = useState('');
   const [paymentProofName, setPaymentProofName] = useState('');
   const [notes, setNotes] = useState('');
@@ -36,14 +35,14 @@ export function PettyCashFinanceReview({ requestId }: { requestId: string }) {
   useEffect(() => {
     setAccount(readBetaSession());
     fetchPettyCashRequest(requestId).then((next) => {
-      setRecord(next); setPaymentDate(next.paymentDate ?? today()); setPaymentReference(next.paymentReference ?? ''); setPaymentProofLink(next.paymentProofLink ?? '');
+      setRecord(next); setPaymentDate(next.paymentDate ?? today()); setPaymentProofLink(next.paymentProofLink ?? '');
     }).catch((caught) => setError(caught instanceof Error ? caught.message : 'Request could not be loaded.')).finally(() => setChecked(true));
   }, [requestId]);
 
   async function verify() {
     if (!account || !record) return;
     setSaving(true); setError(''); setSuccess('');
-    try { const updated = await verifyPettyCashByFinance(record.id, { financeId: account.id, paymentDate, paymentReference: paymentReference.trim(), paymentProofLink: paymentProofLink.trim(), notes: notes.trim() }); notifyPettyCashFinanceVerified(updated, account); setRecord(updated); setSuccess('Payment information was verified. Review it once more before marking the request as paid.'); }
+    try { const updated = await verifyPettyCashByFinance(record.id, { financeId: account.id, paymentDate, paymentProofLink: paymentProofLink.trim(), notes: notes.trim() }); notifyPettyCashFinanceVerified(updated, account); setRecord(updated); setSuccess('Payment information was verified. Review it once more before marking the request as paid.'); }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Payment could not be verified.'); }
     finally { setSaving(false); }
   }
@@ -108,7 +107,7 @@ export function PettyCashFinanceReview({ requestId }: { requestId: string }) {
       <div className={styles.detailRail}>
         <aside className={styles.managerDecisionPanel}><p>Finance action</p><h2>{canPeerReview ? 'Independently review request' : canVerify ? 'Verify payment information' : canComplete ? 'Complete payment' : record.status === 'PAID' ? 'Payment completed' : 'Processing recorded'}</h2>
           {canPeerReview && <><span>This request was submitted by Finance. Your independent preview is informational and does not block payment processing.</span><button className={styles.managerApproveButton} disabled={saving} onClick={reviewFinanceRequest} type="button">Record independent preview <b aria-hidden="true">→</b></button></>}
-          {canVerify && <><span>Record the payment information and upload the receipt before completing the Petty Cash payment.</span><label><span>Payment date</span><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label><label><span>Payment reference</span><input value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Bank or transaction reference" /></label><label><span>Upload payment receipt</span><div className={styles.financeReceiptUpload}><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" type="file" onChange={selectReceipt} /><small>PDF, JPG or PNG · maximum 2.5 MB</small>{paymentProofLink && <div><strong>{paymentProofName || 'Payment receipt attached'}</strong><a href={paymentProofLink} rel="noreferrer" target="_blank">Preview</a><button type="button" onClick={() => { setPaymentProofLink(''); setPaymentProofName(''); }}>Remove</button></div>}</div></label><label><span>Finance notes</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional payment notes" /></label><button className={styles.managerApproveButton} disabled={saving || !paymentDate || !paymentReference.trim() || !paymentProofLink.trim()} onClick={verify} type="button">Verify payment information <b aria-hidden="true">→</b></button></>}
+          {canVerify && <><span>Record the payment information and upload the receipt before completing the Petty Cash payment.</span><label><span>Payment date</span><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></label><label><span>Payment reference</span><input readOnly value={record.requestNumber} /></label><label><span>Upload payment receipt</span><div className={styles.financeReceiptUpload}><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" type="file" onChange={selectReceipt} /><small>PDF, JPG or PNG · maximum 2.5 MB</small>{paymentProofLink && <div><strong>{paymentProofName || 'Payment receipt attached'}</strong><a href={paymentProofLink} rel="noreferrer" target="_blank">Preview</a><button type="button" onClick={() => { setPaymentProofLink(''); setPaymentProofName(''); }}>Remove</button></div>}</div></label><label><span>Finance notes</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional payment notes" /></label><button className={styles.managerApproveButton} disabled={saving || !paymentDate || !paymentProofLink.trim()} onClick={verify} type="button">Verify payment information <b aria-hidden="true">→</b></button></>}
           {canComplete && <><span>Payment information is verified. Marking this request as paid will automatically create the Money Out transaction and update the location balance.</span><div className={styles.managerPaymentSummary}><span>Reference</span><strong>{record.paymentReference}</strong><span>Payment date</span><strong>{date(record.paymentDate)}</strong></div><button className={styles.managerApproveButton} disabled={saving} onClick={markPaid} type="button">Mark as Paid <b aria-hidden="true">→</b></button></>}
           {record.status === 'PAID' && <><span>This payment is complete and appears in the Petty Cash ledger.</span><small>Paid {date(record.paidAt)}</small></>}
           {record.status === 'RETURNED_TO_STAFF' && <><span>This request was returned to Staff.</span><div className={styles.managerReturnedReason}><strong>Return reason</strong><p>{record.returnRemarks}</p></div></>}

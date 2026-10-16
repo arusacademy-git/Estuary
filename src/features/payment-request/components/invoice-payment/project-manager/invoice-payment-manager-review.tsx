@@ -144,7 +144,7 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
                         </dl>
                     </DetailSection>
                     <DetailSection title="Supporting Documents">
-                        <div className={styles.documents}>{record.supportingDocuments.map((document) => <div key={document.id}><span aria-hidden="true" className={styles.documentIcon}>▧</span><div><strong>{document.fileName}</strong><span>{(document.size / 1024).toFixed(0)} KB</span></div><button type="button" onClick={() => downloadDocument(document)}>Download</button></div>)}</div>
+                        <div className={styles.documents}>{record.supportingDocuments.length ? record.supportingDocuments.map((document) => <div key={document.id}><span aria-hidden="true" className={styles.documentIcon}>▧</span><div><strong>{document.fileName}</strong><span>{(document.size / 1024).toFixed(0)} KB</span></div><button type="button" onClick={() => downloadDocument(document)}>Download</button></div>) : <p>No optional supporting documents were attached.</p>}</div>
                     </DetailSection>
                 </div>
 

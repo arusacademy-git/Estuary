@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ListPagination } from '@/components/ui/list-pagination/list-pagination';
+import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 import { useListPagination } from '@/components/ui/list-pagination/use-list-pagination';
 import { fetchInvoicePayments } from '@/data/payment-requests/invoice-payment/api';
 import type { InvoicePaymentRequestRecord } from '@/domain/payment-requests/invoice-payment/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
+import { FinanceBulkProcessLink } from '@/features/payment-request/components/bulk/finance-bulk-process-link';
 
 import styles from './invoice-payment-finance.module.css';
 
@@ -74,7 +76,7 @@ export function InvoicePaymentFinanceQueue() {
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
-        <div><p>Finance workspace</p><h1>Invoice Payment verification</h1><span>Verify Director-approved requests and complete the payment record.</span></div>
+        <div><p>Finance workspace</p><h1>Invoice Payment verification</h1><span>Verify Director-approved requests and complete the payment record.</span>{pendingCount > 0 && <FinanceBulkProcessLink className={styles.bulkPreviewButton} href="/beta/finance/payment-requests/invoice-payments/bulk">Bulk process Invoice Payments</FinanceBulkProcessLink>}</div>
         <div className={styles.accountCard}><span>Signed in as</span><strong>{account.name}</strong><small>{account.position}</small></div>
       </header>
       <section className={styles.summaryGrid}>
@@ -86,7 +88,7 @@ export function InvoicePaymentFinanceQueue() {
         <div className={styles.queueHeader}><div><h2>Invoice Payments for Finance</h2><p>Open a request to verify its approvals, invoice and supporting documents.</p></div><label className={styles.searchField}><span>Search</span><input type="search" placeholder="Request number or vendor" value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
         <div className={styles.toolbar}>
           <div className={styles.tabs} role="group" aria-label="Invoice Payment filters"><button data-active={filter === 'PENDING'} type="button" onClick={() => setFilter('PENDING')}>Requires verification <span>{pendingCount}</span></button><button data-active={filter === 'COMPLETED'} type="button" onClick={() => setFilter('COMPLETED')}>Completed <span>{completedCount}</span></button><button data-active={filter === 'ALL'} type="button" onClick={() => setFilter('ALL')}>All <span>{financeRecords.length}</span></button></div>
-          <div className={styles.viewToggle} role="group" aria-label="Choose queue view"><button aria-pressed={viewMode === 'grid'} data-active={viewMode === 'grid'} type="button" onClick={() => setViewMode('grid')}>▦ Grid</button><button aria-pressed={viewMode === 'list'} data-active={viewMode === 'list'} type="button" onClick={() => setViewMode('list')}>☷ List</button></div>
+          <PaymentViewToggle label="Choose Invoice Payment queue view" onChange={setViewMode} value={viewMode} />
         </div>
         {visible.length === 0 ? <div className={styles.emptyState}><h2>No Invoice Payments found</h2><p>There are no requests matching this filter.</p></div> : viewMode === 'grid' ? <div className={styles.cardGrid}>{pagination.pageRecords.map((record) => <RequestCard key={record.id} record={record} />)}</div> : <div className={styles.tableWrapper}><table><thead><tr><th>Request</th><th>Staff</th><th>Vendor</th><th>Project</th><th>Amount</th><th>Status</th><th><span className={styles.srOnly}>Action</span></th></tr></thead><tbody>{pagination.pageRecords.map((record) => <tr key={record.id}><td><strong>{record.requestNumber}</strong></td><td>{record.staffName}</td><td>{record.vendorName}</td><td>{record.projectName}</td><td className={styles.amount}>{money(record.totalAmount)}</td><td><StatusBadge status={record.status} /></td><td className={styles.actionCell}><Link href={`/beta/finance/payment-requests/invoice-payments/${record.id}`}>{record.status === 'PENDING_FINANCE_REVIEW' ? 'Verify request' : 'View details'}</Link></td></tr>)}</tbody></table></div>}
         <ListPagination currentPage={pagination.currentPage} firstRecord={pagination.firstRecord} lastRecord={pagination.lastRecord} pageCount={pagination.pageCount} pageSize={pagination.pageSize} totalRecords={pagination.totalRecords} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />

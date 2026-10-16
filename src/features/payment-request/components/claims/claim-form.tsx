@@ -15,6 +15,9 @@ import {
   claimTotal,
   MEDICAL_ANNUAL_LIMIT,
   mileageRate,
+  normalizeTechAllowance,
+  requiresTechManagerApproval,
+  TECH_STANDARD_LIMIT,
   validateClaimInput,
 } from '@/domain/payment-requests/claims/policy';
 import {
@@ -28,9 +31,9 @@ import {
   type CreateClaimInput,
 } from '@/domain/payment-requests/claims/types';
 import { betaAccounts, readBetaSession } from '@/lib/auth/beta-accounts';
-import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
-import { parsePaymentAmountInput } from '@/shared/utils/payment-amount';
+import { DocumentReferenceChip } from '@/shared/document-reference-chip';
+import { PaymentAmountInput } from '@/shared/payment-amount-input';
 import { CorrectionBackLink, CorrectionEditLayout } from '@/shared/correction-edit-layout';
 
 import { ClaimConfirmation } from './claim-confirmation';
@@ -39,7 +42,7 @@ import styles from './claims.module.css';
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 const makeLine = (): ClaimLine => ({
-  id: createRuntimeId(),
+  id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
   expenseDate: today(), supplier: '', details: '', receiptFileName: '', receiptMimeType: '', receiptFileSize: 0,
   accountType: '', division: '', amount: 0, from: '', to: '', kilometers: 0,
 });
@@ -56,7 +59,6 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
   const [contact, setContact] = useState(initialRecord?.requesterContact ?? '');
   const [managerId, setManagerId] = useState(initialRecord?.managerApproverId ?? '');
   const [directorId, setDirectorId] = useState(initialRecord?.directorApproverId ?? '');
-  const [techExtended, setTechExtended] = useState(initialRecord?.techExtended ?? false);
   const [lines, setLines] = useState<ClaimLine[]>(initialRecord?.lines?.length ? initialRecord.lines : [makeLine()]);
   const [receiptFiles, setReceiptFiles] = useState<Record<string, File>>({});
   const [entryMode, setEntryMode] = useState<'MANUAL' | 'GOOGLE_SHEET'>('MANUAL');
@@ -80,25 +82,25 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
   }, [account, claimDate]);
 
   const total = useMemo(() => claimTotal(claimType, lines), [claimType, lines]);
+  const techExtended = claimType === 'TECH' && total > TECH_STANDARD_LIMIT;
   const limit = claimLimit({ claimType, techExtended }, context);
   const type = claimTypeDetails(claimType);
   const limitExceeded = limit !== null && total > limit;
 
   function buildInput(currentAccount: NonNullable<typeof account>): CreateClaimInput {
-    return {
+    return normalizeTechAllowance({
       organizationId: 'beta-arus-org', requesterId: currentAccount.id, requesterName: currentAccount.name,
       requesterPosition: currentAccount.position, requesterRole: currentAccount.role, requesterContact: contact.trim(),
       managerApproverId: currentAccount.role !== 'director' ? managerId : undefined,
       directorApproverId: currentAccount.role !== 'director' ? directorId : undefined,
       claimDate, claimType, techExtended: claimType === 'TECH' && techExtended,
       lines, notes: notes.trim() || undefined,
-    };
+    });
   }
 
   function chooseType(next: ClaimType) {
     if (next === claimType) return;
     setClaimType(next);
-    setTechExtended(false);
     setLines([makeLine()]);
     setReceiptFiles({});
     setConfirmed(false);
@@ -113,14 +115,14 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
     if (!account) return setError('Sign in before creating a claim.');
     const nextClaimDate = claimDate || data.claimDate;
     const nextContact = contact || data.contact;
-    const input: CreateClaimInput = {
+    const input = normalizeTechAllowance({
       organizationId: 'beta-arus-org', requesterId: account.id, requesterName: account.name,
       requesterPosition: account.position, requesterRole: account.role, requesterContact: nextContact.trim(),
       managerApproverId: account.role !== 'director' ? managerId : undefined,
       directorApproverId: account.role !== 'director' ? directorId : undefined,
       claimDate: nextClaimDate, claimType: data.claimType, techExtended: false,
       lines: data.lines, notes: notes.trim() || undefined,
-    };
+    });
     let activeContext = context;
     try {
       activeContext = await fetchClaimPolicyContext({ organizationId: 'beta-arus-org', requesterId: account.id, claimDate: nextClaimDate });
@@ -198,7 +200,7 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
 
   if (created) return <ClaimConfirmation record={created} onCreateAnother={() => {
     if (initialRecord) { window.location.assign('/beta/payment-requests/claims/new'); return; }
-    setCreated(null); setClaimType('EXPENSE'); setTechExtended(false); setLines([makeLine()]); setReceiptFiles({}); setNotes(''); setConfirmed(false);
+    setCreated(null); setClaimType('EXPENSE'); setLines([makeLine()]); setReceiptFiles({}); setNotes(''); setConfirmed(false);
   }} />;
 
   return <main className={styles.page}>
@@ -223,7 +225,6 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
       onCancel={() => setEntryMode('MANUAL')}
       onRetrieved={(data) => {
         setClaimType(data.claimType);
-        setTechExtended(false);
         if (data.claimDate) setClaimDate(data.claimDate);
         if (data.contact) setContact(data.contact);
         setError('');
@@ -241,7 +242,7 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
             <div className={styles.policyMatrix}>
               <label className={styles.claimTypeField}><span>Claim type</span><select value={claimType} onChange={(event) => chooseType(event.target.value as ClaimType)}>{CLAIM_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><small>Form fields adjust automatically based on the selected type.</small></label>
               <div className={`${styles.policyChoice} ${context.techExtendedLockedUntil && claimType === 'TECH' ? styles.policyLocked : ''}`}><div className={styles.policyDescription}><i aria-hidden="true" /><p><strong>{type.label} policy:</strong> {type.description}</p></div>
-                {claimType === 'TECH' && <><label className={styles.extendedChoice}><input checked={techExtended} disabled={Boolean(context.techExtendedLockedUntil)} onChange={(event) => setTechExtended(event.target.checked)} type="checkbox" /><span><strong>Use the extended RM1,000.00 Tech allowance</strong><small>Prevents another Tech claim for three calendar years after submission.</small></span></label>{context.techExtendedLockedUntil && <p className={styles.lockMessage}>Tech claims are locked until {displayDate(context.techExtendedLockedUntil)}.</p>}</>}
+                {claimType === 'TECH' && <><div className={styles.extendedChoice}><span><strong>RM500.01–RM1,000.00 requires Manager approval</strong><small>The extended allowance is applied automatically from the total and prevents another Tech Claim for three calendar years.</small></span></div>{context.techExtendedLockedUntil && <p className={styles.lockMessage}>Tech claims are locked until {displayDate(context.techExtendedLockedUntil)}.</p>}</>}
               </div>
             </div>
           </section>
@@ -265,7 +266,7 @@ export function ClaimForm({ initialRecord }: { initialRecord?: ClaimRecord } = {
               ? <MileageTable lines={lines} updateLine={updateLine} removeLine={removeLine} />
               : <ExpenseTable claimType={claimType} lines={lines} receiptFiles={receiptFiles} selectReceipt={selectReceipt} updateLine={updateLine} removeLine={removeLine} />}
             </div>
-            <PolicyBar claimType={claimType} context={context} limit={limit} limitExceeded={limitExceeded} loading={loadingPolicy} techExtended={techExtended} total={total} />
+            <PolicyBar claimType={claimType} context={context} limit={limit} limitExceeded={limitExceeded} loading={loadingPolicy} managerApprovalRequired={account ? requiresTechManagerApproval(buildInput(account)) : false} techExtended={techExtended} total={total} />
           </section>
 
           <section className={styles.section}>
@@ -287,8 +288,8 @@ function ExpenseTable({ claimType, lines, receiptFiles, selectReceipt, updateLin
     <td><input value={line.supplier} onChange={(event) => updateLine(line.id, { supplier: event.target.value })} placeholder="Supplier" /></td>
     <td><input value={line.details} onChange={(event) => updateLine(line.id, { details: event.target.value })} placeholder="What is this expense for?" /></td>
     {expense && <><td><select value={line.accountType} onChange={(event) => updateLine(line.id, { accountType: event.target.value })}><option value="">Choose account</option>{PAYMENT_VOUCHER_ACCOUNT_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></td><td><select value={line.division} onChange={(event) => updateLine(line.id, { division: event.target.value })}><option value="">Choose division</option>{CLAIM_DIVISION_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}</select></td></>}
-    <td>{line.receiptLink && !receiptFiles[line.id] ? <div className={styles.receiptLink}><a href={line.receiptLink} rel="noreferrer" target="_blank">Open receipt ↗</a><label><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => selectReceipt(line.id, event.target.files?.[0])} type="file" />Replace with upload</label></div> : <label className={`${styles.receiptUpload} ${receiptFiles[line.id] || line.receiptDocumentId ? styles.receiptAttached : ''}`}><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => selectReceipt(line.id, event.target.files?.[0])} type="file" /><span>{receiptFiles[line.id] || line.receiptDocumentId ? '✓' : '↑'}</span><strong>{(receiptFiles[line.id]?.name ?? line.receiptFileName) || 'Upload receipt'}</strong><small>{receiptFiles[line.id] ? formatFileSize(receiptFiles[line.id].size) : line.receiptDocumentId ? 'Saved receipt · replace' : 'PDF, JPG or PNG'}</small></label>}</td>
-    <td><input inputMode="decimal" placeholder="0.00" type="text" value={line.amount || ''} onChange={(event) => updateLine(line.id, { amount: parsePaymentAmountInput(event.target.value) })} /></td>
+    <td>{line.receiptLink && !receiptFiles[line.id] ? <div className={styles.receiptLink}><DocumentReferenceChip value={line.receiptFileName || line.receiptLink} href={line.receiptLink} /><label><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => selectReceipt(line.id, event.target.files?.[0])} type="file" />Replace with upload</label></div> : <label className={`${styles.receiptUpload} ${receiptFiles[line.id] || line.receiptDocumentId ? styles.receiptAttached : ''}`}><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => selectReceipt(line.id, event.target.files?.[0])} type="file" /><span>{receiptFiles[line.id] || line.receiptDocumentId ? '✓' : '↑'}</span><strong>{(receiptFiles[line.id]?.name ?? line.receiptFileName) || 'Upload receipt'}</strong><small>{receiptFiles[line.id] ? formatFileSize(receiptFiles[line.id].size) : line.receiptDocumentId ? 'Saved receipt · replace' : 'PDF, JPG or PNG'}</small></label>}</td>
+    <td><PaymentAmountInput aria-label="Claim amount" value={line.amount} onValueChange={(amount) => updateLine(line.id, { amount })} /></td>
     <td><RemoveButton disabled={lines.length === 1} onClick={() => removeLine(line.id)} /></td>
   </tr>)}</tbody></table>;
 }
@@ -307,13 +308,13 @@ function MileageTable({ lines, updateLine, removeLine }: { lines: ClaimLine[]; u
   </tr>)}</tbody></table>;
 }
 
-function PolicyBar({ claimType, context, limit, limitExceeded, loading, techExtended, total }: { claimType: ClaimType; context: ClaimPolicyContext; limit: number | null; limitExceeded: boolean; loading: boolean; techExtended: boolean; total: number }) {
+function PolicyBar({ claimType, context, limit, limitExceeded, loading, managerApprovalRequired, techExtended, total }: { claimType: ClaimType; context: ClaimPolicyContext; limit: number | null; limitExceeded: boolean; loading: boolean; managerApprovalRequired: boolean; techExtended: boolean; total: number }) {
   let copy = 'No monetary limit applies. Supporting documents are still required.';
   if (claimType === 'INTERNET_COMMUTE') copy = 'Maximum RM70.00 for this claim.';
   if (claimType === 'MEDICAL') copy = `RM${context.medicalUsedThisYear.toFixed(2)} used of the RM${MEDICAL_ANNUAL_LIMIT.toFixed(2)} annual allowance. RM${(limit ?? 0).toFixed(2)} remains.`;
   if (claimType === 'MILEAGE') copy = 'RM0.50/km for a trip up to 500km; RM0.30/km when that trip exceeds 500km.';
   if (claimType === 'PD') copy = 'Maximum RM500.00 for this PD claim.';
-  if (claimType === 'TECH') copy = techExtended ? 'Extended RM1,000.00 option selected. A three-year Tech claim lock starts after submission.' : 'Standard Tech claim limit: RM500.00.';
+  if (claimType === 'TECH') copy = techExtended ? `${managerApprovalRequired ? 'Manager approval is required before Finance can process this claim. ' : ''}Extended allowance active; maximum RM1,000.00 and a three-year Tech Claim lock applies.` : 'Standard Tech Claim limit: RM500.00.';
   return <div className={`${styles.policyBar} ${limitExceeded ? styles.policyError : ''}`}><div><span><strong>{limitExceeded ? 'Policy limit exceeded' : loading ? 'Checking policy' : 'Policy check'}</strong><small>{loading ? 'Reading your current allowance usage from the database…' : copy}</small></span></div><span><small>Claim total</small><strong>RM {total.toFixed(2)}</strong></span></div>;
 }
 
