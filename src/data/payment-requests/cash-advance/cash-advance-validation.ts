@@ -11,9 +11,10 @@ const documentSchema = z.object({
 
 const requestLineSchema = z.object({
   id: z.string().min(1),
-  description: z.string().trim().min(1),
-  purpose: z.string().trim().min(1),
-  amount: z.coerce.number().positive(),
+  accountType: z.string().trim().optional(),
+  description: z.string().trim(),
+  purpose: z.string().trim(),
+  amount: z.coerce.number().nonnegative(),
 });
 
 export const createCashAdvanceSchema = z.object({
@@ -29,7 +30,7 @@ export const createCashAdvanceSchema = z.object({
   bankAccountNumber: z.string().trim().min(1),
   projectName: z.string().trim().min(1),
   isOtherProject: z.boolean(),
-  managerApproverId: z.string().min(1),
+  managerApproverId: z.string(),
   directorApproverId: z.string().min(1),
   purpose: z.string().trim().min(1),
   currency: z.literal('MYR'),
@@ -71,7 +72,7 @@ export function cashAdvanceError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
   const status = message.includes('could not be found')
     ? 404
-    : message.includes('another') || message.includes('original Staff') || message.includes('not an active')
+    : message.includes('another') || message.includes('original requester') || message.includes('not an active')
       ? 403
       : 409;
   return Response.json({ error: 'CASH_ADVANCE_OPERATION_FAILED', message }, { status });

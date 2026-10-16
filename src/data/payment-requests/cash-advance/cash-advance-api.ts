@@ -52,10 +52,9 @@ export async function fetchCashAdvances(scope: { role: CashAdvanceRole; userId: 
         .then(async (response) => {
             const records = await read<CashAdvanceRecord[]>(response);
             if (!scope.approvalOnly && !scope.includeAll && !scope.month && (scope.role === 'manager' || scope.role === 'director')) {
-                const status = scope.role === 'manager' ? 'PENDING_MANAGER_APPROVAL' : 'PENDING_DIRECTOR_APPROVAL';
-                const assigned = records.filter((record) => record.status === status && (
-                    scope.role === 'manager' ? record.managerApproverId === scope.userId : record.directorApproverId === scope.userId
-                ));
+                const assigned = records.filter((record) => scope.role === 'manager'
+                    ? record.managerApproverId === scope.userId && !record.managerPreviewedAt
+                    : record.status === 'PENDING_DIRECTOR_APPROVAL' && record.directorApproverId === scope.userId);
                 cashAdvanceListCache.set(`${key}&approvalOnly=1`, {
                     expiresAt: Date.now() + CASH_ADVANCE_LIST_CACHE_MS,
                     promise: Promise.resolve(assigned),
@@ -77,16 +76,16 @@ export async function fetchCashAdvance(id: string) {
     return read<CashAdvanceRecord>(response);
 }
 
-export const approveCashAdvanceByManager = (id: string, managerId: string, signatureKey: string) =>
-    action(id, 'manager-approve', { managerId, signatureKey });
+export const previewCashAdvanceByManager = (id: string, managerId: string) =>
+    action(id, 'manager-approve', { managerId });
 export const returnCashAdvanceByManager = (id: string, managerId: string, reason: string) =>
     action(id, 'manager-return', { managerId, reason });
 export const approveCashAdvanceByDirector = (id: string, directorId: string, signatureKey: string) =>
     action(id, 'director-approve', { directorId, signatureKey });
 export const returnCashAdvanceByDirector = (id: string, directorId: string, reason: string) =>
     action(id, 'director-return', { directorId, reason });
-export const payCashAdvanceByFinance = (id: string, financeId: string, paymentDate: string, paymentReference: string) =>
-    action(id, 'finance-pay', { financeId, paymentDate, paymentReference });
+export const payCashAdvanceByFinance = (id: string, financeId: string, paymentDate: string) =>
+    action(id, 'finance-pay', { financeId, paymentDate });
 export const returnCashAdvanceByFinance = (id: string, financeId: string, reason: string) =>
     action(id, 'finance-return', { financeId, reason });
 export const resubmitCashAdvance = (id: string, input: CreateCashAdvanceInput) =>

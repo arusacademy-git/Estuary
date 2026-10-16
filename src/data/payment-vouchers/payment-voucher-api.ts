@@ -180,7 +180,7 @@ export async function startPaymentVoucherFinanceProcessing(
 export type SaveFinancePaymentInformationInput = {
   financeId: string;
   paymentDate: string;
-  paymentReference: string;
+  paymentReference?: string;
   paymentRemarks?: string;
   paymentProofFileName?: string;
 };

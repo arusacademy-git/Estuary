@@ -13,6 +13,8 @@ import {
 import {
   claimPolicyContext,
   claimTotal,
+  normalizeTechAllowance,
+  requiresTechManagerApproval,
   validateClaimInput,
 } from '@/domain/payment-requests/claims/policy';
 import type {
@@ -241,7 +243,8 @@ export async function getClaimPolicyContextFromDatabase(input: {
 }
 
 export async function createClaimInDatabase(input: CreateClaimInput, receiptUploads: ClaimReceiptUpload[], mode: 'draft' | 'submit' = 'submit') {
-  const requiredLineIds = input.claimType === 'MILEAGE' ? [] : input.lines.map((line) => line.id);
+  const normalizedInput = normalizeTechAllowance(input);
+  const requiredLineIds = normalizedInput.claimType === 'MILEAGE' ? [] : normalizedInput.lines.map((line) => line.id);
   if (mode === 'submit' && requiredLineIds.some((id) => !receiptUploads.some((upload) => upload.lineId === id) && !input.lines.find((line) => line.id === id)?.receiptLink?.trim())) {
     throw new Error('Provide one receipt link or upload for every claim item.');
   }
@@ -280,7 +283,7 @@ export async function createClaimInDatabase(input: CreateClaimInput, receiptUplo
         input.requesterId,
         input.claimDate,
       );
-      const validation = mode === 'submit' ? validateClaimInput(input, context) : '';
+      const validation = mode === 'submit' ? validateClaimInput(normalizedInput, context) : '';
       if (validation) throw new Error(validation);
 
       const receiptDocuments = new Map<string, string>();
@@ -301,8 +304,8 @@ export async function createClaimInDatabase(input: CreateClaimInput, receiptUplo
         receiptDocuments.set(upload.lineId, document.id);
       }
       const storedInput: CreateClaimInput = {
-        ...input,
-        lines: input.lines.map((line) => ({
+        ...normalizedInput,
+        lines: normalizedInput.lines.map((line) => ({
           ...line,
           receiptDocumentId: receiptDocuments.get(line.id),
           receiptFileName: prepared.find((upload) => upload.lineId === line.id)?.fileName ?? '',
@@ -312,22 +315,35 @@ export async function createClaimInDatabase(input: CreateClaimInput, receiptUplo
       };
 
       const total = claimTotal(storedInput.claimType, storedInput.lines);
+      const managerApprovalRequired = mode === 'submit' && requiresTechManagerApproval(storedInput);
       const claimNumber = await nextClaimNumber(tx, input.organizationId, input.claimDate);
       const lineDates = input.lines.map((line) => new Date(`${line.expenseDate || input.claimDate}T12:00:00`));
       const claimPeriodStart = new Date(Math.min(...lineDates.map((value) => value.getTime())));
       const claimPeriodEnd = new Date(Math.max(...lineDates.map((value) => value.getTime())));
 
-      const financeId = mode === 'submit'
+      const financeId = mode === 'submit' && !managerApprovalRequired
         ? input.requesterRole === 'finance' ? input.requesterId : await activeFinanceUser(tx, input.organizationId)
         : undefined;
-      const firstState = mode === 'draft' ? 'DRAFT' : 'PENDING_FINANCE_PROCESSING';
-      const firstAssignee = mode === 'draft' ? undefined : financeId;
+      const firstState = mode === 'draft'
+        ? 'DRAFT'
+        : managerApprovalRequired
+          ? 'PENDING_MANAGER_APPROVAL'
+          : 'PENDING_FINANCE_PROCESSING';
+      const firstAssignee = mode === 'draft'
+        ? undefined
+        : managerApprovalRequired
+          ? storedInput.managerApproverId
+          : financeId;
       const submission = await tx.submission.create({
         data: {
           organization_id: input.organizationId,
           payment_type: paymentTypeForClaim(storedInput.claimType),
           current_state_code: firstState,
-          current_state_group: mode === 'draft' ? StateGroup.DRAFT : StateGroup.PENDING_VERIFICATION,
+          current_state_group: mode === 'draft'
+            ? StateGroup.DRAFT
+            : managerApprovalRequired
+              ? StateGroup.IN_REVIEW
+              : StateGroup.PENDING_VERIFICATION,
           current_assignee_id: firstAssignee,
           submission_number: claimNumber,
           submitted_by_id: input.requesterId,
@@ -406,6 +422,7 @@ export async function updateClaimDraftInDatabase(
   receiptUploads: ClaimReceiptUpload[],
   mode: 'draft' | 'submit',
 ) {
+  const normalizedInput = normalizeTechAllowance(input);
   for (const upload of receiptUploads) {
     if (!(upload.mimeType in receiptExtensions) || !upload.bytes.length || upload.bytes.length > RECEIPT_MAX_SIZE) {
       throw new Error('Each receipt must be a PDF, JPG or PNG file no larger than 10 MB.');
@@ -452,8 +469,8 @@ export async function updateClaimDraftInDatabase(
         receiptDocuments.set(upload.lineId, document.id);
       }
       const storedInput: CreateClaimInput = {
-        ...input,
-        lines: input.lines.map((line) => {
+        ...normalizedInput,
+        lines: normalizedInput.lines.map((line) => {
           const upload = prepared.find((item) => item.lineId === line.id);
           return upload ? { ...line, receiptDocumentId: receiptDocuments.get(line.id), receiptFileName: upload.fileName, receiptMimeType: upload.mimeType, receiptFileSize: upload.bytes.length } : line;
         }),
@@ -465,11 +482,20 @@ export async function updateClaimDraftInDatabase(
       const validation = mode === 'submit' ? validateClaimInput(storedInput, context) : '';
       if (validation) throw new Error(validation);
 
-      const financeId = mode === 'submit'
+      const managerApprovalRequired = mode === 'submit' && requiresTechManagerApproval(storedInput);
+      const financeId = mode === 'submit' && !managerApprovalRequired
         ? input.requesterRole === 'finance' ? input.requesterId : await activeFinanceUser(tx, input.organizationId)
         : undefined;
-      const nextState = mode === 'draft' ? 'DRAFT' : 'PENDING_FINANCE_PROCESSING';
-      const assignee = mode === 'draft' ? undefined : financeId;
+      const nextState = mode === 'draft'
+        ? 'DRAFT'
+        : managerApprovalRequired
+          ? 'PENDING_MANAGER_APPROVAL'
+          : 'PENDING_FINANCE_PROCESSING';
+      const assignee = mode === 'draft'
+        ? undefined
+        : managerApprovalRequired
+          ? storedInput.managerApproverId
+          : financeId;
       const total = claimTotal(storedInput.claimType, storedInput.lines);
       const lineDates = storedInput.lines.map((line) => new Date(`${line.expenseDate || input.claimDate}T12:00:00`));
       const claimPeriodStart = new Date(Math.min(...lineDates.map((value) => value.getTime())));
@@ -483,7 +509,11 @@ export async function updateClaimDraftInDatabase(
         data: {
           payment_type: paymentTypeForClaim(storedInput.claimType),
           current_state_code: nextState,
-          current_state_group: mode === 'draft' ? StateGroup.DRAFT : input.requesterRole === 'director' ? StateGroup.PENDING_VERIFICATION : StateGroup.IN_REVIEW,
+          current_state_group: mode === 'draft'
+            ? StateGroup.DRAFT
+            : managerApprovalRequired
+              ? StateGroup.IN_REVIEW
+              : StateGroup.PENDING_VERIFICATION,
           current_assignee_id: assignee,
           submitted_at: mode === 'submit' ? new Date() : null,
           total_amount: new Prisma.Decimal(total.toFixed(2)),
@@ -699,9 +729,15 @@ export async function returnClaimByDirectorInDatabase(id: string, directorId: st
 }
 
 export async function processClaimByFinanceInDatabase(id: string, financeId: string, input: ClaimFinanceInput) {
-  if (!input.paymentDate || !input.paymentReference.trim()) throw new Error('Payment date and payment reference are required.');
+  if (!input.paymentDate) throw new Error('Payment date is required.');
   return prisma.$transaction(async (tx) => {
     const record = await getStoredClaim(tx, id);
+    const paymentReference = record.submission_number?.trim();
+    if (!paymentReference) throw new Error('This Claim has no Claim number to use as its payment reference.');
+    const snapshot = readSnapshot(record);
+    if (requiresTechManagerApproval(snapshot) && !record.transitions.some((item) => item.action_code === 'APPROVE_BY_MANAGER')) {
+      throw new Error('Manager approval is required before Finance can process this Tech Claim.');
+    }
     if (!['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_PROCESSING'].includes(record.current_state_code)) throw new Error('Only a Claim pending Finance processing can be completed.');
     if (record.current_state_code === 'PENDING_FINANCE_PROCESSING' && record.current_assignee_id !== financeId) throw new Error('This Claim is assigned to another Finance user.');
     await requireRole(tx, record.organization_id, financeId, OrgRole.FINANCE_ADMIN);
@@ -721,7 +757,7 @@ export async function processClaimByFinanceInDatabase(id: string, financeId: str
             actor_user_id: financeId,
             metadata_json: {
               paymentDate: input.paymentDate,
-              paymentReference: input.paymentReference.trim(),
+              paymentReference,
               notes: input.notes?.trim() || null,
             } as Prisma.InputJsonValue,
           }

@@ -1,6 +1,7 @@
 import { ActorType, PaymentMode, PaymentType, Prisma, StateGroup } from '@prisma/client';
 
 import type { CreateInvoicePaymentRequestInput, InvoicePaymentRequestRecord, PaymentRequestStatus } from '@/domain/payment-requests/invoice-payment/types';
+import { paymentRequestReference } from '@/domain/payment-requests/finance-payment-reference';
 import { prisma } from '@/lib/db/prisma';
 
 const include = {
@@ -48,6 +49,8 @@ function map(record: Stored): InvoicePaymentRequestRecord {
     directorReturnRemarks: directorReturn?.reason_text ?? undefined,
     financeVerifiedAt: complete?.created_at.toISOString(),
     financeVerifiedById: complete?.actor_user_id ?? undefined,
+    financePaymentDate: record.invoice_detail?.paid_at?.toISOString().slice(0, 10),
+    financePaymentReference: record.invoice_detail?.paid_reference ?? undefined,
     financeReturnedAt: financeReturn?.created_at.toISOString(),
     financeReturnedById: financeReturn?.actor_user_id ?? undefined,
     financeReturnRemarks: financeReturn?.reason_text ?? undefined,
@@ -137,7 +140,7 @@ export async function resubmitInvoicePaymentInDatabase(id: string, input: Create
         const current = await tx.submission.findFirst({ where: { id, payment_type: PaymentType.INVOICE_PAYMENT }, include: { approval_steps: true } });
         if (!current) throw new Error('Invoice Payment could not be found.');
         if (current.current_state_code !== 'RETURNED_TO_STAFF') throw new Error('Only an Invoice Payment returned for correction can be edited.');
-        if (current.submitted_by_id !== input.staffId) throw new Error('Only the original Staff requester can edit this Invoice Payment.');
+        if (current.submitted_by_id !== input.staffId) throw new Error('Only the original requester can edit this Invoice Payment.');
 
         const [manager, director, project] = await Promise.all([
             tx.user.findUnique({ where: { id: input.managerApproverId }, select: { id: true } }),
@@ -198,7 +201,7 @@ export const returnInvoicePaymentByManagerInDatabase = (id: string, actorId: str
 export const reviewInvoicePaymentByDirectorInDatabase = (id: string, actorId: string) => approvalAction(id, actorId, 'DIRECTOR', true);
 export const returnInvoicePaymentByDirectorInDatabase = (id: string, actorId: string, reason: string) => approvalAction(id, actorId, 'DIRECTOR', false, reason);
 
-async function financeAction(id: string, financeId: string, complete: boolean, reason?: string) {
+async function financeAction(id: string, financeId: string, complete: boolean, paymentDate?: string, reason?: string) {
   const cleanReason = reason?.trim();
   if (!complete && (!cleanReason || cleanReason.length < 5)) throw new Error('Enter a clear reason for returning the request.');
   return prisma.$transaction(async (tx) => {
@@ -207,12 +210,20 @@ async function financeAction(id: string, financeId: string, complete: boolean, r
     if (current.current_state_code !== 'PENDING_FINANCE_REVIEW') throw new Error('This Invoice Payment is no longer awaiting Finance verification.');
     const to = complete ? 'COMPLETED' : 'RETURNED_TO_STAFF';
     const actionCode = complete ? 'COMPLETE' : 'RETURN_BY_FINANCE';
-    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: current.current_state_code, action_code: actionCode, to_state_code: to, actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, reason_text: cleanReason } });
+    const automaticReference = paymentRequestReference(current.submission_number ?? `IV-${current.id}`);
+    const effectivePaymentDate = paymentDate || new Date().toISOString().slice(0, 10);
+    if (complete) {
+      await tx.invoicePaymentDetail.update({
+        where: { submission_id: id },
+        data: { paid_at: new Date(`${effectivePaymentDate}T12:00:00Z`), paid_reference: automaticReference },
+      });
+    }
+    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: current.current_state_code, action_code: actionCode, to_state_code: to, actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, reason_text: cleanReason, metadata_json: complete ? { paymentDate: effectivePaymentDate, paymentReference: automaticReference } : undefined } });
     await tx.submission.update({ where: { id }, data: { current_state_code: to, current_state_group: complete ? StateGroup.COMPLETE : StateGroup.REJECTED, current_assignee_id: complete ? null : current.submitted_by_id, closed_at: complete ? new Date() : null } });
     await tx.auditEvent.create({ data: { organization_id: current.organization_id, submission_id: id, event_type: complete ? 'invoice_payment.finance_completed' : 'invoice_payment.returned_by_finance', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, payload_json: cleanReason ? { reason: cleanReason } : undefined } });
     return map(await tx.submission.findUniqueOrThrow({ where: { id }, include }));
   }, { timeout: 15_000 });
 }
 
-export const completeInvoicePaymentByFinanceInDatabase = (id: string, financeId: string) => financeAction(id, financeId, true);
-export const returnInvoicePaymentByFinanceInDatabase = (id: string, financeId: string, reason: string) => financeAction(id, financeId, false, reason);
+export const completeInvoicePaymentByFinanceInDatabase = (id: string, financeId: string, paymentDate?: string) => financeAction(id, financeId, true, paymentDate);
+export const returnInvoicePaymentByFinanceInDatabase = (id: string, financeId: string, reason: string) => financeAction(id, financeId, false, undefined, reason);
