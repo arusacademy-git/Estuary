@@ -62,24 +62,25 @@ export const PAYMENT_METHOD_SELECT_OPTIONS: PaymentSelectOption[] =
   }));
 
 export const BANK_NAME_OPTIONS = [
-  'Affin Bank',
-  'Alliance Bank',
-  'AmBank',
-  'Bank Islam',
-  'Bank Muamalat',
-  'Bank Rakyat',
+  'AFFIN',
+  'ALLIANCE',
+  'AMBANK',
+  'ALRAJHI',
+  'BANK ISLAM',
+  'MUAMALAT',
+  'BANK RAKYAT',
   'BSN',
   'CIMB',
-  'Citibank',
-  'Hong Leong Bank',
+  'CITIBANK',
+  'HONG LEONG',
   'HSBC',
-  'Maybank',
+  'MAYBANK',
   'OCBC',
-  'Public Bank',
+  'PUBLIC BANK',
   'RHB',
-  'Standard Chartered Bank',
+  'STANDARD CHARTERED',
   'UOB',
-  'Agro Bank',
+  'AGRO',
 ] as const;
 
 export const BANK_NAME_SELECT_OPTIONS: PaymentSelectOption[] =
