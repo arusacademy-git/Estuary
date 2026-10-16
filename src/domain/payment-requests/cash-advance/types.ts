@@ -17,6 +17,7 @@ export type CashAdvanceDocument = {
 
 export type CashAdvanceRequestLine = {
   id: string;
+  accountType?: string;
   description: string;
   purpose: string;
   amount: number;
@@ -59,6 +60,7 @@ export type CreateCashAdvanceInput = {
   organizationId: string;
   requestDate: string;
   requesterId: string;
+  requesterRole?: CashAdvanceRole;
   requesterName: string;
   requesterPosition: string;
   requesterDepartment: string;
@@ -92,6 +94,7 @@ export type CashAdvanceRecord = CreateCashAdvanceInput & {
   status: CashAdvanceStatus;
   totalAmount: number;
   staffSignedAt: string;
+  managerPreviewedAt?: string;
   managerSignatureKey?: string;
   managerApprovedAt?: string;
   directorSignatureKey?: string;
