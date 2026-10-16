@@ -18,6 +18,7 @@ import type {
   PaymentVoucherLineInput,
   PaymentVoucherRecord,
 } from '@/domain/payment-vouchers/types';
+import { paymentVoucherRecipientReference } from '@/domain/payment-vouchers/payment-reference';
 
 const paymentVoucherInclude = {
   pv_detail: true,
@@ -75,7 +76,7 @@ type PaymentVoucherSnapshot = {
 export type FinancePaymentInformationInput = {
   financeId: string;
   paymentDate: string;
-  paymentReference: string;
+  paymentReference?: string;
   paymentRemarks?: string;
   paymentProofFileName?: string;
 };
@@ -289,8 +290,9 @@ export function mapStoredPaymentVoucher(
     division: snapshot.division ?? '',
     recipientName: detail.recipient_name,
     recipientEmail: detail.recipient_email,
-    recipientReference:
-      snapshot.recipientReference ?? `REC-${voucher.id.slice(-12).toUpperCase()}`,
+    recipientReference: paymentVoucherRecipientReference(
+      voucher.submission_number ?? voucher.id,
+    ),
     recipientIc: detail.recipient_ic ?? undefined,
     recipientIsMalaysian: snapshot.recipientIsMalaysian ?? true,
     paymentMethod: fromPaymentMode(detail.payment_mode),
@@ -475,10 +477,6 @@ export async function createPaymentVoucherInDatabase(
   const initialState = submitForApproval
     ? 'PENDING_DIRECTOR_APPROVAL'
     : 'DRAFT';
-  const recipientReference =
-    input.recipientReference?.trim() ||
-    `REC-${crypto.randomUUID().replaceAll('-', '').slice(0, 14).toUpperCase()}`;
-
   return prisma.$transaction(async (transaction) => {
     const [organization, submitter, director, workflow] = await Promise.all([
       transaction.organization.findUnique({
@@ -529,6 +527,7 @@ export async function createPaymentVoucherInDatabase(
       input.organizationId,
       now,
     );
+    const recipientReference = paymentVoucherRecipientReference(voucherNumber);
 
     const snapshot: PaymentVoucherSnapshot = {
       division: input.division,
@@ -703,10 +702,9 @@ export async function resubmitPaymentVoucherInDatabase(
       throw new Error(`GL account ${missingAccountCode} was not found for this organization.`);
     }
 
-    const recipientReference =
-      input.recipientReference?.trim() ||
-      readSnapshot(voucher).recipientReference ||
-      `REC-${voucher.id.slice(-12).toUpperCase()}`;
+    const recipientReference = paymentVoucherRecipientReference(
+      voucher.submission_number ?? voucher.id,
+    );
     const snapshot: PaymentVoucherSnapshot = {
       division: input.division,
       directorId: input.directorId,
@@ -1239,7 +1237,6 @@ export async function savePaymentVoucherFinanceInformationInDatabase(
   input: FinancePaymentInformationInput,
 ) {
   const paymentDate = input.paymentDate.trim();
-  const paymentReference = input.paymentReference.trim();
   const paymentRemarks = input.paymentRemarks?.trim() || undefined;
   const paymentProofFileName =
     input.paymentProofFileName?.trim() || undefined;
@@ -1257,10 +1254,6 @@ export async function savePaymentVoucherFinanceInformationInDatabase(
     throw new Error('Enter a valid payment date.');
   }
 
-  if (!paymentReference) {
-    throw new Error('Payment reference is required.');
-  }
-
   return prisma.$transaction(async (transaction) => {
     const voucher = await transaction.submission.findFirst({
       where: {
@@ -1273,6 +1266,8 @@ export async function savePaymentVoucherFinanceInformationInDatabase(
     if (!voucher) {
       throw new Error('Payment Voucher could not be found.');
     }
+
+    const paymentReference = voucher.submission_number;
 
     if (voucher.current_state_code !== 'FINANCE_PROCESSING') {
       throw new Error(

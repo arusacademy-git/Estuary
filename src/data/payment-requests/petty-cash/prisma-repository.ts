@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
+import { paymentRequestReference } from '@/domain/payment-requests/finance-payment-reference';
 import {
   PETTY_CASH_MONTHLY_ALLOCATION,
   pettyCashTotal,
@@ -106,12 +107,13 @@ function mapPettyCash(record: StoredPettyCash): PettyCashRecord {
   const returned = [...record.transitions].reverse().find((item) =>
     ['RETURN_BY_MANAGER', 'RETURN_BY_DIRECTOR', 'RETURN_BY_FINANCE'].includes(item.action_code),
   );
+  const requestNumber = record.submission_number ?? `PC-DRAFT-${record.id.slice(-6)}`;
 
   return {
     ...snapshot,
     location: snapshot.location ?? locationFromFloatName(record.petty_cash_detail.petty_cash_float.name),
     id: record.id,
-    requestNumber: record.submission_number ?? `PC-DRAFT-${record.id.slice(-6)}`,
+    requestNumber,
     requestType: 'PETTY_CASH_REQUEST',
     status: record.current_state_code as PettyCashRecord['status'],
     totalAmount: Number(record.total_amount),
@@ -122,7 +124,7 @@ function mapPettyCash(record: StoredPettyCash): PettyCashRecord {
     financeVerifiedAt: verification?.at,
     financeVerifiedById: verification?.by,
     paymentDate: verification?.paymentDate,
-    paymentReference: verification?.paymentReference,
+    paymentReference: verification ? requestNumber : undefined,
     paymentProofLink: verification?.paymentProofLink,
     paidAt: paid?.created_at.toISOString(),
     paidById: paid?.actor_user_id ?? undefined,
@@ -652,8 +654,8 @@ export async function verifyPettyCashByFinanceInDatabase(
   id: string,
   input: PettyCashFinanceInput,
 ) {
-  if (!input.paymentDate || !input.paymentReference.trim() || !input.paymentProofLink.trim()) {
-    throw new Error('Complete the payment date, reference and proof link.');
+  if (!input.paymentDate || !input.paymentProofLink.trim()) {
+    throw new Error('Complete the payment date and proof link.');
   }
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
@@ -661,6 +663,7 @@ export async function verifyPettyCashByFinanceInDatabase(
     if (record.current_state_code !== 'PENDING_FINANCE_PAYMENT') {
       throw new Error('Only a request pending Finance payment can be verified.');
     }
+    const automaticReference = paymentRequestReference(record.submission_number ?? `PC-${record.id}`);
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
@@ -676,7 +679,7 @@ export async function verifyPettyCashByFinanceInDatabase(
             actor_user_id: input.financeId,
             metadata_json: {
               paymentDate: input.paymentDate,
-              paymentReference: input.paymentReference.trim(),
+              paymentReference: automaticReference,
               paymentProofLink: input.paymentProofLink.trim(),
               notes: input.notes?.trim(),
             },

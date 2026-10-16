@@ -79,5 +79,5 @@ export const reviewInvoicePaymentByManager = (id: string, managerId: string) => 
 export const returnInvoicePaymentByManager = (id: string, managerId: string, remarks: string) => action(id, 'manager-return', { managerId, remarks });
 export const reviewInvoicePaymentByDirector = (id: string, directorId: string) => action(id, 'director-review', { directorId });
 export const returnInvoicePaymentByDirector = (id: string, directorId: string, remarks: string) => action(id, 'director-return', { directorId, remarks });
-export const completeInvoicePaymentByFinance = (id: string, financeId: string) => action(id, 'finance-complete', { financeId });
+export const completeInvoicePaymentByFinance = (id: string, financeId: string, paymentDate?: string) => action(id, 'finance-complete', { financeId, paymentDate });
 export const returnInvoicePaymentByFinance = (id: string, financeId: string, remarks: string) => action(id, 'finance-return', { financeId, remarks });
