@@ -190,6 +190,14 @@ export function DirectorBulkApproval({
                 ),
         );
 
+    const reviewedSelectedCount =
+        selectedVoucherIds.filter(
+            (voucherId) =>
+                reviewedVoucherIds.includes(
+                    voucherId,
+                ),
+        ).length;
+
     useEffect(() => {
         const pendingIds = new Set(
             pendingVouchers.map(
@@ -701,97 +709,18 @@ export function DirectorBulkApproval({
 
             {selectedVoucherIds.length > 0 && (
                 <section
-                    className={
-                        styles.confirmationPanel
-                    }
+                    className={`${styles.confirmationPanel} ${styles.compactConfirmation}`}
                 >
-                    <div>
-                        <p className={styles.eyebrow}>
-                            Approval confirmation
-                        </p>
-
-                        <h2>
-                            Approve{' '}
-                            {selectedVoucherIds.length}{' '}
-                            selected{' '}
-                            {selectedVoucherIds.length === 1
-                                ? 'voucher'
-                                : 'vouchers'}
-                        </h2>
-
-                        <p>
-                            Every selected voucher must be
-                            reviewed. Your saved signature
-                            and approval date will be applied
-                            to each approved voucher.
-                        </p>
-                    </div>
-
-                    {!allSelectedVouchersReviewed && (
-                        <div
-                            className={
-                                styles.reviewRequiredMessage
-                            }
-                        >
-                            Review all selected Payment
-                            Vouchers before approving them.
-                        </div>
-                    )}
-
-                    <label
-                        className={
-                            styles.confirmationCheck
-                        }
-                    >
-                        <input
-                            checked={hasConfirmed}
-                            disabled={
-                                !allSelectedVouchersReviewed
-                            }
-                            onChange={(event) =>
-                                setHasConfirmed(
-                                    event.target.checked,
-                                )
-                            }
-                            type="checkbox"
-                        />
-
-                        <span>
-                            I confirm that I reviewed the
-                            selected Payment Vouchers and
-                            approve them for Finance
-                            processing.
-                        </span>
-                    </label>
-
-                    <button
-                        className={
-                            styles.approveButton
-                        }
-                        disabled={
-                            !activeSignature ||
-                            !hasConfirmed ||
-                            !allSelectedVouchersReviewed ||
-                            isSubmitting
-                        }
-                        onClick={handleBulkApproval}
-                        type="button"
-                    >
-                        {isSubmitting
-                            ? 'Approving…'
-                            : `Approve ${selectedVoucherIds.length} selected`}
-                    </button>
-
-                    <p
-                        className={
-                            styles.rejectionNotice
-                        }
-                    >
-                        Rejections must be completed
-                        individually because a rejection
-                        remark is required for each
-                        Payment Voucher.
-                    </p>
+                    <header className={styles.compactConfirmationHeader}>
+                        <div><p className={styles.eyebrow}>Approval confirmation</p><h2>Approve {selectedVoucherIds.length} selected {selectedVoucherIds.length === 1 ? 'voucher' : 'vouchers'}</h2><p>Your saved signature and approval date will be applied to each approved voucher.</p></div>
+                        <div className={styles.compactConfirmationTotal}><span>Total amount</span><strong>{formatCurrency(selectedTotal)}</strong></div>
+                    </header>
+                    <div className={styles.compactConfirmationProgress}><span data-complete={allSelectedVouchersReviewed}><i aria-hidden="true" />Open and mark every selected voucher as reviewed to continue</span><b>{reviewedSelectedCount} of {selectedVoucherIds.length}</b></div>
+                    <footer className={styles.compactConfirmationFooter}>
+                        <label className={styles.confirmationCheck}><input checked={hasConfirmed} disabled={!allSelectedVouchersReviewed} onChange={(event) => setHasConfirmed(event.target.checked)} type="checkbox" /><span>I confirm that I reviewed and approve the selected Payment Vouchers for Finance processing.</span></label>
+                        <button className={styles.approveButton} disabled={!activeSignature || !hasConfirmed || !allSelectedVouchersReviewed || isSubmitting} onClick={handleBulkApproval} type="button">{isSubmitting ? 'Approving…' : `Approve ${selectedVoucherIds.length} selected`}</button>
+                    </footer>
+                    <p className={styles.rejectionNotice}>Rejections must be completed individually because each Payment Voucher requires a rejection remark.</p>
                 </section>
             )}
 

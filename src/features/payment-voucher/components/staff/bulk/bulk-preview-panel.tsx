@@ -30,6 +30,8 @@ type BulkPreviewPanelProps = {
     selectedRows:
       BulkPaymentVoucherRow[],
   ) => void | Promise<void>;
+
+  progressLabel?: string;
 };
 
 function formatCurrency(
@@ -49,6 +51,7 @@ export function BulkPreviewPanel({
   source,
   onBack,
   onConfirm,
+  progressLabel,
 }: BulkPreviewPanelProps) {
   const [
     selectedRowIds,
@@ -556,7 +559,7 @@ export function BulkPreviewPanel({
           type="button"
         >
           {isSubmitting
-            ? 'Creating drafts…'
+            ? progressLabel ?? 'Creating drafts…'
             : `Create ${
                 selectedRows.length
               } ${

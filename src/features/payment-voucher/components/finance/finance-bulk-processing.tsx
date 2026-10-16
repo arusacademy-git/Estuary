@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { betaAccounts, type BetaAccount } from '@/lib/auth/beta-accounts';
+import { paymentVoucherReference } from '@/domain/payment-vouchers/payment-reference';
 import type { PaymentVoucherRecord } from '@/domain/payment-vouchers/types';
 import {
   savePaymentVoucherFinanceInformation,
@@ -18,6 +19,8 @@ type Props = {
   finance: BetaAccount;
   vouchers: PaymentVoucherRecord[];
 };
+
+type PaymentFilter = 'ALL' | 'TO_REVIEW' | 'MISSING_REFERENCE';
 
 function localIsoDate() {
   const now = new Date();
@@ -48,7 +51,10 @@ export function FinanceBulkProcessing({ finance, vouchers }: Props) {
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState(localIsoDate());
   const [remarks, setRemarks] = useState('');
-  const [references, setReferences] = useState<Record<string, string>>({});
+  const [references] = useState<Record<string, string>>(() => Object.fromEntries(
+    vouchers.map((voucher) => [voucher.id, paymentVoucherReference(voucher)]),
+  ));
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -64,6 +70,11 @@ export function FinanceBulkProcessing({ finance, vouchers }: Props) {
   const allSelected = pending.length > 0 && selectedIds.length === pending.length;
   const allReviewed = selectedIds.length > 0 && selectedIds.every((id) => reviewedIds.includes(id));
   const allReferencesEntered = selectedIds.every((id) => references[id]?.trim());
+  const reviewedCount = selectedIds.filter((id) => reviewedIds.includes(id)).length;
+  const referenceCount = selectedIds.filter((id) => references[id]?.trim()).length;
+  const paymentRows = selected.filter((voucher) => paymentFilter === 'ALL'
+    || (paymentFilter === 'TO_REVIEW' && !reviewedIds.includes(voucher.id))
+    || (paymentFilter === 'MISSING_REFERENCE' && !references[voucher.id]?.trim()));
 
   function resetConfirmation() {
     setConfirmed(false);
@@ -129,7 +140,7 @@ export function FinanceBulkProcessing({ finance, vouchers }: Props) {
         <div>
           <p className={styles.eyebrow}>Finance workspace</p>
           <h1>Bulk Payment Voucher processing</h1>
-          <p>Review Director-approved vouchers, record the payment date and unique bank reference for each selected voucher, then begin Finance processing together.</p>
+          <p>Review Director-approved vouchers, confirm the payment date and process each voucher using its PV number as the payment reference.</p>
         </div>
         <Link className={styles.backButton} href="/beta/finance">Back to Finance</Link>
       </header>
@@ -183,26 +194,19 @@ export function FinanceBulkProcessing({ finance, vouchers }: Props) {
         <section className={`${styles.confirmationPanel} ${styles.financeConfirmationPanel}`}>
           <div className={styles.financeConfirmationHeader}><div><p className={styles.eyebrow}>Finance information</p><h2>Process {selectedIds.length} selected {selectedIds.length === 1 ? 'voucher' : 'vouchers'}</h2></div><div className={styles.batchTotal}><span>Total amount</span><strong>{formatCurrency(selectedTotal)}</strong></div></div>
           <div className={styles.financeSection}>
-            <div className={styles.sectionHeading}><h3>Shared details</h3><p>Applied to every selected voucher.</p></div>
+            <div className={styles.sectionHeading}><h3>Shared details</h3><p>Applied to every selected voucher</p></div>
             <div className={styles.financeFields}>
-              <label>Payment date *<input type="date" value={paymentDate} onChange={(event) => { setPaymentDate(event.target.value); resetConfirmation(); }} /></label>
-              <label>Finance remarks <span className={styles.optionalText}>(optional)</span><textarea value={remarks} placeholder="Note applied to every selected voucher" onChange={(event) => setRemarks(event.target.value)} /></label>
+              <label><span>Payment date <b>*</b></span><input type="date" value={paymentDate} onChange={(event) => { setPaymentDate(event.target.value); resetConfirmation(); }} /></label>
+              <label><span>Finance remarks <small className={styles.optionalText}>(optional)</small></span><textarea value={remarks} placeholder="Note applied to every selected voucher" onChange={(event) => setRemarks(event.target.value)} /></label>
             </div>
           </div>
-          <div className={styles.financeSection}>
-            <div className={styles.sectionHeading}><h3>Payment reference per voucher</h3><p>Each voucher needs its own unique reference.</p></div>
-            <div className={styles.referenceList}>{selected.map((voucher) => <div className={styles.referenceRow} key={voucher.id}>
-              <div><strong className={styles.voucherNumber}>{voucher.voucherNumber}</strong><span>{voucher.recipientName}</span></div>
-              <strong>{formatCurrency(voucher.amount)}</strong>
-              <label><span className={styles.visuallyHidden}>Payment reference for {voucher.voucherNumber}</span><input value={references[voucher.id] ?? ''} placeholder="Payment reference" onChange={(event) => {
-                setReferences((current) => ({ ...current, [voucher.id]: event.target.value }));
-                resetConfirmation();
-              }} /></label>
-            </div>)}</div>
+          <div className={`${styles.financeSection} ${styles.voucherPaymentSection}`}>
+            <div className={styles.voucherPaymentHeading}><div className={styles.sectionHeading}><h3>Payment reference per voucher</h3><p>Automatically follows each PV number</p></div>{selected.length > 1 && <div className={styles.voucherPaymentFilters}><button data-active={paymentFilter === 'ALL'} onClick={() => setPaymentFilter('ALL')} type="button">All {selected.length}</button><button data-active={paymentFilter === 'TO_REVIEW'} onClick={() => setPaymentFilter('TO_REVIEW')} type="button">To review {selected.length - reviewedCount}</button><button data-active={paymentFilter === 'MISSING_REFERENCE'} onClick={() => setPaymentFilter('MISSING_REFERENCE')} type="button">Missing reference {selected.length - referenceCount}</button></div>}</div>
+            {selected.length > 1 && <div className={styles.voucherProgressGrid}><div><span>Reviewed <b>{reviewedCount} of {selected.length}</b></span><i><em style={{ width: `${reviewedCount / selected.length * 100}%` }} /></i></div><div><span>References added <b>{referenceCount} of {selected.length}</b></span><i><em style={{ width: `${referenceCount / selected.length * 100}%` }} /></i></div></div>}
+            <div className={styles.voucherReferenceTable}><div className={`${styles.voucherReferenceRow} ${styles.voucherReferenceHeader}`}><span>Voucher</span><span>Amount</span><span>Payment reference</span><span>Review</span></div><div className={styles.voucherReferenceBody}>{paymentRows.map((voucher) => { const reviewed = reviewedIds.includes(voucher.id); return <div className={styles.voucherReferenceRow} key={voucher.id}><div className={styles.voucherReferenceRecord}><strong>{voucher.voucherNumber}</strong><small>{voucher.recipientName} · {accountName(voucher.submitterId)}</small></div><strong className={styles.voucherReferenceAmount}>{formatCurrency(voucher.amount)}</strong><input aria-label={`Payment reference for ${voucher.voucherNumber}`} aria-readonly="true" readOnly value={references[voucher.id] ?? voucher.voucherNumber} /><button className={styles.voucherReviewStatus} data-reviewed={reviewed} onClick={() => setReviewId(voucher.id)} type="button">{reviewed ? 'Reviewed' : 'Not reviewed'}</button></div>; })}{paymentRows.length === 0 && <p className={styles.voucherNoRows}>No selected vouchers match this view.</p>}</div></div>
+            <p className={styles.voucherScrollHint}>Review every selected voucher before processing. Payment references are generated from the PV numbers.</p>
           </div>
-          <div className={styles.followUpNotice}><strong>Still completed per voucher afterwards</strong><ul><li>Payment proof upload</li><li>PDF generation and recipient signature</li><li>Final Finance verification</li></ul></div>
-          {!allReviewed && <p className={styles.notice}>Review every selected Payment Voucher before processing.</p>}
-          {!allReferencesEntered && <p className={styles.notice}>Enter a unique payment reference for every selected voucher.</p>}
+          <div className={styles.followUpNotice}><strong>After processing</strong><ol><li><b>1</b>Payment proof upload</li><li><b>2</b>PDF generation and recipient signature</li><li><b>3</b>Final Finance verification</li></ol></div>
           <div className={styles.financeConfirmationFooter}><label className={styles.confirmationCheck}><input type="checkbox" checked={confirmed} disabled={!allReviewed || !allReferencesEntered || !paymentDate} onChange={(event) => setConfirmed(event.target.checked)} />I confirm the selected vouchers and payment information are correct.</label>
           <button className={styles.primaryButton} type="button" disabled={!confirmed || !allReviewed || !allReferencesEntered || !paymentDate || submitting} onClick={submit}>{submitting ? 'Processing vouchers…' : `Process ${selectedIds.length} ${selectedIds.length === 1 ? 'voucher' : 'vouchers'}`}</button></div>
         </section>
