@@ -56,6 +56,7 @@ model User {
   audit_events              AuditEvent[]         @relation("AuditActor")
   uploaded_documents        Document[]           @relation("DocumentUploader")
   export_batches            ExportBatch[]        @relation("ExportRequester")
+  sql_entry_updates         SqlEntryTracking[]   @relation("SqlEntryUpdatedBy")
 
   @@map("users")
 }
@@ -393,6 +394,7 @@ model Submission {
   evidence          SubmissionEvidence[]
   approval_steps    ApprovalStep[]
   external_tokens   ExternalActionToken[]
+  sql_entry_tracking SqlEntryTracking?
 
   // Type-specific detail (at most one per payment type)
   pv_detail         PaymentVoucherDetail?
@@ -407,6 +409,33 @@ model Submission {
   @@index([organization_id, submitted_by_id])
   @@index([organization_id, submitted_at])
   @@map("submissions")
+}
+
+model SqlEntryTracking {
+  id             String         @id @default(cuid())
+  submission_id  String         @unique
+  status         SqlEntryStatus @default(PENDING_ENTRY)
+  sql_reference  String?        @db.VarChar(100)
+  recorded_at    DateTime?
+  notes          String?        @db.VarChar(500)
+  updated_by_id  String?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+
+  submission Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+  updated_by User?      @relation("SqlEntryUpdatedBy", fields: [updated_by_id], references: [id])
+
+  @@index([status])
+  @@index([recorded_at])
+  @@index([updated_by_id])
+  @@map("sql_entry_tracking")
+}
+
+enum SqlEntryStatus {
+  PENDING_ENTRY
+  RECORDED_IN_SQL_SYSTEM
+  NEEDS_CORRECTION
+  NOT_REQUIRED
 }
 
 enum PaymentType {
