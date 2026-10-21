@@ -2,7 +2,7 @@
 
 ## Current State
 - Project: Estuary
-- Summary: Transferred to OpenAI Codex during duplicate-path control-state repair; no Athanor files were changed.
+- Summary: SQL Account entry tracking is being added as a one-to-one submission record with explicit status, reference, audit updater, and migration coverage.
 - Current Holder: GitHub issue/branch owner (non-exclusive project model)
 - Actor Model: OpenAI Codex
 - Assigned Agent:
@@ -10,8 +10,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: feature/simplify-pv-lines
-- Last Updated: 2026-08-16T12:25:00+08:00
+- Current Branch: agent/add-sql-entry-tracking
+- Last Updated: 2026-10-21T11:24:00+08:00
 
 ## Handover Status
 - Session Status: ACTIVE
@@ -78,6 +78,7 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-10-21: Tracked by GitHub issue #61. Added the `SqlEntryStatus` enum, `SqlEntryTracking` model, Submission/User relations, and migration `20261020090000_add_sql_entry_tracking`. Prisma's generated diff matches the migration, and the full migration chain applies successfully to disposable PostgreSQL.
 - 2026-10-10: Added local-only Finance bulk processing for Invoice Payments, Travel Allowances, Claims, Cash Advances and Petty Cash. Each request type has a separate workspace and route, the action button sits below the Finance page description, Claims include a type filter, records require detail review, and processing runs in bounded groups of five. Cash Advances move to reconciliation after payment; Petty Cash requires payment proof before completion. No GitHub, database migration or deployment action was performed.
 - 2026-10-09: Restored the missing `exceljs` runtime dependency required by the payment-voucher Excel template generator on branch `agent/fix-missing-exceljs-dependency` under GitHub issue #40. The generator itself was preserved and no database or deployment changes were made.
 - 2026-08-16: Ported Afiq's Google Sheets Ringgit-to-Malay-words formula and helper vocabulary into the shared voucher calculation library. The composer now derives a read-only amount-in-words value from the grand total, while voucher issuing and PDF generation independently recalculate it so callers cannot persist or print a mismatched phrase.
@@ -107,6 +108,14 @@
 - 2026-07-06: Added `docs/ESTUARY_OVERVIEW.html` — self-contained project overview and development-history page for human readers
 
 ## Verification
+- 2026-10-21 SQL entry tracking schema:
+  - `prisma validate` -> pass
+  - Prisma schema diff -> exactly matches `20261020090000_add_sql_entry_tracking/migration.sql`
+  - full `prisma migrate deploy` chain against disposable PostgreSQL 18.4 -> pass
+  - Prisma Client generation -> pass
+  - ESLint -> pass
+  - TypeScript typecheck -> pass
+  - Vitest -> pass (`16 files`, `46 tests`)
 - 2026-10-10 Finance request bulk processing:
   - targeted ESLint for all added and updated Finance bulk files -> pass
   - `corepack pnpm lint` -> pass
