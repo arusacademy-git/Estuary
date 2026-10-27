@@ -2,7 +2,7 @@
 
 ## Current State
 - Project: Estuary
-- Summary: SQL Account entry tracking is being added as a one-to-one submission record with explicit status, reference, audit updater, and migration coverage.
+- Summary: Payment request draft storage has been added to the Prisma schema with organization/requester relations and a prepared migration; live deployment is pending merge.
 - Current Holder: GitHub issue/branch owner (non-exclusive project model)
 - Actor Model: OpenAI Codex
 - Assigned Agent:
@@ -10,8 +10,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/add-sql-entry-tracking
-- Last Updated: 2026-10-21T11:24:00+08:00
+- Current Branch: agent/add-payment-request-drafts
+- Last Updated: 2026-10-27
 
 ## Handover Status
 - Session Status: ACTIVE
@@ -78,6 +78,7 @@
 - `tests/e2e/payment-requests.spec.ts` - smoke for browse -> create -> detail on payment-request module routes (currently passing)
 
 ## Latest Session Changelog
+- 2026-10-27: GitHub issue #63. Added `PaymentRequestDraft` with organization/requester cascade relations, JSON snapshot, per-requester/per-type uniqueness, and update-time index. Created migration `20261027_payment_request_drafts`, including Prisma's shortened unique index name. Prisma schema validation, client generation, TypeScript checking, and the full migration chain on disposable PostgreSQL passed. No live database changes were made.
 - 2026-10-21: Tracked by GitHub issue #61. Added the `SqlEntryStatus` enum, `SqlEntryTracking` model, Submission/User relations, and migration `20261020090000_add_sql_entry_tracking`. Prisma's generated diff matches the migration, and the full migration chain applies successfully to disposable PostgreSQL.
 - 2026-10-10: Added local-only Finance bulk processing for Invoice Payments, Travel Allowances, Claims, Cash Advances and Petty Cash. Each request type has a separate workspace and route, the action button sits below the Finance page description, Claims include a type filter, records require detail review, and processing runs in bounded groups of five. Cash Advances move to reconciliation after payment; Petty Cash requires payment proof before completion. No GitHub, database migration or deployment action was performed.
 - 2026-10-09: Restored the missing `exceljs` runtime dependency required by the payment-voucher Excel template generator on branch `agent/fix-missing-exceljs-dependency` under GitHub issue #40. The generator itself was preserved and no database or deployment changes were made.

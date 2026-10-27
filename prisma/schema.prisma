@@ -35,6 +35,7 @@ model Organization {
   system_events      SystemEvent[]
   job_queue          JobQueue[]
   export_batches     ExportBatch[]
+  payment_request_drafts PaymentRequestDraft[]
 
   @@map("organizations")
 }
@@ -57,8 +58,26 @@ model User {
   uploaded_documents        Document[]           @relation("DocumentUploader")
   export_batches            ExportBatch[]        @relation("ExportRequester")
   sql_entry_updates         SqlEntryTracking[]   @relation("SqlEntryUpdatedBy")
+  payment_request_drafts    PaymentRequestDraft[] @relation("DraftRequester")
 
   @@map("users")
+}
+
+model PaymentRequestDraft {
+  id              String   @id @default(cuid())
+  organization_id String
+  requester_id    String
+  payment_type    String
+  snapshot_json   Json
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  requester    User         @relation("DraftRequester", fields: [requester_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, requester_id, payment_type])
+  @@index([requester_id, updated_at])
+  @@map("payment_request_drafts")
 }
 
 model UserOrgMembership {
