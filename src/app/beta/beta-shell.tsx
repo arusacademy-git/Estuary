@@ -25,6 +25,24 @@ import styles from './beta.module.css';
 
 const BETA_SESSION_EVENT = 'estuary-beta-session-change';
 
+type PaymentContext = {
+  type: 'payment-voucher' | 'invoice' | 'travel' | 'cash-advance' | 'petty-cash' | 'claim';
+};
+
+function paymentContext(pathname: string): PaymentContext | null {
+  const detailRoute = pathname.includes('/payment-records/')
+    || pathname.includes('/payment-requests/')
+    || /^\/beta\/payment-vouchers\/[^/]+/.test(pathname);
+  if (!detailRoute || pathname.endsWith('/new') || pathname.endsWith('/bulk')) return null;
+  if (pathname.includes('/petty-cash/')) return { type: 'petty-cash' };
+  if (pathname.includes('/cash-advance/')) return { type: 'cash-advance' };
+  if (pathname.includes('/invoice-payment')) return { type: 'invoice' };
+  if (pathname.includes('/travel-allowance')) return { type: 'travel' };
+  if (pathname.includes('/claims/')) return { type: 'claim' };
+  if (pathname.includes('/payment-vouchers/')) return { type: 'payment-voucher' };
+  return null;
+}
+
 function subscribeToBetaSession(onStoreChange: () => void) {
   function handleStorage(event: StorageEvent) {
     if (event.key === BETA_SESSION_KEY) onStoreChange();
@@ -66,6 +84,7 @@ export default function BetaShell({
   const account: BetaAccount | null =
     betaAccounts.find((candidate) => candidate.id === accountId) ?? null;
   const isSessionHydrated = accountId !== undefined;
+  const currentPaymentContext = paymentContext(pathname);
 
   useEffect(() => {
     if (isSessionHydrated && !isPublicPage && !account) {
@@ -98,7 +117,7 @@ export default function BetaShell({
     <div className={styles.shell}>
       <RoleSidebar account={account} />
 
-      <main className={styles.main}>
+      <main className={styles.main} data-payment-context={currentPaymentContext?.type}>
         <header className={styles.header}>
           <strong className={styles.headerBrand}>
             Estuary Beta
