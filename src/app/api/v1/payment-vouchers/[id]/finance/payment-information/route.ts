@@ -8,15 +8,12 @@ import { dataResponse } from '@/lib/api/response';
 export const dynamic = 'force-dynamic';
 
 type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 };
 
 const paymentInformationSchema = z.object({
   financeId: z.string().trim().min(1),
   paymentDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
-  paymentReference: z.string().trim().max(200).optional(),
   paymentRemarks: z.string().trim().max(2000).optional(),
   paymentProofFileName: z.string().trim().max(255).optional(),
 });
@@ -38,11 +35,10 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const voucher =
-      await savePaymentVoucherFinanceInformationInDatabase(
-        decodeURIComponent(id),
-        parsed.data,
-      );
+    const voucher = await savePaymentVoucherFinanceInformationInDatabase(
+      decodeURIComponent(id),
+      parsed.data,
+    );
 
     return dataResponse(voucher);
   } catch (error) {
@@ -61,7 +57,7 @@ export async function POST(request: Request, context: RouteContext) {
       : message.includes('not an active Finance')
         ? 403
         : message.includes('valid payment date') ||
-            message.includes('reference is required')
+            message.includes('Voucher number is required')
           ? 400
           : 409;
 
