@@ -5,11 +5,32 @@ import type {
   CreateCashAdvanceInput,
 } from '@/domain/payment-requests/cash-advance/types';
 
-type Envelope<T> = { data?: T; message?: string };
+type Envelope<T> = {
+  data?: T;
+  message?: string;
+  details?: {
+    fieldErrors?: Record<string, string[]>;
+    formErrors?: string[];
+  };
+};
 
 async function read<T>(response: Response) {
   const body = (await response.json().catch(() => null)) as Envelope<T> | null;
-  if (!response.ok) throw new Error(body?.message ?? `Cash Advance request failed (${response.status}).`);
+  if (!response.ok) {
+    const fieldMessages = Object.entries(body?.details?.fieldErrors ?? {})
+      .flatMap(([field, messages]) =>
+        messages.filter(Boolean).map((message) => `${field}: ${message}`),
+      );
+    const messages = [
+      ...(body?.details?.formErrors ?? []),
+      ...fieldMessages,
+    ];
+    throw new Error(
+      messages.length
+        ? messages.join(' ')
+        : body?.message ?? `Cash Advance request failed (${response.status}).`,
+    );
+  }
   if (!body || body.data === undefined) throw new Error('The Cash Advance API returned no data.');
   return body.data;
 }
