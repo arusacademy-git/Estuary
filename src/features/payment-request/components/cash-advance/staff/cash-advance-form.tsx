@@ -307,8 +307,9 @@ export function CashAdvanceForm({
       requestDate,
       requesterId: account.id,
       requesterName: account.name,
-      requesterPosition: account.position,
-      requesterDepartment: account.department,
+      requesterPosition: account.position?.trim() || account.role,
+      requesterDepartment:
+        account.department?.trim() || account.position?.trim() || account.role,
       requesterRole: account.role,
       requesterContact: contact.trim(),
       accountHolderName: accountHolderName.trim(),
