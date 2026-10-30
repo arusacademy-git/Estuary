@@ -7,7 +7,6 @@ import {
 } from 'react';
 
 import Link from 'next/link';
-import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 
 import {
   useRouter,
@@ -57,6 +56,7 @@ const visibleStatuses = new Set([
 ]);
 
 type ManagerViewMode = 'grid' | 'list';
+type ManagerSort = 'UPDATED_DESC' | 'UPDATED_ASC' | 'AMOUNT_DESC' | 'AMOUNT_ASC';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-MY', {
@@ -74,6 +74,9 @@ export default function ProjectManagerPaymentVouchersPage() {
 
   const [search, setSearch] =
     useState('');
+  const [month, setMonth] = useState('');
+  const [specificDate, setSpecificDate] = useState('');
+  const [sort, setSort] = useState<ManagerSort>('UPDATED_DESC');
 
   const [viewMode, setViewMode] =
     useState<ManagerViewMode>('list');
@@ -107,7 +110,7 @@ export default function ProjectManagerPaymentVouchersPage() {
       .filter(
         (voucher) =>
           voucher.projectManagerId ===
-            account.id &&
+          account.id &&
           visibleStatuses.has(
             voucher.status,
           ),
@@ -148,11 +151,11 @@ export default function ProjectManagerPaymentVouchersPage() {
     const normalizedSearch =
       search.trim().toLowerCase();
 
-    return assignedRecords.filter(
+    const matching = assignedRecords.filter(
       (voucher) => {
         if (
           viewFilter ===
-            'REQUIRES_PREVIEW' &&
+          'REQUIRES_PREVIEW' &&
           voucher.projectManagerViewedAt
         ) {
           return false;
@@ -165,9 +168,10 @@ export default function ProjectManagerPaymentVouchersPage() {
           return false;
         }
 
-        if (!normalizedSearch) {
-          return true;
-        }
+        const recordDate = voucher.updatedAt.slice(0, 10);
+        if (month && !recordDate.startsWith(month)) return false;
+        if (specificDate && recordDate !== specificDate) return false;
+        if (!normalizedSearch) return true;
 
         const searchableValues = [
           voucher.voucherNumber,
@@ -186,9 +190,18 @@ export default function ProjectManagerPaymentVouchersPage() {
         );
       },
     );
+    return [...matching].sort((first, second) => {
+      if (sort === 'AMOUNT_DESC') return second.amount - first.amount;
+      if (sort === 'AMOUNT_ASC') return first.amount - second.amount;
+      const difference = new Date(first.updatedAt).getTime() - new Date(second.updatedAt).getTime();
+      return sort === 'UPDATED_ASC' ? difference : -difference;
+    });
   }, [
     assignedRecords,
+    month,
     search,
+    sort,
+    specificDate,
     viewFilter,
   ]);
 
@@ -266,7 +279,7 @@ export default function ProjectManagerPaymentVouchersPage() {
       <header className={styles.pageHeader}>
         <div>
           <p className={styles.eyebrow}>
-             Manager workspace
+            Manager workspace
           </p>
 
           <h1>Payment Voucher previews</h1>
@@ -334,34 +347,31 @@ export default function ProjectManagerPaymentVouchersPage() {
         </article>
       </section>
 
-      <section className={styles.queuePanel}>
+      <section className={styles.filterCard}>
         <div className={styles.queueHeader}>
           <div>
             <h2>
-              Assigned Payment Vouchers
+              Find a Payment Voucher
             </h2>
 
             <p>
-              Open a voucher to check its full
-              payment information.
+              Search, filter and sort your assigned previews.
             </p>
           </div>
-
-          <label className={styles.searchField}>
-            <span>Search</span>
-
-            <input
-              onChange={(event) =>
-                setSearch(
-                  event.target.value,
-                )
-              }
-              placeholder="PV number or recipient"
-              type="search"
-              value={search}
-            />
-          </label>
+          <button className={styles.clearFiltersButton} onClick={() => { setSearch(''); setViewFilter('ALL'); setMonth(''); setSpecificDate(''); setSort('UPDATED_DESC'); }} type="button">Clear filters</button>
         </div>
+
+        <div className={styles.filterFields}>
+          <label><span>Search</span><input onChange={(event) => setSearch(event.target.value)} placeholder="PV number, recipient or purpose" type="search" value={search} /></label>
+          <label><span>Status</span><select onChange={(event) => setViewFilter(event.target.value as 'REQUIRES_PREVIEW' | 'VIEWED' | 'ALL')} value={viewFilter}><option value="ALL">All statuses</option><option value="REQUIRES_PREVIEW">Requires preview</option><option value="VIEWED">Already viewed</option></select></label>
+          <label><span>Month</span><input onChange={(event) => { setMonth(event.target.value); if (specificDate && !specificDate.startsWith(event.target.value)) setSpecificDate(''); }} type="month" value={month} /></label>
+          <label><span>Exact date</span><input max={month ? `${month}-31` : undefined} min={month ? `${month}-01` : undefined} onChange={(event) => setSpecificDate(event.target.value)} type="date" value={specificDate} /></label>
+          <label><span>Sort by</span><select onChange={(event) => setSort(event.target.value as ManagerSort)} value={sort}><option value="UPDATED_DESC">Newest updated</option><option value="UPDATED_ASC">Oldest waiting</option><option value="AMOUNT_DESC">Highest amount</option><option value="AMOUNT_ASC">Lowest amount</option></select></label>
+        </div>
+      </section>
+
+      <section className={styles.queuePanel}>
+        <div className={styles.resultsHeading}><h2>Assigned Payment Vouchers</h2><p>Open a voucher to check its full payment information.</p></div>
 
         <div
           className={styles.filterTabs}
@@ -427,7 +437,33 @@ export default function ProjectManagerPaymentVouchersPage() {
               : 'Payment Vouchers'}
           </div>
 
-          <PaymentViewToggle label="Choose Manager queue view" onChange={setViewMode} value={viewMode} />
+          <div
+            aria-label="Choose Manager queue view"
+            className={styles.viewToggle}
+            role="group"
+          >
+            <span>View</span>
+
+            <button
+              aria-pressed={viewMode === 'grid'}
+              data-active={viewMode === 'grid'}
+              onClick={() => setViewMode('grid')}
+              type="button"
+            >
+              <span aria-hidden="true">▦</span>
+              Grid
+            </button>
+
+            <button
+              aria-pressed={viewMode === 'list'}
+              data-active={viewMode === 'list'}
+              onClick={() => setViewMode('list')}
+              type="button"
+            >
+              <span aria-hidden="true">☷</span>
+              List
+            </button>
+          </div>
         </div>
 
         {filteredRecords.length === 0 ? (
