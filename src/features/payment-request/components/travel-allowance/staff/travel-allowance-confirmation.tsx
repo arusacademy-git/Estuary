@@ -63,7 +63,7 @@ export function TravelAllowanceConfirmation({ request, onCreateAnother }: Props)
                             <small>REF ID</small><strong>{request.requestNumber}</strong>
                             <button aria-label="Copy request reference" type="button" onClick={copyReference}>{copied ? 'Copied' : 'Copy'}</button>
                         </span>
-                        <span className={styles.statusBadge}><i />{isManagerRequest ? 'Pending Director Approval' : 'Pending Manager Review'}</span>
+                        <span className={styles.statusBadge}><i />{isManagerRequest ? 'Pending Director Approval' : 'Pending Manager Approval'}</span>
                     </div>
                     <p>
                         {isManagerRequest
@@ -84,12 +84,13 @@ export function TravelAllowanceConfirmation({ request, onCreateAnother }: Props)
 
                 <section className={styles.workflowSection}>
                     <h2>Workflow progress</h2>
-                    <ol className={styles.workflow} data-count={isManagerRequest ? '4' : '5'}>
+                    <ol className={styles.workflow} data-count={isManagerRequest ? '5' : '6'}>
                         <Step state="complete" number="✓" title={isManagerRequest ? 'Manager Request Submitted' : 'Request Submitted'} copy={request.requesterName} />
                         {!isManagerRequest && <Step state="active" number="2" title="Manager Review" copy={`Assigned to ${manager?.name ?? 'Manager'}`} />}
                         <Step state={isManagerRequest ? 'active' : 'pending'} number={isManagerRequest ? '2' : '3'} title="Director Review" copy={isManagerRequest ? `Assigned to ${director?.name ?? 'Director'}` : 'Awaiting Manager review'} />
                         <Step number={isManagerRequest ? '3' : '4'} title="Finance Verification" copy="Awaiting Director approval" />
-                        <Step number={isManagerRequest ? '4' : '5'} title="Completed" copy="Awaiting Finance payment" />
+                        <Step number={isManagerRequest ? '4' : '5'} title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
+                        <Step number={isManagerRequest ? '5' : '6'} title="Completed" copy="Closes after transaction proof is uploaded" />
                     </ol>
                 </section>
 

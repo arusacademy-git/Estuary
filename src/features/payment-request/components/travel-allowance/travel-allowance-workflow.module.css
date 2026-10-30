@@ -23,14 +23,14 @@
     color: #486889;
     font-size: 11px;
     font-weight: 800;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
 .pageHeader h1 {
     margin: 0;
     font-size: 34px;
-    letter-spacing: -.035em;
+    letter-spacing: -0.035em;
 }
 
 .pageHeader>div>span {
@@ -55,6 +55,43 @@
 
 .pageHeader aside strong {
     margin: 6px 0 3px;
+}
+
+.bulkActionButton,
+.bulkPreviewButton {
+    display: inline-flex;
+    width: max-content;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 16px;
+    padding: 9px 16px;
+    border: 1px solid #173a64;
+    border-radius: 9px;
+    color: #fff;
+    background: #173a64;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.2;
+    text-decoration: none;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        transform 160ms ease;
+}
+
+.bulkActionButton:hover,
+.bulkPreviewButton:hover {
+    border-color: #24568f;
+    background: #24568f;
+    transform: translateY(-1px);
+}
+
+.bulkActionButton:focus-visible,
+.bulkPreviewButton:focus-visible {
+    outline: 3px solid rgb(37 99 235 / 18%);
+    outline-offset: 2px;
 }
 
 .summaryGrid {
@@ -158,25 +195,20 @@
     padding: 0 28px 16px;
 }
 
-.toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 0 28px 16px;
-    border-bottom: 1px solid #e2e8f0;
+.queueHeader {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
-.toolbar .tabs {
-    min-width: 0;
-    padding: 0;
-}
-
-.viewToggle {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 5px;
+.tabs {
+    margin: 0 20px 18px;
+    padding-top: 4px;
+    border: 1px solid #dbe3ee;
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
+    background: #f8fafc;
 }
 
 .tabs button {
@@ -191,29 +223,10 @@
     cursor: pointer;
 }
 
-.viewToggle button {
-    min-height: 36px;
-    padding: 7px 11px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    color: #536b8c;
-    background: transparent;
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.tabs button[data-active='true'] {
+.tabs button[data-active="true"] {
     color: #1458c4;
     border-color: #bdd4fb;
     background: #eff5ff;
-}
-
-.viewToggle button[data-active='true'] {
-    border-color: #bdd4fb;
-    color: #1458c4;
-    background: #eff5ff;
-    font-weight: 750;
 }
 
 .tabs button span {
@@ -248,7 +261,7 @@
     color: #526987;
     background: #f7f9fc;
     font-size: 10px;
-    letter-spacing: .06em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
@@ -285,114 +298,19 @@
     white-space: nowrap;
 }
 
-.status[data-status='PENDING_FINANCE_VERIFICATION'] {
+.status[data-status="PENDING_FINANCE_VERIFICATION"] {
     color: #1d4ed8;
     background: #e7efff;
 }
 
-.status[data-status='RETURNED_TO_STAFF'] {
+.status[data-status="RETURNED_TO_STAFF"] {
     color: #b42318;
     background: #feeceb;
 }
 
-.status[data-status='COMPLETED'] {
+.status[data-status="COMPLETED"] {
     color: #087a50;
     background: #dff8ec;
-}
-
-.cardGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    padding: 22px 28px 28px;
-}
-
-.requestCard {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    padding: 21px;
-    border: 1px solid #dbe3ee;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 4px 12px rgb(15 23 42 / 4%);
-}
-
-.cardTop {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.cardTop>span:first-child {
-    color: #2563eb;
-    font-size: 13px;
-    font-weight: 800;
-}
-
-.requestCard h2 {
-    margin: 15px 0 4px;
-    overflow-wrap: anywhere;
-    color: #102a4c;
-    font-size: 19px;
-}
-
-.requestCard>p {
-    margin: 0;
-    color: #64748b;
-}
-
-.requestCard dl {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 15px;
-    margin: 18px 0;
-    padding: 15px;
-    border-radius: 9px;
-    background: #f7f9fc;
-}
-
-.requestCard dt,
-.requestCard dd {
-    margin: 0;
-}
-
-.requestCard dt {
-    color: #71849c;
-    font-size: 11px;
-}
-
-.requestCard dd {
-    margin-top: 4px;
-    overflow-wrap: anywhere;
-    color: #172b4d;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.requestCard>a {
-    display: inline-flex;
-    min-height: 36px;
-    align-self: flex-end;
-    align-items: center;
-    justify-content: center;
-    margin-top: auto;
-    padding: 0 12px;
-    border: 1px solid #bfd0e5;
-    border-radius: 8px;
-    color: #1e3a5f;
-    background: #fff;
-    font-size: .78rem;
-    font-weight: 800;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.requestCard>a:hover {
-    border-color: #2563eb;
-    color: #2563eb;
-    background: #eff6ff;
 }
 
 .empty,
@@ -444,6 +362,7 @@
 
 .detailMain {
     overflow: hidden;
+    border-top: 4px solid #f59e0b;
 }
 
 .hero {
@@ -658,7 +577,7 @@
 
 .primary:disabled,
 .returnButton:disabled {
-    opacity: .55;
+    opacity: 0.55;
     cursor: not-allowed;
 }
 
@@ -701,7 +620,7 @@
     left: 10px;
     width: 2px;
     background: #dbe3ee;
-    content: '';
+    content: "";
 }
 
 .progress li i {
@@ -718,12 +637,12 @@
     font-style: normal;
 }
 
-.progress li[data-state='complete'] i {
+.progress li[data-state="complete"] i {
     color: #fff;
     background: #12b981;
 }
 
-.progress li[data-state='active'] i {
+.progress li[data-state="active"] i {
     color: #fff;
     background: #1d68d5;
 }
@@ -752,10 +671,6 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
     }
-
-    .cardGrid {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 760px) {
@@ -766,8 +681,7 @@
     .pageHeader,
     .queueHeader,
     .hero,
-    .queueControls,
-    .toolbar {
+    .queueControls {
         align-items: stretch;
         flex-direction: column;
     }
@@ -775,6 +689,11 @@
     .pageHeader aside,
     .queueHeader label {
         min-width: 0;
+    }
+
+    .bulkActionButton,
+    .bulkPreviewButton {
+        width: 100%;
     }
 
     .summaryGrid,
@@ -786,31 +705,8 @@
         display: flex;
     }
 
-    .tabs,
-    .toolbar .tabs {
+    .tabs {
         overflow-x: auto;
-    }
-
-    .toolbar {
-        padding-right: 16px;
-        padding-left: 16px;
-    }
-
-    .viewToggle {
-        justify-content: flex-end;
-    }
-
-    .cardGrid {
-        padding: 18px 16px 22px;
-    }
-
-    .cardTop {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .requestCard dl {
-        grid-template-columns: 1fr;
     }
 
     .taFormCard {
@@ -825,6 +721,85 @@
     .taFormActions a {
         flex: 1 1 180px;
     }
+}
+
+.financePaymentConfirmation {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start;
+    gap: 9px;
+    margin: 2px 0 4px;
+    color: #304866;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.financePaymentConfirmation span {
+    flex: 1 1 auto;
+    white-space: nowrap;
+}
+
+.uploadProofBox {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 12px;
+    align-items: center;
+    padding: 15px;
+    border: 1px dashed #bfd2e8;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.uploadProofBox label {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    border: 1px solid #bfd2e8;
+    border-radius: 9px;
+    color: #12365f;
+    background: #fff;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.uploadProofBox>span {
+    overflow: hidden;
+    color: #334155;
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.uploadProofBox input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.uploadProofBox small {
+    grid-column: 1 / -1;
+    color: #7890ad;
+    font-size: 0.7rem;
+}
+
+.actionCard .financePaymentConfirmation input[type="checkbox"] {
+    flex: 0 0 16px;
+    box-sizing: border-box;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    min-height: 16px;
+    margin: 1px 0 0;
+    padding: 0;
+    border-radius: 3px;
+    accent-color: #173f70;
 }
 
 /* Payment Voucher-aligned approval queue table */
@@ -852,7 +827,7 @@
     padding: 16px 12px;
     border-bottom: 1px solid #e2e8f0;
     color: #334155;
-    font-size: .82rem;
+    font-size: 0.82rem;
     text-align: left;
     vertical-align: middle;
     overflow-wrap: anywhere;
@@ -861,9 +836,9 @@
 .queuePanel .tableWrapper th {
     color: #64748b;
     background: #f8fafc;
-    font-size: .7rem;
+    font-size: 0.7rem;
     font-weight: 800;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     white-space: nowrap;
 }
@@ -920,7 +895,7 @@
     border-radius: 8px;
     color: #1e3a5f;
     background: #fff;
-    font-size: .78rem;
+    font-size: 0.78rem;
     font-weight: 800;
     text-decoration: none;
     white-space: nowrap;
@@ -940,7 +915,7 @@
     width: max-content;
     max-width: none;
     justify-content: center;
-    font-size: .72rem;
+    font-size: 0.72rem;
     white-space: nowrap;
 }
 
@@ -951,7 +926,7 @@
     flex: 0 0 7px;
     border-radius: 50%;
     background: currentColor;
-    content: '';
+    content: "";
 }
 
 @media (max-width: 760px) {
@@ -960,41 +935,3 @@
         margin-left: 16px;
     }
 }
-.bulkActionButton {
-  display: flex;
-  width: fit-content;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  margin-top: 18px;
-  border-radius: 9px;
-  background: #1e4775;
-  color: #fff;
-  padding: 0 18px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background-color 160ms ease, transform 160ms ease;
-}
-
-.bulkActionButton:hover {
-  background: #163a63;
-  transform: translateY(-1px);
-}
-.bulkPreviewButton {
-  display: flex;
-  width: max-content;
-  max-width: 100%;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  margin-top: 18px;
-  border-radius: 9px;
-  background: #1e4775;
-  color: #fff;
-  padding: 0 18px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background-color 160ms ease, transform 160ms ease;
-}
-
-.bulkPreviewButton:hover { background: #163a63; transform: translateY(-1px); }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import type { TravelAllowanceRecord } from '@/domain/payment-requests/travel-allowance/types';
+import { standardPaymentStatusLabel } from '@/domain/payment-requests/standard-payment-status';
 
 import styles from './travel-allowance-workflow.module.css';
 
@@ -14,14 +15,6 @@ function money(value: number) {
   return new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(value);
 }
 
-function statusLabel(status: TravelAllowanceRecord['status']) {
-  if (status === 'PENDING_MANAGER_REVIEW') return 'Pending Manager Review';
-  if (status === 'PENDING_DIRECTOR_APPROVAL') return 'Pending Director Approval';
-  if (status === 'PENDING_FINANCE_VERIFICATION') return 'Pending Finance Verification';
-  if (status === 'RETURNED_TO_STAFF') return 'Returned for Correction';
-  return 'Completed';
-}
-
 export function TravelAllowanceQueueCard({ actionLabel, href, record }: TravelAllowanceQueueCardProps) {
   const employees = [...new Set(record.lines.map((line) => line.employeeName))].filter(Boolean);
   const projects = [...new Set(record.lines.map((line) => line.projectName))].filter(Boolean);
@@ -32,7 +25,7 @@ export function TravelAllowanceQueueCard({ actionLabel, href, record }: TravelAl
     <article className={styles.requestCard}>
       <div className={styles.cardTop}>
         <span>{record.requestNumber}</span>
-        <span className={styles.status} data-status={record.status}>{statusLabel(record.status)}</span>
+        <span className={styles.status} data-status={record.status}>{standardPaymentStatusLabel(record.status)}</span>
       </div>
       <h2>{employees.join(', ') || record.requesterName}</h2>
       <p>{record.lines.length} travel {record.lines.length === 1 ? 'entry' : 'entries'}</p>

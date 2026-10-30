@@ -8,6 +8,7 @@ import type {
     InvoicePaymentRequestRecord,
     PaymentRequestDocument,
 } from '@/domain/payment-requests/invoice-payment/types';
+import { standardPaymentStatusLabel } from '@/domain/payment-requests/standard-payment-status';
 import {
     getBetaAccount,
     readBetaSession,
@@ -108,15 +109,7 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
                             <div className={styles.detailEyebrow}>
                                 <span>Manager review</span>
                                 <span className={styles.detailStatusBadge} data-status={record.status}>
-                                    {record.status === 'PENDING_MANAGER_REVIEW'
-                                        ? 'Pending Manager Review'
-                                        : record.status === 'PENDING_DIRECTOR_REVIEW'
-                                            ? 'Pending Director Review'
-                                            : record.status === 'PENDING_FINANCE_REVIEW'
-                                                ? 'Pending Finance Verification'
-                                                : record.status === 'COMPLETED'
-                                                    ? 'Completed'
-                                                    : 'Returned to Staff'}
+                                    {standardPaymentStatusLabel(record.status)}
                                 </span>
                             </div>
                             <h1>{record.requestNumber}</h1>
@@ -144,14 +137,14 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
                         </dl>
                     </DetailSection>
                     <DetailSection title="Supporting Documents">
-                        <div className={styles.documents}>{record.supportingDocuments.length ? record.supportingDocuments.map((document) => <div key={document.id}><span aria-hidden="true" className={styles.documentIcon}>▧</span><div><strong>{document.fileName}</strong><span>{(document.size / 1024).toFixed(0)} KB</span></div><button type="button" onClick={() => downloadDocument(document)}>Download</button></div>) : <p>No optional supporting documents were attached.</p>}</div>
+                        <div className={styles.documents}>{record.supportingDocuments.map((document) => <div key={document.id}><span aria-hidden="true" className={styles.documentIcon}>▧</span><div><strong>{document.fileName}</strong><span>{(document.size / 1024).toFixed(0)} KB</span></div><button type="button" onClick={() => downloadDocument(document)}>Download</button></div>)}</div>
                     </DetailSection>
                 </div>
 
                 <div className={styles.rightRail}>
                     <aside className={styles.actionPanel}>
                         <p>Manager action</p><h2>{canAct ? 'Review and forward' : 'Review recorded'}</h2>
-                        {canAct ? <><span>Confirm the information is complete, or return it to Staff with correction notes. No signature is required.</span><button className={styles.primaryAction} disabled={isSaving} type="button" onClick={forwardToDirector}>Review and forward to Director <b aria-hidden="true">→</b></button><div className={styles.actionDivider}><span>or return with notes</span></div><label><span>Reason for returning</span><textarea rows={4} placeholder="Explain what Staff needs to correct" value={returnRemarks} onChange={(event) => setReturnRemarks(event.target.value)} /></label><button className={styles.returnAction} disabled={isSaving || !returnRemarks.trim()} type="button" onClick={returnToStaff}>Return to Staff</button></> : <><span>This request is now: <strong>{record.status.replaceAll('_', ' ')}</strong>.</span>{record.managerReviewedAt && <small>Reviewed {date(record.managerReviewedAt)}</small>}{record.managerReturnRemarks && <div className={styles.returnedReason}><strong>Return reason</strong><p>{record.managerReturnRemarks}</p></div>}</>}
+                        {canAct ? <><span>Confirm the information is complete, or return it to Staff with correction notes. No signature is required.</span><button className={styles.primaryAction} disabled={isSaving} type="button" onClick={forwardToDirector}>Review and forward to Director <b aria-hidden="true">→</b></button><div className={styles.actionDivider}><span>or return with notes</span></div><label><span>Reason for returning</span><textarea rows={4} placeholder="Explain what Staff needs to correct" value={returnRemarks} onChange={(event) => setReturnRemarks(event.target.value)} /></label><button className={styles.returnAction} disabled={isSaving || !returnRemarks.trim()} type="button" onClick={returnToStaff}>Return to Staff</button></> : <><span>This request is now: <strong>{standardPaymentStatusLabel(record.status)}</strong>.</span>{record.managerReviewedAt && <small>Reviewed {date(record.managerReviewedAt)}</small>}{record.managerReturnRemarks && <div className={styles.returnedReason}><strong>Reason of rejection</strong><p>{record.managerReturnRemarks}</p></div>}</>}
                     </aside>
                     <WorkflowProgress record={record} directorName={directorName} />
                 </div>

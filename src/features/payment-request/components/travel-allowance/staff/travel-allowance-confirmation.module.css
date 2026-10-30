@@ -38,7 +38,7 @@
   justify-items: center;
   padding: 34px 28px 30px;
   text-align: center;
-  background: white;
+  background: #fff;
 }
 
 .successIcon {
@@ -139,6 +139,7 @@
 .workflowSection {
   padding: 28px 38px;
   border-top: 1px solid #edf1f5;
+  background: #fff;
 }
 
 .summarySection h2,
@@ -194,7 +195,7 @@
 
 .workflow {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -285,7 +286,7 @@
   gap: 16px;
   padding: 20px 38px;
   border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: #fff;
 }
 
 .actions>div {
@@ -421,12 +422,12 @@
   }
 }
 
-.workflow[data-count='4'] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.workflow[data-count='5'] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 @media (max-width: 800px) {
-  .workflow[data-count='4'] {
+  .workflow[data-count='5'] {
     grid-template-columns: 1fr;
   }
 }

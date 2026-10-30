@@ -1,5 +1,5 @@
 import type { CashAdvanceRequestLine } from '@/domain/payment-requests/cash-advance/types';
-import { PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
+import { useAdminAccountingOptions } from '@/features/administration/admin-settings';
 import { PaymentAmountInput } from '@/shared/payment-amount-input';
 import styles from '../cash-advance.module.css';
 
@@ -18,6 +18,7 @@ export function CashAdvanceRequestLines({
   onChange: (id: string, patch: Partial<CashAdvanceRequestLine>) => void;
   onRemove: (id: string) => void;
 }) {
+  const accountingOptions = useAdminAccountingOptions();
   return (
     <section className={styles.receiptSection}>
       <div className={styles.sectionHeading}>
@@ -33,8 +34,8 @@ export function CashAdvanceRequestLines({
               <td>
                 <select aria-label={`Expense ${index + 1} account`} required value={line.accountType ?? ''} onChange={(event) => onChange(line.id, { accountType: event.target.value })}>
                   <option value="">Choose account</option>
-                  {line.accountType && !PAYMENT_VOUCHER_ACCOUNT_OPTIONS.some((option) => option.value === line.accountType) && <option value={line.accountType}>{line.accountType} (saved value)</option>}
-                  {PAYMENT_VOUCHER_ACCOUNT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {line.accountType && !accountingOptions.some((option) => option.value === line.accountType) && <option value={line.accountType}>{line.accountType} (saved value)</option>}
+                  {accountingOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </td>
               <td><input aria-label={`Expense ${index + 1} description`} placeholder="e.g. Workshop materials" value={line.description} onChange={(event) => onChange(line.id, { description: event.target.value })} /></td>

@@ -68,7 +68,8 @@ export function PaymentVoucherReview({
       (total, line) => total + line.quantity * line.unitAmount,
       0,
     );
-    return { subtotal, grandTotal: subtotal };
+    const tax = voucher.lines.reduce((total, line) => total + line.taxAmount, 0);
+    return { subtotal, tax, grandTotal: subtotal + tax };
   }, [voucher.lines]);
 
   const amountInWords = useMemo(
@@ -106,13 +107,7 @@ export function PaymentVoucherReview({
         </header>
 
         <div className={styles.cardBody}>
-          {isAmendment && (
-            <div className={styles.amendmentNote}>
-              <strong>Amendment review</strong>
-              <span>The existing PV number will remain unchanged after resubmission.</span>
-            </div>
-          )}
-
+          <div className={styles.reviewMain}>
           <section className={styles.informationSection}>
             <h2>General Information</h2>
             <dl className={styles.informationGrid}>
@@ -157,16 +152,17 @@ export function PaymentVoucherReview({
             <div className={styles.breakdownTable} role="table">
               <div className={styles.breakdownHeader} role="row">
                 <span>Account</span><span>Description</span><span>Quantity</span>
-                <span>Unit price</span><span>Total</span>
+                <span>Unit price</span><span>Tax</span><span>Total</span>
               </div>
               <div className={styles.breakdownBody}>
                 {voucher.lines.map((line, index) => {
-                  const lineTotal = line.quantity * line.unitAmount;
+                  const lineTotal = line.quantity * line.unitAmount + line.taxAmount;
                   const cells = [
                     ['Account', line.accountCode],
                     ['Description', line.description],
                     ['Quantity', String(line.quantity)],
                     ['Unit price', formatMoney(line.unitAmount)],
+                    ['Tax', formatMoney(line.taxAmount)],
                     ['Total', formatMoney(lineTotal)],
                   ];
                   return (
@@ -174,7 +170,7 @@ export function PaymentVoucherReview({
                       {cells.map(([label, cellValue]) => (
                         <div key={label} role="cell">
                           <span>{label}</span>
-                          <strong className={label === 'Account' || label === 'Unit price' || label === 'Total' ? styles.monospace : undefined}>{cellValue}</strong>
+                          <strong className={label === 'Account' || label === 'Unit price' || label === 'Tax' || label === 'Total' ? styles.monospace : undefined}>{cellValue}</strong>
                         </div>
                       ))}
                     </div>
@@ -185,6 +181,7 @@ export function PaymentVoucherReview({
 
             <div className={styles.totalsPanel}>
               <div><span>Subtotal</span><strong>{formatMoney(totals.subtotal)}</strong></div>
+              <div><span>Tax</span><strong>{formatMoney(totals.tax)}</strong></div>
               <div className={styles.grandTotal}><span>Grand total</span><strong>{formatMoney(totals.grandTotal)}</strong></div>
             </div>
 
@@ -212,18 +209,41 @@ export function PaymentVoucherReview({
             </div>
           </section>
 
+          </div>
+
+          <aside className={styles.reviewRail}>
+            <section className={styles.amountSummary}>
+              <span>Voucher total</span>
+              <strong>{formatMoney(totals.grandTotal)}</strong>
+              <small>{amountInWords}</small>
+            </section>
+
+            <section className={styles.resubmitSummary}>
+              <span>{isAmendment ? 'Resubmit to' : 'Submit to'}</span>
+              <strong>{director?.name ?? voucher.directorId}</strong>
+              <small>Assigned Director</small>
+            </section>
+
+            {isAmendment && (
+              <div className={styles.amendmentNote}>
+                <strong>Amendment review</strong>
+                <span>The existing PV number will remain unchanged after resubmission.</span>
+              </div>
+            )}
+
           <footer className={styles.reviewActions}>
-            <span>Step 2 of 2: {isAmendment ? 'Director Resubmission' : 'Director Submission'}</span>
             <div>
-              <button className={styles.secondaryButton} disabled={isSubmitting} onClick={onBack} type="button">Back to edit</button>
               <button className={styles.primaryButton} disabled={isSubmitting} onClick={onSubmit} type="button">
                 {isSubmitting
                   ? isAmendment ? 'Resubmitting…' : 'Submitting…'
                   : isAmendment ? 'Resubmit to Director' : 'Submit to Director'}
                 {!isSubmitting && <span aria-hidden="true">→</span>}
               </button>
+              <button className={styles.secondaryButton} disabled={isSubmitting} onClick={onBack} type="button">Back to edit</button>
             </div>
+            <span>Step 2 of 2: {isAmendment ? 'Director Resubmission' : 'Director Submission'}</span>
           </footer>
+          </aside>
         </div>
       </article>
     </section>

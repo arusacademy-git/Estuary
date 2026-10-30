@@ -1,8 +1,6 @@
 import type { CashAdvanceExpense } from '@/domain/payment-requests/cash-advance/types';
-import {
-  DIVISION_SELECT_OPTIONS,
-  PAYMENT_VOUCHER_ACCOUNT_OPTIONS,
-} from '@/shared/constants/payment-options';
+import { DIVISION_SELECT_OPTIONS } from '@/shared/constants/payment-options';
+import { useAdminAccountingOptions } from '@/features/administration/admin-settings';
 import { PaymentAmountInput } from '@/shared/payment-amount-input';
 import styles from '../../cash-advance.module.css';
 
@@ -21,14 +19,173 @@ type CashSpentSummaryProps = {
   totalSpent: number;
 };
 
-export function CashSpentSummary({ expenses, onChange, totalSpent }: CashSpentSummaryProps) {
+export function CashSpentSummary({
+  expenses,
+  onChange,
+  totalSpent,
+}: CashSpentSummaryProps) {
+  const accountingOptions = useAdminAccountingOptions();
   const update = (id: string, patch: Partial<CashAdvanceExpense>) =>
-    onChange(expenses.map((expense) => expense.id === id ? { ...expense, ...patch } : expense));
+    onChange(
+      expenses.map((expense) =>
+        expense.id === id ? { ...expense, ...patch } : expense
+      )
+    );
 
-  return <section className={styles.receiptSection}>
-    <div className={styles.sectionHeading}><div><span>1</span><div><h2>Summary of Cash Spent &amp; Receipts</h2><p>Record every actual expense and paste a shareable Google Drive link for its receipt or proof.</p></div></div><button className={styles.secondary} onClick={() => onChange([...expenses, newExpense()])} type="button">+ Add expense</button></div>
-    <div className={`${styles.tableShell} ${styles.cashSpentTableWrap}`}><table className={`${styles.lineTable} ${styles.reconciliationTable} ${styles.cashSpentTable}`}><thead><tr><th>Date</th><th>Supplier</th><th>Description</th><th>Type of account</th><th>Division</th><th>Amount (RM)</th><th>Receipt / proof Google Drive link</th><th /></tr></thead><tbody>{expenses.map((expense) => <tr key={expense.id}><td><input aria-label="Expense date" onChange={(event) => update(expense.id, { expenseDate: event.target.value })} type="date" value={expense.expenseDate} /></td><td><input aria-label="Supplier" onChange={(event) => update(expense.id, { supplier: event.target.value })} placeholder="Supplier name" value={expense.supplier ?? ''} /></td><td><input aria-label="Expense description" onChange={(event) => update(expense.id, { description: event.target.value })} placeholder="What was purchased" value={expense.description} /></td><td><select aria-label="Type of account" onChange={(event) => update(expense.id, { accountType: event.target.value })} value={expense.accountType ?? ''}><option value="">Choose account</option>{PAYMENT_VOUCHER_ACCOUNT_OPTIONS.map((accountType) => <option key={accountType.value} value={accountType.value}>{accountType.label}</option>)}</select></td><td><select aria-label="Division" onChange={(event) => update(expense.id, { division: event.target.value })} value={expense.division ?? ''}><option value="">Choose division</option>{expense.division && !DIVISION_SELECT_OPTIONS.some((option) => option.value === expense.division) && <option value={expense.division}>{expense.division} (saved value)</option>}{DIVISION_SELECT_OPTIONS.map((division) => <option key={division.value} value={division.value}>{division.label}</option>)}</select></td><td><PaymentAmountInput aria-label="Expense amount" value={expense.amount} onValueChange={(amount) => update(expense.id, { amount })} /></td><td><input aria-label="Google Drive receipt or proof link" onChange={(event) => update(expense.id, { receiptLink: event.target.value })} placeholder="Paste shareable Google Drive link" type="url" value={expense.receiptLink ?? ''} /></td><td><button aria-label="Remove expense" className={styles.iconButton} disabled={expenses.length === 1} onClick={() => onChange(expenses.filter((row) => row.id !== expense.id))} type="button">×</button></td></tr>)}</tbody></table></div>
-    <p className={styles.tableScrollHint}>Scroll horizontally to complete every column, including the Google Drive receipt link.</p>
-    <div className={styles.total}><span>Total spent</span><span>RM {totalSpent.toFixed(2)}</span></div>
-  </section>;
+  return (
+    <section className={styles.receiptSection}>
+      <div className={styles.sectionHeading}>
+        <div>
+          <span>1</span>
+          <div>
+            <h2>Summary of Cash Spent &amp; Receipts</h2>
+            <p>
+              Record every actual expense and paste a shareable Google Drive
+              link for its receipt or proof.
+            </p>
+          </div>
+        </div>
+        <button
+          className={styles.secondary}
+          onClick={() => onChange([...expenses, newExpense()])}
+          type="button"
+        >
+          + Add expense
+        </button>
+      </div>
+      <div className={`${styles.tableShell} ${styles.cashSpentTableWrap}`}>
+        <table
+          className={`${styles.lineTable} ${styles.reconciliationTable} ${styles.cashSpentTable}`}
+        >
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Supplier</th>
+              <th>Description</th>
+              <th>Type of account</th>
+              <th>Division</th>
+              <th>Amount (RM)</th>
+              <th>Receipt / proof Google Drive link</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.map((expense) => (
+              <tr key={expense.id}>
+                <td>
+                  <input
+                    aria-label="Expense date"
+                    onChange={(event) =>
+                      update(expense.id, { expenseDate: event.target.value })
+                    }
+                    type="date"
+                    value={expense.expenseDate}
+                  />
+                </td>
+                <td>
+                  <input
+                    aria-label="Supplier"
+                    onChange={(event) =>
+                      update(expense.id, { supplier: event.target.value })
+                    }
+                    placeholder="Supplier name"
+                    value={expense.supplier ?? ''}
+                  />
+                </td>
+                <td>
+                  <input
+                    aria-label="Expense description"
+                    onChange={(event) =>
+                      update(expense.id, { description: event.target.value })
+                    }
+                    placeholder="What was purchased"
+                  value={expense.description}
+                  />
+                </td>
+                <td>
+                  <select
+                    aria-label="Type of account"
+                    onChange={(event) =>
+                      update(expense.id, { accountType: event.target.value })
+                    }
+                    value={expense.accountType ?? ''}
+                  >
+                    <option value="">Choose account</option>
+                    {accountingOptions.map((accountType) => (
+                      <option key={accountType.value} value={accountType.value}>
+                        {accountType.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <select
+                    aria-label="Division"
+                    onChange={(event) =>
+                      update(expense.id, { division: event.target.value })
+                    }
+                    value={expense.division ?? ''}
+                  >
+                    <option value="">Choose division</option>
+                    {expense.division &&
+                      !DIVISION_SELECT_OPTIONS.some(
+                        (option) => option.value === expense.division
+                      ) && (
+                        <option value={expense.division}>
+                          {expense.division} (saved value)
+                        </option>
+                      )}
+                    {DIVISION_SELECT_OPTIONS.map((division) => (
+                      <option key={division.value} value={division.value}>
+                        {division.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <PaymentAmountInput
+                    aria-label="Expense amount"
+                    value={expense.amount}
+                    onValueChange={(amount) => update(expense.id, { amount })}
+                  />
+                </td>
+                <td>
+                  <input
+                    aria-label="Google Drive receipt or proof link"
+                    onChange={(event) =>
+                      update(expense.id, { receiptLink: event.target.value })
+                    }
+                    placeholder="Paste shareable Google Drive link"
+                    type="url"
+                    value={expense.receiptLink ?? ''}
+                  />
+                </td>
+                <td>
+                  <button
+                    aria-label="Remove expense"
+                    className={styles.iconButton}
+                    disabled={expenses.length === 1}
+                    onClick={() =>
+                      onChange(expenses.filter((row) => row.id !== expense.id))
+                    }
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className={styles.tableScrollHint}>
+        Scroll horizontally to complete every column, including the Google Drive
+        receipt link.
+      </p>
+      <div className={styles.total}>
+        <span>Total spent</span>
+        <span>RM {totalSpent.toFixed(2)}</span>
+      </div>
+    </section>
+  );
 }

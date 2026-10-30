@@ -9,6 +9,50 @@
     box-shadow: 0 1px 3px rgb(15 23 42 / 5%);
 }
 
+.pageHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 30px 18px;
+}
+
+.pageHeader p {
+    margin: 0;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.pageHeader h1 {
+    margin: 7px 0 7px;
+    color: #082b55;
+    font-size: clamp(27px, 3vw, 36px);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+}
+
+.pageHeader div>span {
+    color: #607795;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.pageHeader>strong {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 6px 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 11px;
+    font-weight: 800;
+}
+
 .hero {
     display: flex;
     align-items: flex-start;
@@ -23,7 +67,7 @@
     color: #082b55;
     font-size: clamp(27px, 3vw, 36px);
     line-height: 1.15;
-    letter-spacing: -.025em;
+    letter-spacing: -0.025em;
 }
 
 .hero p {
@@ -152,7 +196,7 @@
     background: #f9fbff;
 }
 
-.typeCard[aria-pressed='true'] {
+.typeCard[aria-pressed="true"] {
     border-color: #2563eb;
     outline: 3px solid rgb(37 99 235 / 10%);
     background: #f8fbff;
@@ -211,7 +255,7 @@
     color: #4f6380;
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: .05em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
@@ -274,7 +318,7 @@
 .secondaryButton {
     border: 1px solid #bad2eb;
     color: #075aa7;
-    background: #fff;
+    background: #f1f8ff;
 }
 
 .primaryButton {
@@ -284,7 +328,7 @@
 }
 
 .primaryButton:disabled {
-    opacity: .5;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -353,7 +397,7 @@
     color: #536f91;
     background: #f3f7fb;
     font-size: 9px;
-    letter-spacing: .45px;
+    letter-spacing: 0.45px;
     text-align: left;
     text-transform: uppercase;
     white-space: nowrap;
@@ -412,7 +456,7 @@
 }
 
 .removeButton:disabled {
-    opacity: .35;
+    opacity: 0.35;
     cursor: not-allowed;
 }
 
@@ -614,6 +658,19 @@
 }
 
 @media (max-width: 620px) {
+    .pageHeader {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 22px;
+    }
+
+    .pageHeader>strong {
+        align-self: flex-start;
+    }
+
+    .claimSheetStep {
+        grid-template-columns: 1fr;
+    }
 
     .hero,
     .submitBar,
@@ -732,7 +789,7 @@
     color: #58677a;
     font-size: 11px;
     font-weight: 850;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -759,7 +816,7 @@
     color: #526174;
     font-size: 12px;
     font-weight: 850;
-    letter-spacing: .065em;
+    letter-spacing: 0.065em;
     text-transform: uppercase;
 }
 
@@ -774,7 +831,7 @@
 
 .policyMatrix {
     display: grid;
-    grid-template-columns: minmax(210px, .85fr) minmax(0, 2fr);
+    grid-template-columns: minmax(210px, 0.85fr) minmax(0, 2fr);
     align-items: start;
     gap: 18px;
 }
@@ -788,7 +845,7 @@
     color: #526174;
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: .05em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
@@ -899,7 +956,7 @@
 .fieldGrid label>span {
     color: #667085;
     font-size: 10px;
-    letter-spacing: .05em;
+    letter-spacing: 0.05em;
 }
 
 .fieldGrid input {
@@ -926,6 +983,15 @@
     grid-column: 1 / -1;
 }
 
+.halfField {
+    grid-column: span 2;
+}
+
+.requiredMark {
+    color: #dc2626;
+    font-style: normal;
+}
+
 .itemsHeading {
     align-items: flex-start;
 }
@@ -940,7 +1006,7 @@
     border-radius: 8px;
     padding: 8px 14px;
     color: #1d5dcc;
-    background: #fff;
+    background: #eff6ff;
     font-size: 11px;
 }
 
@@ -1104,7 +1170,15 @@
 .actions {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 12px;
+}
+
+.reviewActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 22px 28px;
+    border-top: 1px solid #dce5ef;
 }
 
 .draftButton {
@@ -1114,14 +1188,21 @@
     padding: 8px 14px;
     color: #244a73;
     background: #fff;
+    box-shadow: none;
     font: inherit;
     font-size: 11px;
     font-weight: 800;
     cursor: pointer;
 }
 
+.draftButton:hover:not(:disabled) {
+    border-color: #173a64;
+    color: #173a64;
+    background: #f8fbff;
+}
+
 .draftButton:disabled {
-    opacity: .5;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -1144,6 +1225,10 @@
     .policyChoice,
     .fullField {
         grid-column: 1 / -1;
+    }
+
+    .halfField {
+        grid-column: auto;
     }
 }
 
@@ -1170,6 +1255,10 @@
     .fullField {
         grid-column: auto;
     }
+
+    .halfField {
+        grid-column: auto;
+    }
 }
 
 /* Claims confirmation and Manager review workflow */
@@ -1182,7 +1271,7 @@
 
 .confirmationLayout {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(300px, .8fr);
+    grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.8fr);
     align-items: start;
     gap: 22px;
     margin-top: 18px;
@@ -1307,7 +1396,7 @@
     color: #66758a;
     font-size: 10px;
     font-weight: 850;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -1350,7 +1439,7 @@
     left: 13px;
     width: 2px;
     background: #dfe7f0;
-    content: '';
+    content: "";
 }
 
 .confirmationProgress li>i,
@@ -1369,21 +1458,21 @@
     font-weight: 850;
 }
 
-.confirmationProgress li[data-state='complete']>i,
-.reviewProgress li[data-state='complete']>i {
+.confirmationProgress li[data-state="complete"]>i,
+.reviewProgress li[data-state="complete"]>i {
     border-color: #16b981;
     color: #fff;
     background: #16b981;
 }
 
-.confirmationProgress li[data-state='active']>i,
-.reviewProgress li[data-state='active']>i {
+.confirmationProgress li[data-state="active"]>i,
+.reviewProgress li[data-state="active"]>i {
     border-color: #2563eb;
     color: #2563eb;
 }
 
-.confirmationProgress li[data-state='returned']>i,
-.reviewProgress li[data-state='returned']>i {
+.confirmationProgress li[data-state="returned"]>i,
+.reviewProgress li[data-state="returned"]>i {
     border-color: #ef4444;
     color: #fff;
     background: #ef4444;
@@ -1485,7 +1574,7 @@
     cursor: pointer;
 }
 
-.managerTools button[data-active='true'] {
+.managerTools button[data-active="true"] {
     border-color: #b8d3f0;
     color: #1457a0;
     background: #eff6ff;
@@ -1523,7 +1612,7 @@
     color: #60738c;
     background: #f6f8fb;
     font-size: 9px;
-    letter-spacing: .05em;
+    letter-spacing: 0.05em;
     text-align: left;
     text-transform: uppercase;
 }
@@ -1565,12 +1654,12 @@
     font-weight: 850;
 }
 
-.claimStatus[data-status='PENDING_DIRECTOR_APPROVAL'] {
+.claimStatus[data-status="PENDING_DIRECTOR_APPROVAL"] {
     color: #1457a0;
     background: #e8f1ff;
 }
 
-.claimStatus[data-status='RETURNED_TO_CLAIMANT'] {
+.claimStatus[data-status="RETURNED_TO_CLAIMANT"] {
     color: #b42318;
     background: #fee4e2;
 }
@@ -1630,7 +1719,7 @@
 
 .reviewLayout {
     display: grid;
-    grid-template-columns: minmax(0, 2.1fr) minmax(300px, .8fr);
+    grid-template-columns: minmax(0, 2.1fr) minmax(300px, 0.8fr);
     align-items: start;
     gap: 22px;
 }
@@ -1762,7 +1851,7 @@
     color: #a16207;
     font-size: 9px;
     font-weight: 800;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -1790,20 +1879,16 @@
     min-height: 38px;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d5deea;
     border-radius: 8px;
-    color: #173a64;
-    background: #fff;
+    color: #fff;
+    background: #172b4d;
     font-size: 11px;
     font-weight: 750;
     text-decoration: none;
-    transition: color .18s ease, background-color .18s ease, border-color .18s ease;
 }
 
 .returnedRecordCard>a:hover {
-    border-color: #172b4d;
-    color: #fff;
-    background: #172b4d;
+    background: #10213a;
 }
 
 .decisionCard {
@@ -1817,7 +1902,7 @@
     color: #dc2626;
     font-size: 10px;
     font-weight: 850;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -1877,7 +1962,7 @@
 }
 
 .decisionCard button:disabled {
-    opacity: .45;
+    opacity: 0.45;
     cursor: not-allowed;
 }
 
@@ -1966,7 +2051,8 @@
     cursor: pointer;
 }
 
-.entryModeTabs .entryModeActive {
+.entryModeTabs .entryModeActive,
+.entryModeTabs button[data-active="true"] {
     color: #fff;
     background: #153f70;
 }
@@ -1991,7 +2077,7 @@
     color: #2563eb;
     font-size: 10px;
     font-weight: 850;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -2007,15 +2093,82 @@
     font-size: 12px;
 }
 
-.googleSheetFields {
+.claimSheetSteps {
     display: grid;
-    grid-template-columns: minmax(220px, .45fr) minmax(0, 1.4fr) auto;
-    align-items: end;
-    gap: 13px;
+    gap: 14px;
 }
 
-.googleSheetFieldsSingle {
+.claimSheetStep {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid #dbe7f5;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.claimSheetStepWhite {
+    background: #fff;
+}
+
+.claimSheetStepNumber {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 11px;
+    color: #1d4ed8;
+    background: #e8f1ff;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.claimSheetStep h3 {
+    margin: 0;
+    color: #142f50;
+    font-size: 15px;
+}
+
+.claimSheetStep p {
+    margin: 5px 0 13px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.claimSheetStep>div>label,
+.googleSheetFields {
+    width: 100%;
+}
+
+.claimSheetStep>div>label {
+    display: grid;
+    gap: 7px;
+    color: #536980;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.claimSheetStep>div>label select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid #cad7e6;
+    border-radius: 8px;
+    color: #17395f;
+    background: #fff;
+    font: inherit;
+    font-size: 12px;
+    text-transform: none;
+}
+
+.googleSheetFields {
+    display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 13px;
 }
 
 .googleSheetFields label {
@@ -2114,7 +2267,7 @@
     text-transform: uppercase;
 }
 
-.sheetCompletionGrid input:not([type='checkbox']),
+.sheetCompletionGrid input:not([type="checkbox"]),
 .sheetCompletionGrid select,
 .sheetCompletionGrid textarea {
     box-sizing: border-box;
@@ -2217,65 +2370,210 @@
     }
 }
 
-/* Travel Allowance-aligned request shell */
-.pageHeader {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 20px;
+/* Compact requester review: the summary and submission action remain visible together. */
+.compactReviewPage {
+    padding: 20px;
+    color: #102a4c;
 }
 
-.pageHeader p {
-    margin: 0 0 6px;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .07em;
+.compactReviewPage>.error {
+    max-width: 1080px;
+    margin: 0 auto 12px;
+}
+
+.compactReviewCard {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(280px, .85fr);
+    max-width: 1080px;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid #d9e3ee;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(15 42 76 / 7%);
+}
+
+.compactReviewMain {
+    min-width: 0;
+    padding: 30px 34px;
+}
+
+.compactReviewHeader {
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e6ecf2;
+}
+
+.compactReviewHeader>span:not(.compactTypeBadge) {
+    color: #526b89;
+    font-size: 9px;
+    letter-spacing: .08em;
     text-transform: uppercase;
 }
 
-.pageHeader h1 {
-    margin: 0;
-    color: #102a4c;
-    font-size: clamp(27px, 3vw, 36px);
-    letter-spacing: -.035em;
-}
-
-.pageHeader span {
-    display: block;
-    margin-top: 7px;
-    color: #64748b;
-    font-size: 13px;
-}
-
-.pageHeader>strong {
-    padding: 6px 11px;
-    border: 1px solid #dbe3ee;
-    border-radius: 999px;
-    color: #526987;
-    background: #fff;
-    font-size: 11px;
-    white-space: nowrap;
-}
-
-.claimForm {
-    display: block;
-}
-
-.entryModeTabs .entryModeActive,
-.entryModeTabs button[data-active='true'] {
+.compactTypeBadge {
+    display: inline-grid;
+    width: 25px;
+    height: 18px;
+    margin-right: 8px;
+    place-items: center;
+    border-radius: 5px;
     color: #fff;
-    background: #173a64;
+    background: #050505;
+    font-size: 8px;
+    font-weight: 800;
 }
 
-@media (max-width: 620px) {
-    .pageHeader {
-        align-items: stretch;
-        flex-direction: column;
+.compactReviewHeader h1 {
+    margin: 10px 0 4px;
+    font-size: 26px;
+}
+
+.compactReviewHeader p {
+    margin: 0;
+    color: #60758f;
+    font-size: 11px;
+}
+
+.compactReviewSection {
+    padding: 20px 0;
+    border-bottom: 1px solid #e6ecf2;
+}
+
+.compactReviewSection:last-child {
+    border-bottom: 0;
+}
+
+.compactReviewSection h2 {
+    margin: 0 0 16px;
+    font-size: 15px;
+}
+
+.compactReviewSection h2 small {
+    margin-left: 7px;
+    color: #73849a;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.compactSummaryGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 22px;
+    margin: 0;
+}
+
+.compactSummaryGrid dt {
+    color: #71839a;
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+.compactSummaryGrid dd {
+    margin: 5px 0 0;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.compactTableWrap {
+    overflow-x: auto;
+    border: 1px solid #dfe7f0;
+    border-radius: 10px;
+}
+
+.compactReviewTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+}
+
+.compactReviewTable th {
+    color: #60738d;
+    background: #f3f6fa;
+    font-size: 8px;
+    letter-spacing: .04em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.compactReviewTable th,
+.compactReviewTable td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #e3e9f0;
+}
+
+.compactReviewTable tfoot td {
+    border-bottom: 0;
+    background: #f8fafc;
+    font-weight: 800;
+}
+
+.compactReviewTable tfoot td:last-child {
+    font-size: 14px;
+    text-align: right;
+}
+
+.compactReviewAside {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 34px 28px 24px;
+    border-left: 1px solid #dfe7f0;
+    background: #f4f8fc;
+}
+
+.compactReviewAside>span,
+.compactNextStep span {
+    color: #647a96;
+    font-size: 9px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.compactReviewAside>strong {
+    margin-top: 4px;
+    font-size: 30px;
+}
+
+.compactReviewAside>small {
+    margin-top: 4px;
+    color: #71839a;
+    font-size: 9px;
+}
+
+.compactNextStep {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #dce5ef;
+}
+
+.compactNextStep p {
+    color: #425a76;
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+.compactReviewActions {
+    display: grid;
+    gap: 9px;
+    margin-top: auto;
+    padding-top: 28px;
+}
+
+.compactReviewActions button {
+    width: 100%;
+}
+
+@media (max-width: 800px) {
+    .compactReviewCard {
+        grid-template-columns: 1fr;
     }
 
-    .pageHeader>strong {
-        align-self: flex-start;
+    .compactReviewAside {
+        border-top: 1px solid #dfe7f0;
+        border-left: 0;
+    }
+
+    .compactSummaryGrid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

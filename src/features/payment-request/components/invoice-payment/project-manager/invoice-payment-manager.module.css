@@ -171,10 +171,26 @@
 .toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 16px;
     padding: 0 28px 16px;
     border-bottom: 1px solid #e2e8f0;
+}
+
+.queueHeader {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.toolbar {
+    margin: 0 20px 18px;
+    padding-top: 4px;
+    border: 1px solid #dbe3ee;
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
+    background: #f8fafc;
 }
 
 .tabs,
@@ -182,6 +198,21 @@
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+.viewToggle {
+    flex: 0 0 auto;
+    padding: 3px;
+    border: 1px solid #c8d5e5;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
+.viewLabel {
+    padding: 0 8px;
+    color: #526987;
+    font-size: 12px;
 }
 
 .tabs button,
@@ -208,9 +239,9 @@
 
 .tabs button[data-active='true'],
 .viewToggle button[data-active='true'] {
-    border-color: #bfd7fb;
-    color: #1d5dcc;
-    background: #eff6ff;
+    border-color: #173a64;
+    color: #fff;
+    background: #173a64;
     font-weight: 750;
 }
 
@@ -997,6 +1028,48 @@
     }
 }
 
+/* Joined View / Grid / List selector — keep this after legacy toolbar rules. */
+.queueHeader .viewToggle {
+    display: inline-flex;
+    width: max-content;
+    min-height: 42px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0;
+    padding: 3px;
+    border: 1px solid #c8d5e5;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+}
+
+.queueHeader .viewLabel {
+    padding: 0 10px;
+    color: #173a64;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.queueHeader .viewToggle button {
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 7px;
+    color: #173a64;
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.queueHeader .viewToggle button[data-active='true'] {
+    color: #fff;
+    background: #173a64;
+    font-weight: 750;
+}
+
 /* Payment Voucher-aligned approval queue table */
 .queuePanel .tableWrapper {
     width: auto;
@@ -1129,23 +1202,4 @@
         margin-right: 16px;
         margin-left: 16px;
     }
-}
-.bulkActionButton {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  margin-top: 18px;
-  border-radius: 9px;
-  background: #1e4775;
-  color: #fff;
-  padding: 0 18px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background-color 160ms ease, transform 160ms ease;
-}
-
-.bulkActionButton:hover {
-  background: #163a63;
-  transform: translateY(-1px);
 }

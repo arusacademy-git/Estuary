@@ -12,21 +12,16 @@ import type {
   TravelAllowanceRecord,
   TravelAllowanceStatus,
 } from "@/domain/payment-requests/travel-allowance/types";
+import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import {
   getBetaAccount,
   readBetaSession,
   type BetaAccount,
 } from "@/lib/auth/beta-accounts";
+import { PaymentRecordActionCard } from "../shared/payment-record-action-card";
 
 import styles from "./travel-allowance-records.module.css";
 
-const labels: Record<TravelAllowanceStatus, string> = {
-  PENDING_MANAGER_REVIEW: "Pending Manager Review",
-  PENDING_DIRECTOR_APPROVAL: "Pending Director Approval",
-  PENDING_FINANCE_VERIFICATION: "Pending Finance Verification",
-  RETURNED_TO_STAFF: "Returned to requester",
-  COMPLETED: "Completed",
-};
 function money(value: number) {
   return new Intl.NumberFormat("en-MY", {
     style: "currency",
@@ -61,44 +56,35 @@ export function TravelAllowanceRecordDetail({
 }: {
   requestId: string;
 }) {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(() => !account);
   const [error, setError] = useState("");
-
   useEffect(() => {
+    if (!account) return;
+
     let cancelled = false;
 
-    // Session lives in the browser, so it is read after mount, inside a callback
-    Promise.resolve().then(async () => {
-      const session = readBetaSession();
-      if (cancelled) return;
-      setAccount(session);
-      if (!session) {
-        setChecked(true);
-        return;
-      }
-
-      try {
-        const data = await fetchTravelAllowance(requestId);
-        if (!cancelled) setRecord(data);
-      } catch (caught: unknown) {
-        if (!cancelled)
-          setError(
-            caught instanceof Error
-              ? caught.message
-              : "The record could not be loaded.",
-          );
-      } finally {
+    fetchTravelAllowance(requestId)
+      .then((value) => {
+        if (!cancelled) setRecord(value);
+      })
+      .catch((caught: unknown) =>
+        !cancelled &&
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "The record could not be loaded.",
+        ),
+      )
+      .finally(() => {
         if (!cancelled) setChecked(true);
-      }
-    });
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [requestId]);
-
+  }, [account, requestId]);
   if (!checked)
     return (
       <State
@@ -305,6 +291,15 @@ export function TravelAllowanceRecordDetail({
           </Section>
         </section>
         <aside className={styles.detailRail}>
+          <PaymentRecordActionCard
+            account={account}
+            directorApproverId={record.projectDirectorId}
+            managerApproverId={record.managerApproverId}
+            paymentType="TA"
+            reference={record.requestNumber}
+            requestId={record.id}
+            status={record.status}
+          />
           {returnRemarks && (
             <div className={styles.returnNotice}>
               <div className={styles.returnNoticeHeader}>
@@ -336,64 +331,74 @@ function Progress({
   const managerPath = record.requesterRole === "staff";
   const steps = managerPath
     ? [
-        {
-          title: "Request Submitted",
-          copy: `Submitted by ${record.requesterName}`,
-          time: record.createdAt,
-        },
-        {
-          title: "Manager Review",
-          copy: `Reviewed and approved by ${manager}`,
-          time: record.managerReviewedAt,
-        },
-        {
-          title: "Director Review",
-          copy: `Reviewed and approved by ${director}`,
-          time: record.directorReviewedAt,
-        },
-        {
-          title: "Finance Verification",
-          copy: `Allowance verified by ${record.financeVerifiedById
-            ? (getBetaAccount(record.financeVerifiedById)?.name ??
-              record.financeVerifiedById)
-            : "Finance"}`,
-          time: record.financeVerifiedAt,
-        },
-        {
-          title: "Completed",
-          copy: record.financePaymentReference
-            ? `Payment completed · Ref ${record.financePaymentReference}`
-            : "Payment completed and request closed",
-          time: record.financeVerifiedAt,
-        },
-      ]
+      {
+        title: "Request Submitted",
+        copy: `Submitted by ${record.requesterName}`,
+        time: record.createdAt,
+      },
+      {
+        title: "Manager Review",
+        copy: `Reviewed and approved by ${manager}`,
+        time: record.managerReviewedAt,
+      },
+      {
+        title: "Director Review",
+        copy: `Reviewed and approved by ${director}`,
+        time: record.directorReviewedAt,
+      },
+      {
+        title: "Finance Verification",
+        copy: `Allowance verified by ${record.financeVerifiedById
+          ? (getBetaAccount(record.financeVerifiedById)?.name ??
+            record.financeVerifiedById)
+          : "Finance"}`,
+        time: record.financeVerifiedAt,
+      },
+      {
+        title: "Payment transaction proof uploaded",
+        copy: "Finance uploaded the payment transaction proof for the requester",
+        time: record.financeVerifiedAt,
+      },
+      {
+        title: "Completed",
+        copy: record.financePaymentReference
+          ? `Payment completed · Ref ${record.financePaymentReference}`
+          : "Payment completed and request closed",
+        time: record.financeVerifiedAt,
+      },
+    ]
     : [
-        {
-          title: "Manager Request Submitted",
-          copy: `Submitted by ${record.requesterName}`,
-          time: record.createdAt,
-        },
-        {
-          title: "Director Review",
-          copy: `Reviewed and approved by ${director}`,
-          time: record.directorReviewedAt,
-        },
-        {
-          title: "Finance Verification",
-          copy: `Allowance verified by ${record.financeVerifiedById
-            ? (getBetaAccount(record.financeVerifiedById)?.name ??
-              record.financeVerifiedById)
-            : "Finance"}`,
-          time: record.financeVerifiedAt,
-        },
-        {
-          title: "Completed",
-          copy: record.financePaymentReference
-            ? `Payment completed · Ref ${record.financePaymentReference}`
-            : "Payment completed and request closed",
-          time: record.financeVerifiedAt,
-        },
-      ];
+      {
+        title: "Manager Request Submitted",
+        copy: `Submitted by ${record.requesterName}`,
+        time: record.createdAt,
+      },
+      {
+        title: "Director Review",
+        copy: `Reviewed and approved by ${director}`,
+        time: record.directorReviewedAt,
+      },
+      {
+        title: "Finance Verification",
+        copy: `Allowance verified by ${record.financeVerifiedById
+          ? (getBetaAccount(record.financeVerifiedById)?.name ??
+            record.financeVerifiedById)
+          : "Finance"}`,
+        time: record.financeVerifiedAt,
+      },
+      {
+        title: "Payment transaction proof uploaded",
+        copy: "Finance uploaded the payment transaction proof for the requester",
+        time: record.financeVerifiedAt,
+      },
+      {
+        title: "Completed",
+        copy: record.financePaymentReference
+          ? `Payment completed · Ref ${record.financePaymentReference}`
+          : "Payment completed and request closed",
+        time: record.financeVerifiedAt,
+      },
+    ];
   const active =
     record.status === "PENDING_MANAGER_REVIEW"
       ? 2
@@ -405,17 +410,19 @@ function Progress({
           ? managerPath
             ? 4
             : 3
-          : record.status === "COMPLETED"
-            ? steps.length
-            : record.financeReturnedAt
-              ? managerPath
-                ? 4
-                : 3
-              : record.directorReturnedAt
+          : record.status === "TRANSACTION_PROOF_UPLOADED"
+            ? steps.length - 1
+            : record.status === "COMPLETED"
+              ? steps.length
+              : record.financeReturnedAt
                 ? managerPath
-                  ? 3
-                  : 2
-                : 2;
+                  ? 4
+                  : 3
+                : record.directorReturnedAt
+                  ? managerPath
+                    ? 3
+                    : 2
+                  : 2;
   return (
     <section className={styles.progressPanel}>
       <header>
@@ -466,7 +473,7 @@ function Progress({
 function Status({ status }: { status: TravelAllowanceStatus }) {
   return (
     <span className={styles.statusBadge} data-status={status}>
-      {labels[status]}
+      {standardPaymentStatusLabel(status)}
     </span>
   );
 }

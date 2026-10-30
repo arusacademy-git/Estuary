@@ -34,10 +34,39 @@
   justify-content: center;
   border-radius: 14px;
   color: #ffffff;
-  background: #1e3a5f;
+  background: var(--payment-color, #07456b);
   font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: 0.05em;
+}
+
+.paymentTypeCard[data-type="PV"] {
+  --payment-color: #07456b;
+}
+
+.paymentTypeCard[data-type="INV"] {
+  --payment-color: #0c6f50;
+}
+
+.paymentTypeCard[data-type="TA"] {
+  --payment-color: #f29221;
+}
+
+.paymentTypeCard[data-type="CA"] {
+  --payment-color: #db224a;
+}
+
+.paymentTypeCard[data-type="CL"] {
+  --payment-color: #000;
+}
+
+.paymentTypeCard[data-type="PC"] {
+  --payment-color: #fff;
+}
+
+.paymentTypeCard[data-type="PC"] .paymentTypeIcon {
+  border: 1px solid #173a64;
+  color: #173a64;
 }
 
 .availableBadge,
@@ -77,13 +106,12 @@
 
 .paymentTypeStatistics {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-self: end;
 }
 
-.paymentTypeStatistics > div {
+.paymentTypeStatistics>div {
   display: grid;
   gap: 8px;
   border-radius: 12px;
@@ -103,14 +131,19 @@
 }
 
 .paymentTypeStatistics .loadingNumber,
-.paymentTypeCard[aria-busy='true'] .paymentTypeStatistics strong {
+.paymentTypeCard[aria-busy="true"] .paymentTypeStatistics strong {
   color: #94a3b8;
   animation: recordLoadingPulse 1.15s ease-in-out infinite alternate;
 }
 
 @keyframes recordLoadingPulse {
-  from { opacity: 0.45; }
-  to { opacity: 1; }
+  from {
+    opacity: 0.45;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .paymentTypeStatistics .attentionNumber {
@@ -118,37 +151,41 @@
 }
 
 .paymentTypeCardFooter {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 18px;
+  border-top: 0;
+  padding-top: 4px;
 }
 
 .viewRecordsButton,
 .disabledRecordsButton {
   display: flex;
   width: 100%;
-  min-height: 45px;
+  min-height: 40px;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  border-radius: 11px;
-  padding: 10px 16px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  gap: 6px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
 }
 
 .viewRecordsButton {
-  color: #ffffff;
-  background: #1e3a5f;
-  transition: background 160ms ease;
+  border: 1px solid #173a64;
+  color: #173a64;
+  background: #ffffff;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .viewRecordsButton:hover {
-  background: #162e4a;
+  color: #ffffff;
+  background: #173a64;
 }
 
 .viewRecordsButton span {
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   transition: transform 160ms ease;
 }
 
@@ -157,6 +194,7 @@
 }
 
 .disabledRecordsButton {
+  border: 1px solid #cbd5e1;
   color: #94a3b8;
   background: #f1f5f9;
   cursor: not-allowed;
@@ -205,7 +243,7 @@
   line-height: 1.15;
 }
 
-.paymentRecordsHeader > div:first-child > p:last-child {
+.paymentRecordsHeader>div:first-child>p:last-child {
   max-width: 760px;
   margin: 14px 0 0;
   color: #64748b;
@@ -241,8 +279,7 @@
 
 .recordsSummary {
   display: grid;
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -273,6 +310,70 @@
   padding: 28px;
 }
 
+.savedDraftsSection {
+  border: 1px solid #f4cf7a;
+  border-radius: 20px;
+  background: #fffbeb;
+  padding: 28px;
+}
+
+.savedDraftsList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.savedDraftCard {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #f3d38a;
+  border-radius: 14px;
+  background: #fff;
+  padding: 17px 18px;
+}
+
+.savedDraftCard>div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.savedDraftCard span {
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.savedDraftCard strong {
+  color: #1e3a5f;
+}
+
+.savedDraftCard small {
+  color: #718096;
+}
+
+.savedDraftCard a {
+  flex: 0 0 auto;
+  border: 1px solid #173a64;
+  border-radius: 8px;
+  color: #173a64;
+  background: #fff;
+  padding: 9px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.savedDraftCard a:hover {
+  color: #fff;
+  background: #173a64;
+}
+
 .sectionHeading {
   margin-bottom: 24px;
 }
@@ -291,8 +392,7 @@
 
 .paymentTypesGrid {
   display: grid;
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -316,13 +416,11 @@
 
 @media (max-width: 1100px) {
   .paymentTypesGrid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .recordsSummary {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -338,6 +436,7 @@
   }
 
   .paymentTypesGrid,
+  .savedDraftsList,
   .recordsSummary {
     grid-template-columns: 1fr;
   }

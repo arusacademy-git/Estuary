@@ -119,3 +119,52 @@ export async function downloadPaymentVoucherPdf(
 
   window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
 }
+
+export async function previewPaymentVoucherPdf(
+  voucher: PaymentVoucherRecord,
+  options: BuildPaymentVoucherPdfOptions = {},
+) {
+  if (typeof window === 'undefined') {
+    throw new Error('The signed Payment Voucher can only be previewed from the browser.');
+  }
+
+  const previewWindow = window.open('about:blank', '_blank');
+
+  if (!previewWindow) {
+    throw new Error('Allow pop-ups to preview the signed Payment Voucher.');
+  }
+
+  try {
+    if (voucher.signedPvDataUrl) {
+      previewWindow.location.href = voucher.signedPvDataUrl;
+      return;
+    }
+
+    const directorSignatureDataUrl =
+      options.directorSignatureDataUrl ??
+      await getDirectorSignatureDataUrl(voucher);
+    const recipientSignatureDataUrl =
+      options.recipientSignatureDataUrl ??
+      voucher.recipientSignatureDataUrl ??
+      null;
+
+    if (!recipientSignatureDataUrl) {
+      throw new Error('The recipient-signed Payment Voucher is not available yet.');
+    }
+
+    const pdfBytes = await buildPaymentVoucherPdf(voucher, {
+      directorSignatureDataUrl,
+      recipientSignatureDataUrl,
+    });
+    const pdfBlob = new Blob(
+      [createSafeArrayBuffer(pdfBytes)],
+      { type: 'application/pdf' },
+    );
+    const previewUrl = URL.createObjectURL(pdfBlob);
+    previewWindow.location.href = previewUrl;
+    window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
+  } catch (error) {
+    previewWindow.close();
+    throw error;
+  }
+}

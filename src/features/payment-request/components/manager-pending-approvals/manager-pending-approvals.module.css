@@ -1,0 +1,616 @@
+.page {
+    display: grid;
+    gap: 18px;
+    padding: 28px;
+    color: #102a4c;
+}
+
+.hero,
+.queue {
+    border: 1px solid #d8e2ef;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 28px;
+}
+
+.hero p,
+.queue header p,
+.confirmModal header p,
+.detailModal header p {
+    margin: 0 0 6px;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hero h1,
+.queue h2,
+.confirmModal h2,
+.detailModal h2 {
+    margin: 0;
+    color: #102a4c;
+}
+
+.hero>div:first-child>span,
+.confirmModal header span {
+    display: block;
+    margin-top: 6px;
+    color: #71839a;
+    font-size: 12px;
+}
+
+.hero>div:last-child {
+    display: grid;
+    min-width: 150px;
+    gap: 6px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid #f1d58c;
+    border-radius: 12px;
+    background: #fff9e9;
+}
+
+.hero>div:last-child small {
+    color: #8b6a19;
+}
+
+.hero>div:last-child strong {
+    color: #9a5a00;
+    font-size: 28px;
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    border-bottom: 1px solid #d8e2ef;
+}
+
+.tabs button {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 12px 11px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #526987;
+    background: transparent;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tabs button[data-active="true"] {
+    color: #102a4c;
+    border-bottom-color: #173a64;
+    font-weight: 800;
+}
+
+.tabs i {
+    width: 7px;
+    height: 7px;
+    border: 1px solid #cad5e2;
+    border-radius: 50%;
+}
+
+.tabs b {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #edf2f7;
+    font-size: 9px;
+}
+
+.queue {
+    overflow: hidden;
+}
+
+.queue>header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 20px 24px 10px;
+}
+
+.queue>header>span {
+    color: #71839a;
+    font-size: 11px;
+}
+
+.filters {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr)) auto;
+    gap: 8px;
+    padding: 0 24px 16px;
+}
+
+.filters input,
+.filters select,
+.filters button {
+    min-height: 40px;
+    border: 1px solid #cbd8e7;
+    border-radius: 8px;
+    padding: 8px 11px;
+    color: #173a64;
+    background: #fff;
+    font: inherit;
+    font-size: 11px;
+}
+
+.filters button {
+    border: 0;
+    color: #175cc5;
+    font-weight: 700;
+}
+
+.tableWrap {
+    overflow-x: auto;
+    border-top: 1px solid #dfe7f0;
+}
+
+.tableWrap table {
+    width: 100%;
+    min-width: 950px;
+    border-collapse: collapse;
+}
+
+.tableWrap th {
+    padding: 12px;
+    color: #58708e;
+    background: #f3f7fb;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.tableWrap td {
+    padding: 12px;
+    border-top: 1px solid #e3eaf2;
+    font-size: 11px;
+}
+
+.tableWrap td small {
+    display: block;
+    margin-top: 3px;
+    color: #7b8da3;
+}
+
+.tableWrap td:last-child a,
+.tableWrap td:last-child button {
+    display: inline-flex;
+    min-width: 62px;
+    justify-content: center;
+    padding: 7px 12px;
+    border: 1px solid #bfd0e4;
+    border-radius: 7px;
+    color: #173a64;
+    background: #fff;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.amount {
+    font-weight: 800;
+}
+
+.typeBadge {
+    display: inline-flex;
+    min-width: 25px;
+    justify-content: center;
+    border-radius: 5px;
+    padding: 3px 5px;
+    color: #fff;
+    background: #173a64;
+    font-size: 9px;
+    font-weight: 850;
+}
+
+.typeBadge[data-type="PV"] {
+    background: #2563eb;
+}
+
+.typeBadge[data-type="PC"] {
+    color: #173a64;
+    border: 1px solid #9fb0c5;
+    background: #fff;
+}
+
+.typeBadge[data-type="INV"] {
+    background: #059669;
+}
+
+.typeBadge[data-type="TA"] {
+    background: #f59e0b;
+}
+
+.typeBadge[data-type="CA"] {
+    background: #db224a;
+}
+
+.typeBadge[data-type="CL"] {
+    background: #111;
+}
+
+.stage {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 5px 8px;
+    color: #9a6700;
+    background: #fef3c7;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.stage[data-preview="true"] {
+    color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.selectionBar {
+    position: sticky;
+    bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #fff;
+    background: #102e54;
+    box-shadow: 0 10px 30px rgb(15 42 76 / 22%);
+}
+
+.selectionBar div {
+    display: flex;
+    flex: 1;
+    gap: 10px;
+}
+
+.selectionBar span {
+    color: #9ec0ea;
+    font-size: 11px;
+}
+
+.selectionBar button {
+    border: 0;
+    color: #fff;
+    background: transparent;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.selectionBar button:last-child {
+    padding: 9px 14px;
+    border-radius: 7px;
+    color: #102a4c;
+    background: #fff;
+    font-weight: 800;
+}
+
+.backdrop {
+    position: fixed;
+    z-index: 50;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgb(15 23 42 / 55%);
+}
+
+.confirmModal,
+.detailModal {
+    width: min(760px, 96vw);
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 30px 80px rgb(15 23 42 / 35%);
+}
+
+.confirmModal>header,
+.detailModal>header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px 24px;
+    border-bottom: 1px solid #dce5ef;
+}
+
+.confirmModal>header>div,
+.detailModal>header>div {
+    flex: 1;
+}
+
+.confirmModal>header>button,
+.detailModal>header>button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #cbd8e7;
+    border-radius: 50%;
+    color: #536987;
+    background: #fff;
+    font-size: 18px;
+}
+
+.progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+}
+
+.progress span {
+    font-size: 10px;
+}
+
+.progress i {
+    flex: 1;
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5edf6;
+}
+
+.progress b {
+    display: block;
+    height: 100%;
+    background: #2563eb;
+}
+
+.confirmModal ul {
+    margin: 0;
+    padding: 0 24px;
+    list-style: none;
+}
+
+.confirmModal li {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid #dce5ef;
+}
+
+.confirmModal li+li {
+    border-top: 0;
+}
+
+.confirmModal li span {
+    display: block;
+    color: #71839a;
+    font-size: 9px;
+}
+
+.confirmModal li em {
+    padding: 4px 7px;
+    border-radius: 999px;
+    color: #526987;
+    background: #edf2f7;
+    font-size: 9px;
+    font-style: normal;
+}
+
+.confirmModal li button {
+    padding: 7px 12px;
+    border: 1px solid #cbd8e7;
+    border-radius: 7px;
+    background: #fff;
+}
+
+.confirmCheck {
+    display: flex;
+    gap: 8px;
+    margin: 16px 24px;
+    font-size: 11px;
+}
+
+.confirmModal footer,
+.detailModal footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 16px 24px;
+    border-top: 1px solid #dce5ef;
+    background: #f8fafc;
+}
+
+.confirmModal footer button,
+.detailModal footer button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid #cbd8e7;
+    border-radius: 8px;
+    color: #173a64;
+    background: #fff;
+    font: inherit;
+    font-weight: 700;
+}
+
+.confirmModal footer button:last-child,
+.detailModal footer button:last-child {
+    color: #fff;
+    border-color: #1f5c9f;
+    background: #1f5c9f;
+}
+
+.confirmModal footer button:disabled,
+.detailModal footer button:disabled {
+    opacity: 0.45;
+}
+
+.detailModal {
+    width: min(1050px, 97vw);
+}
+
+.detailModal>header>span {
+    align-self: center;
+    color: #8192a8;
+    font-size: 11px;
+}
+
+.detailBody {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+    background: #f5f8fc;
+}
+
+.detailBody section {
+    padding: 24px;
+    border: 1px solid #d9e3ef;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.detailBody h3 {
+    margin: 0 0 18px;
+}
+
+.detailBody dl {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.detailBody dt {
+    color: #7386a0;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.detailBody dd {
+    margin: 5px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.detailBody table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.detailBody th,
+.detailBody td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 10px;
+    text-align: left;
+}
+
+.detailModal footer span {
+    flex: 1;
+}
+
+.error,
+.message,
+.empty {
+    margin: 0 24px 16px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 11px;
+}
+
+.error {
+    color: #b42318;
+    background: #fff1f2;
+}
+
+.message {
+    color: #047857;
+    background: #ecfdf3;
+}
+
+.empty {
+    text-align: center;
+    color: #71839a;
+}
+
+.state {
+    padding: 48px;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .hero {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .filters {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .detailBody dl {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .page {
+        padding: 16px;
+    }
+
+    .filters,
+    .detailBody dl {
+        grid-template-columns: 1fr;
+    }
+
+    .selectionBar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .confirmModal li {
+        grid-template-columns: 1fr auto;
+    }
+
+    .detailModal footer {
+        flex-wrap: wrap;
+    }
+}
+
+/* Pending count badge used inside each payment-type tab. */
+.detailModal footer button {
+    border-radius: 9px;
+    font-size: 14px;
+    line-height: 1.25;
+    box-shadow: none;
+}
+
+.tabs b {
+    min-width: 18px;
+    color: #92400e;
+    background: #fef3c7;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+}
+
+/* Keep this override after the original minified `.tabs b` rule. */
+.tabs button b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    min-height: 18px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    color: #92400e !important;
+    background: #fef3c7 !important;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+}

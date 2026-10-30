@@ -64,7 +64,7 @@
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -174,13 +174,12 @@
   color: #1e3a5f;
   background: #fff;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .clearFiltersButton:hover {
-  background: #0f2f57;
-  color: #fff;
+  background: #f8fafc;
 }
 
 .recordsViewToggle {
@@ -389,6 +388,7 @@
   background: #dbeafe;
 }
 
+.statusBadge[data-status="TRANSACTION_PROOF_UPLOADED"],
 .statusBadge[data-status="COMPLETED"] {
   color: #067647;
   background: #d1fadf;
@@ -889,51 +889,6 @@
   color: #b42318;
 }
 
-.zipActions {
-  display: contents;
-}
-
-.zipActions button:not([data-active]) {
-  display: inline-flex;
-  width: auto;
-  min-height: 36px;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 12px;
-  border: 1px solid #1e3a5f;
-  border-radius: 9px;
-  color: #1e3a5f;
-  background: #fff;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  box-shadow: none;
-  cursor: pointer;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease;
-}
-
-.zipActions button:not([data-active]):not(:disabled):hover {
-  border-color: #163a63;
-  color: #fff;
-  background: #163a63;
-}
-
-.zipActions button:not([data-active]):disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.zipActions button:not([data-active]):focus-visible {
-  outline: 3px solid rgb(37 99 235 / 22%);
-  outline-offset: 2px;
-}
-
 @media (max-width: 1100px) {
   .recordsFilters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1199,20 +1154,16 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #d5deea;
   border-radius: 8px;
-  color: #173a64;
-  background: #fff;
+  color: #fff;
+  background: #0f172a;
   font-size: 11px;
   font-weight: 750;
   text-decoration: none;
-  transition: color .18s ease, background-color .18s ease, border-color .18s ease;
 }
 
 .correctionCard>a:hover {
-  border-color: #172b4d;
-  color: #fff;
-  background: #172b4d;
+  background: #1e293b;
 }
 
 .documents>p {
@@ -1282,20 +1233,16 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #d5deea;
   border-radius: 8px;
-  color: #173a64;
-  background: #fff;
+  color: #fff;
+  background: #0f172a;
   font-size: 11px;
   font-weight: 750;
   text-decoration: none;
-  transition: color .18s ease, background-color .18s ease, border-color .18s ease;
 }
 
 .returnNoticeAction:hover {
-  border-color: #172b4d;
-  color: #fff;
-  background: #172b4d;
+  background: #1e293b;
 }
 
 /* Payment Voucher-aligned list table */
@@ -1380,12 +1327,12 @@
 
 .tableWrapper th:nth-child(6),
 .tableWrapper td:nth-child(6) {
-  width: 205px;
+  width: 220px;
 }
 
 .tableWrapper th:last-child,
 .tableWrapper td:last-child {
-  width: 120px;
+  width: 130px;
 }
 
 .tableWrapper .actionCell a {
@@ -1413,7 +1360,7 @@
 .tableWrapper .statusBadge {
   box-sizing: border-box;
   align-items: center;
-  gap: 7px;
+  gap: 0;
   width: max-content;
   max-width: 100%;
   justify-content: center;
@@ -1422,10 +1369,62 @@
 }
 
 .tableWrapper .statusBadge::before {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 50%;
-  background: currentColor;
-  content: '';
+  display: none;
+  content: none;
+}
+
+.tableWrapper th:nth-child(4),
+.tableWrapper td:nth-child(4) {
+  text-align: center !important;
+}
+
+/* Keep the complete records table inside the records card. */
+.tableWrapper {
+  overflow-x: hidden;
+}
+
+.tableWrapper table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.tableWrapper th,
+.tableWrapper td {
+  padding-inline: 9px;
+  white-space: normal;
+}
+
+.tableWrapper th:nth-child(3),
+.tableWrapper td:nth-child(3) {
+  width: 72px;
+}
+
+.tableWrapper th:nth-last-child(2),
+.tableWrapper td:nth-last-child(2) {
+  width: 170px;
+}
+
+.tableWrapper th:last-child,
+.tableWrapper td:last-child {
+  box-sizing: border-box;
+  width: 150px;
+  padding-right: 14px;
+  padding-left: 14px;
+}
+
+.tableWrapper td:last-child a {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.tableWrapper .statusBadge {
+  box-sizing: border-box;
+  max-width: 100%;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
 }

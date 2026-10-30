@@ -156,7 +156,7 @@ function employeeSummary(entries: TravelAllowanceSheetEntry[]) {
   return [...new Set(entries.map((entry) => entry.employeeName.trim()).filter(Boolean))].join(', ');
 }
 
-function sheetData(csv: string): TravelAllowanceSheetData {
+export function parseTravelAllowanceSheet(csv: string): TravelAllowanceSheetData {
   const rows = parseCsv(csv);
   if (rows.length < 2) throw new Error('The sheet does not contain a Travel Allowance form.');
   const headingRowIndex = rows.findIndex((row) => {
@@ -234,13 +234,15 @@ export function TravelAllowanceGoogleSheet({ completionFields, disabled = false,
       });
       const body = await response.json() as { data?: { csv: string }; error?: { message?: string } };
       if (!response.ok || !body.data) throw new Error(body.error?.message ?? 'Unable to read the Google Sheet.');
-      const retrieved = sheetData(body.data.csv);
+      const retrieved = parseTravelAllowanceSheet(body.data.csv);
       setData(retrieved);
       onRetrieved?.(retrieved);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to read the Google Sheet.');
     } finally { setLoading(false); }
   }
+
+  const overallTotal = data?.entries.reduce((total, entry) => total + entryTotal(entry), 0) ?? 0;
 
   return <section className={styles.sheetCard}>
     <div className={styles.sheetHeader}><div><p>Travel Allowance</p><h2>Retrieve from Google Sheets</h2><span>One shared sheet creates one Travel Allowance request. Each populated row becomes a travel entry.</span></div><button type="button" onClick={onCancel}>Back to manual form</button></div>
@@ -254,6 +256,6 @@ export function TravelAllowanceGoogleSheet({ completionFields, disabled = false,
     {error && <div className={styles.error} role="alert">{error}</div>}
     <div className={styles.sheetLinkRow}><label><span>Google Sheets link</span><input type="url" value={url} placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=..." onChange={(event) => { setUrl(event.target.value); setData(null); setError(''); }} /></label><button type="button" disabled={loading || !url.trim()} onClick={load}>{loading ? 'Retrieving…' : 'Retrieve sheet'}</button></div>
     <p className={styles.sheetHint}>The sheet must use the official Travel Allowance template and be shared as “Anyone with the link can view”. The Manager and Project Director are selected in Estuary after retrieval.</p>
-    {data && <><div className={styles.sheetSummary}><div><span>Travel entries</span><strong>{data.entries.length}</strong></div><div><span>Employees</span><strong>{employeeSummary(data.entries) || 'No employees found'}</strong></div><div><span>Position</span><strong>{data.requesterPosition || 'From sheet'}</strong></div><div><span>Request date</span><strong>{data.requestDate || 'Choose below'}</strong></div></div><div className={styles.sheetTableWrap}><table><thead><tr><th>#</th><th>Employee</th><th>Travel date</th><th>Division</th><th>Reason</th><th>Meals</th><th>Special</th><th>Amount</th></tr></thead><tbody>{data.entries.map((entry, index) => <tr key={`${entry.travelDate}-${index}`}><td>{index + 1}</td><td>{entry.employeeName}</td><td>{entry.travelDate}</td><td>{entry.projectName}</td><td>{entry.reason || '—'}</td><td>{entry.meals.join(', ') || '—'}</td><td>RM {entry.specialAllowance.toFixed(2)}</td><td><strong>RM {entryTotal(entry).toFixed(2)}</strong></td></tr>)}</tbody></table></div><section className={styles.sheetCompletion}><div><h3>Complete request routing</h3><p>Choose the request details and approvers here before continuing.</p></div><div className={styles.sheetCompletionGrid}>{completionFields}</div></section><button className={styles.applySheetButton} disabled={disabled} type="button" onClick={() => onApply(data)}>Continue to review</button></>}
+    {data && <><div className={styles.sheetSummary}><div><span>Travel entries</span><strong>{data.entries.length}</strong></div><div><span>Employees</span><strong>{employeeSummary(data.entries) || 'No employees found'}</strong></div><div><span>Position</span><strong>{data.requesterPosition || 'From sheet'}</strong></div><div><span>Request date</span><strong>{data.requestDate || 'Choose below'}</strong></div></div><div className={styles.sheetTableWrap}><table><thead><tr><th>#</th><th>Employee</th><th>Travel date</th><th>Division</th><th>Reason</th><th>Meals</th><th>Special</th><th>Amount</th></tr></thead><tbody>{data.entries.map((entry, index) => <tr key={`${entry.travelDate}-${index}`}><td>{index + 1}</td><td>{entry.employeeName}</td><td>{entry.travelDate}</td><td>{entry.projectName}</td><td>{entry.reason || '—'}</td><td>{entry.meals.join(', ') || '—'}</td><td>RM {entry.specialAllowance.toFixed(2)}</td><td><strong>RM {entryTotal(entry).toFixed(2)}</strong></td></tr>)}</tbody></table></div><div className={styles.sheetTotal}><span>Overall total amount</span><strong>RM {overallTotal.toFixed(2)}</strong></div><section className={styles.sheetCompletion}><div><h3>Complete request routing</h3><p>Choose the request details and approvers here before continuing.</p></div><div className={styles.sheetCompletionGrid}>{completionFields}</div></section><button className={styles.applySheetButton} disabled={disabled} type="button" onClick={() => onApply(data)}>Continue to review</button></>}
   </section>;
 }

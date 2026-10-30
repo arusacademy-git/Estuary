@@ -23,14 +23,14 @@
   color: #486889;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .pageHeader h1 {
   margin: 0;
   font-size: 34px;
-  letter-spacing: -.035em;
+  letter-spacing: -0.035em;
 }
 
 .pageHeader>div>span {
@@ -117,7 +117,7 @@
 
 .queueFilters {
   display: grid;
-  grid-template-columns: minmax(170px, .72fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(170px, 0.72fr) minmax(260px, 1fr);
   gap: 12px;
   min-width: min(520px, 100%);
 }
@@ -163,7 +163,7 @@
   cursor: pointer;
 }
 
-.tabs button[data-active='true'] {
+.tabs button[data-active="true"] {
   color: #1458c4;
   border-color: #bdd4fb;
   background: #eff5ff;
@@ -226,7 +226,7 @@
   background: #e2e8f0;
 }
 
-.viewToggle button[data-active='true'] {
+.viewToggle button[data-active="true"] {
   color: #fff;
   background: #1e3a5f;
   box-shadow: 0 1px 2px rgb(15 23 42 / 14%);
@@ -347,7 +347,7 @@
   color: #526987;
   background: #f7f9fc;
   font-size: 10px;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -389,39 +389,49 @@
   text-transform: capitalize;
 }
 
-.status[data-status='PENDING_DIRECTOR_APPROVAL'],
-.status[data-status='PENDING_FINANCE_PROCESSING'] {
+.status[data-status="PENDING_DIRECTOR_APPROVAL"],
+.status[data-status="PENDING_FINANCE_PROCESSING"],
+.status[data-status="PENDING_FINANCE_VERIFICATION"] {
   color: #1d4ed8;
   background: #e7efff;
 }
 
-.status[data-status='RETURNED_TO_CLAIMANT'] {
+.status[data-status="RETURNED_TO_CLAIMANT"],
+.status[data-status="PAYMENT_REJECTED"] {
   color: #b42318;
   background: #feeceb;
 }
 
-.status[data-status='PAID'] {
+.status[data-status="PAID"],
+.status[data-status="TRANSACTION_PROOF_UPLOADED"],
+.status[data-status="COMPLETED"] {
   color: #087a50;
   background: #dff8ec;
 }
 
-.status[data-status='PENDING_MANAGER_APPROVAL'] {
+.status[data-status="PENDING_MANAGER_APPROVAL"] {
   color: #7a4500 !important;
   background: #fff0c2 !important;
 }
 
-.status[data-status='PENDING_DIRECTOR_APPROVAL'],
-.status[data-status='PENDING_FINANCE_PROCESSING'] {
+.status[data-status="PENDING_DIRECTOR_APPROVAL"],
+.status[data-status="PENDING_FINANCE_PROCESSING"],
+.status[data-status="PENDING_FINANCE_VERIFICATION"],
+.status[data-status="APPROVED_FOR_PAYMENT"],
+.status[data-status="PAYMENT_PROCESSED"] {
   color: #164e9f !important;
   background: #dbeafe !important;
 }
 
-.status[data-status='RETURNED_TO_CLAIMANT'] {
+.status[data-status="RETURNED_TO_CLAIMANT"],
+.status[data-status="PAYMENT_REJECTED"] {
   color: #a61b12 !important;
   background: #fee4e2 !important;
 }
 
-.status[data-status='PAID'] {
+.status[data-status="PAID"],
+.status[data-status="TRANSACTION_PROOF_UPLOADED"],
+.status[data-status="COMPLETED"] {
   color: #067647 !important;
   background: #d1fadf !important;
 }
@@ -688,7 +698,7 @@
 
 .primary:disabled,
 .returnButton:disabled {
-  opacity: .55;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -740,7 +750,7 @@
   left: 10px;
   width: 2px;
   background: #dbe3ee;
-  content: '';
+  content: "";
 }
 
 .progress li i {
@@ -757,23 +767,23 @@
   font-style: normal;
 }
 
-.progress li[data-state='complete'] i {
+.progress li[data-state="complete"] i {
   color: #fff;
   background: #12b981;
 }
 
-.progress li[data-state='active'] i {
+.progress li[data-state="active"] i {
   color: #fff;
   background: #1d68d5;
 }
 
-.progress li[data-state='informational'] i {
+.progress li[data-state="informational"] i {
   color: #2563eb;
   background: #e7efff;
   box-shadow: 0 0 0 5px #edf4ff;
 }
 
-.progress li[data-state='informational'] strong::after {
+.progress li[data-state="informational"] strong::after {
   display: inline-flex;
   margin-left: 7px;
   padding: 2px 6px;
@@ -781,12 +791,12 @@
   color: #2563eb;
   background: #e7efff;
   font-size: 8px;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  content: 'Informational';
+  content: "Informational";
 }
 
-.progress li[data-state='returned'] i {
+.progress li[data-state="returned"] i {
   color: #fff;
   background: #dc2626;
 }
@@ -931,7 +941,7 @@
   padding: 16px 12px;
   border-bottom: 1px solid #e2e8f0;
   color: #334155;
-  font-size: .76rem;
+  font-size: 0.76rem;
   text-align: left;
   vertical-align: middle;
   overflow-wrap: anywhere;
@@ -940,9 +950,9 @@
 .queuePanel .tableWrapper th {
   color: #64748b;
   background: #f8fafc;
-  font-size: .7rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -982,6 +992,12 @@
   white-space: nowrap;
 }
 
+.queuePanel .tableWrapper .amountCell {
+  min-width: 120px;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
 .queuePanel .tableWrapper td:last-child,
 .queuePanel .tableWrapper .actionCell {
   padding-right: 18px;
@@ -999,7 +1015,7 @@
   border-radius: 8px;
   color: #1e3a5f;
   background: #fff;
-  font-size: .78rem;
+  font-size: 0.78rem;
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
@@ -1019,7 +1035,7 @@
   width: max-content;
   max-width: none;
   justify-content: center;
-  font-size: .72rem;
+  font-size: 0.72rem;
   white-space: nowrap;
 }
 
@@ -1030,7 +1046,7 @@
   flex: 0 0 7px;
   border-radius: 50%;
   background: currentColor;
-  content: '';
+  content: "";
 }
 
 @media (max-width: 760px) {
@@ -1039,6 +1055,7 @@
     margin-left: 16px;
   }
 }
+
 .bulkPreviewButton {
   display: flex;
   width: max-content;
@@ -1053,10 +1070,59 @@
   padding: 0 18px;
   font-weight: 700;
   text-decoration: none;
-  transition: background-color 160ms ease, transform 160ms ease;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
 }
 
 .bulkPreviewButton:hover {
   background: #163a63;
   transform: translateY(-1px);
+}
+
+.financePaymentConfirmation {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start;
+  gap: 9px;
+  margin: 2px 0 4px;
+  color: #304866;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.financePaymentConfirmation span {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.actionCard .financePaymentConfirmation input[type="checkbox"] {
+  flex: 0 0 16px;
+  box-sizing: border-box;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 1px 0 0;
+  padding: 0;
+  border-radius: 3px;
+  accent-color: #173f70;
+}
+
+/* Unified ARUS Payment Request detail treatment */
+.pageHeader h1 {
+  font-size: clamp(22px, 2.3vw, 28px) !important;
+}
+
+.detailMain {
+  border-top: 4px solid #000 !important;
+}
+
+.rail {
+  position: static !important;
+  top: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
 }

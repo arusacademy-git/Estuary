@@ -155,6 +155,81 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.filterCard {
+  overflow: hidden;
+  border: 1px solid #d8e2ef;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.filterFields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.45fr) repeat(4, minmax(140px, 1fr));
+  gap: 14px;
+  padding: 0 24px 24px;
+}
+
+.filterFields label {
+  display: grid;
+  gap: 7px;
+  color: #526987;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.filterFields input,
+.filterFields select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #1e293b;
+  background: #fff;
+  font: inherit;
+}
+
+.clearFiltersButton {
+  align-self: end;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #b9c9dc;
+  border-radius: 9px;
+  color: #173a64;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.resultsHeading {
+  padding: 22px 24px 0;
+}
+
+.resultsHeading h2 {
+  margin: 0 0 6px;
+  color: #1e3a5f;
+}
+
+.resultsHeading p {
+  margin: 0;
+  color: #64748b;
+}
+
+@media (max-width: 1050px) {
+  .filterFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .filterFields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .filterTabs button {
   display: inline-flex;
   align-items: center;
@@ -166,7 +241,6 @@
   background: transparent;
   color: #64748b;
   cursor: pointer;
-  font-size: 11px;
 }
 
 .filterTabs button[data-active='true'] {
@@ -184,6 +258,11 @@
   border-radius: 999px;
   background: #e2e8f0;
   font-size: 12px;
+}
+
+/* Status selection now lives in the standalone filter card. */
+.queuePanel>.filterTabs {
+  display: none;
 }
 
 .queueDisplayBar {
@@ -276,7 +355,7 @@
 
 .voucherNumber {
   color: #2563eb;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-decoration: none;
 }
@@ -284,13 +363,11 @@
 .cardHeader h2 {
   margin: 7px 0;
   color: #1e293b;
-  font-size: 14px;
 }
 
 .cardHeader p {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
 }
 
 .statusArea {
@@ -306,7 +383,7 @@
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -333,14 +410,13 @@
 
 .informationGrid dt {
   color: #64748b;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .informationGrid dd {
   margin: 5px 0 0;
   color: #1e293b;
   font-weight: 600;
-  font-size:11px;
   overflow-wrap: anywhere;
 }
 
@@ -370,7 +446,6 @@
   padding: 0 15px;
   border-radius: 9px;
   font-weight: 700;
-  font-size: 11px;
   text-decoration: none;
 }
 
@@ -439,10 +514,6 @@
   padding-right: 18px;
 }
 
-.previewTable td:nth-child(5) > * {
-  font-size: 11px;
-}
-
 .previewTable th:nth-child(6),
 .previewTable td:nth-child(6) {
   width: 12%;
@@ -476,7 +547,7 @@
 
 .previewTable td {
   color: #334155;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .previewTable tbody tr:last-child td {
@@ -754,10 +825,6 @@
   .statusArea {
     align-items: flex-start;
   }
-
-  .statusArea > * {
-  font-size: 11px;
-}
 
   .cardActions {
     display: grid;

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import type { InvoicePaymentRequestRecord } from '@/domain/payment-requests/invoice-payment/types';
 import { getBetaAccount } from '@/lib/auth/beta-accounts';
 
-import styles from '@/features/payment-request/components/invoice-payment/staff/invoice-payment-confirmation.module.css';
+import styles from './invoice-payment-confirmation.module.css';
 
 type InvoicePaymentConfirmationProps = {
   request: InvoicePaymentRequestRecord;
@@ -36,10 +36,10 @@ function formatDate(value: string) {
   return Number.isNaN(parsed.getTime())
     ? value
     : new Intl.DateTimeFormat('en-MY', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }).format(parsed);
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(parsed);
 }
 
 export function InvoicePaymentConfirmation({
@@ -90,7 +90,7 @@ export function InvoicePaymentConfirmation({
               </button>
             </span>
             <span className={styles.statusBadge}>
-              <i aria-hidden="true" /> Pending Manager Review
+              <i aria-hidden="true" /> Pending Manager Approval
             </span>
           </div>
           <p>
@@ -132,7 +132,8 @@ export function InvoicePaymentConfirmation({
             <WorkflowStep state="active" number="2" title="Manager Review" copy={`Assigned to ${manager?.name ?? 'Manager'}`} />
             <WorkflowStep number="3" title="Director Review" copy="Awaiting Manager approval" />
             <WorkflowStep number="4" title="Finance Verification" copy="Awaiting Director approval" />
-            <WorkflowStep number="5" title="Completed" copy="Awaiting Finance confirmation" />
+            <WorkflowStep number="5" title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
+            <WorkflowStep number="6" title="Completed" copy="Closes after transaction proof is uploaded" />
           </ol>
         </section>
 
