@@ -11,7 +11,7 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/compact-finance-sidebar-counts
+- Current Branch: agent/fix-penang-font-build
 - Last Updated: 2026-10-30
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
@@ -34,6 +34,7 @@
 
 ## Current Session Log — 2026-10-30
 
+- Penang Docker rebuild of `89d226a` failed during `next build` on 14 Fira Code `next/font/google` Turbopack resolutions. The prior app image stayed healthy and running. Issue #95 vendors the same OFL Fira Code variable font and loads it with `next/font/local`, preserving the `--font-mono` CSS variable and weights 400–500. Local production build and focused lint passed; Linux Docker rebuild still needs verification on Penang.
 - Issue #91: the Finance sidebar downloaded six full record lists on each refresh, including a 7.6 MB Invoice Payment response, to show count badges. A new read-only `/api/v1/dashboard/finance-action-counts` endpoint returns only badge counts. Voucher, Invoice and Travel counts query PostgreSQL directly; Cash Advance reads only the state field for the same newest 1,000 records; Petty Cash and Claims retain their existing repository mapping for current behavior. The browser now makes one count request instead of six list requests. The current Penang Finance badge baseline was 72 actions before deployment. No schema migration is required.
 - Integrated GitHub `main` through `b439916`, including the intern's Cash Advance and Claim changes. Issue #93 closes a release gap in the new Claim storage behavior: Penang Compose now mounts a persistent `claims-private` volume and sets `ESTUARY_PRIVATE_STORAGE_ROOT=/app/runtime/private`, while the runner image creates the directory owned by UID 1001. Back up that volume separately from PostgreSQL and `runtime/`.
 - Penang performance check: the finance dashboard loaded in roughly 0.6 seconds over NetBird and 2.5–3.5 seconds through the temporary Cloudflare tunnel. The server itself was lightly loaded. Browser inspection found the finance sidebar fetching six full payment lists every 15 seconds and Next.js prefetching many unopened destinations through the tunnel. Issue #86 tracks a 60-second visible-tab polling interval and disabled dashboard, sidebar, and header route prefetch; action-count events and tab focus still trigger refreshes. Local production browser test reduced dashboard prefetch requests from 15 to 0; eight initial Finance API reads remain. Lint, TypeScript check, and production build passed. The change awaits GitHub publishing and Penang deployment before live speed can be retested.
