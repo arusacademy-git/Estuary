@@ -106,6 +106,11 @@ function ArrowIcon() {
 export function PaymentVoucherCreateWorkspace() {
   const searchParams = useSearchParams();
 
+  const requestedDraftMode =
+    searchParams.get('draft') === '1'
+      ? searchParams.get('mode')
+      : null;
+
   const amendmentVoucherId =
     searchParams.get('amend');
 
@@ -136,7 +141,11 @@ export function PaymentVoucherCreateWorkspace() {
   ] = useState<CreationMode>(
     isAmendmentRequest
       ? 'single'
-      : null,
+      : requestedDraftMode === 'multiple'
+        ? 'multiple'
+        : requestedDraftMode === 'single'
+          ? 'single'
+          : null,
   );
 
   const [
@@ -488,3 +497,4 @@ export function PaymentVoucherCreateWorkspace() {
     </div>
   );
 }
+

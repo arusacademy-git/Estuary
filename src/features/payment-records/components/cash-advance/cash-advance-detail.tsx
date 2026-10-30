@@ -7,9 +7,10 @@ import { fetchCashAdvance } from '@/data/payment-requests/cash-advance/cash-adva
 import type { CashAdvanceRecord } from '@/domain/payment-requests/cash-advance/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
 import { CashAdvanceDetail as CashAdvanceReceipt } from '@/features/payment-request/components/cash-advance/cash-advance-detail';
-import { PaymentPageState } from '@/shared/payment-page-state';
 import receiptStyles from '@/features/payment-request/components/cash-advance/cash-advance.module.css';
+import { PaymentRecordActionCard } from '../shared/payment-record-action-card';
 
+import styles from './cash-advance-records.module.css';
 
 function canView(record: CashAdvanceRecord, account: BetaAccount) {
   if (record.requesterId === account.id) return true;
@@ -21,37 +22,28 @@ function canView(record: CashAdvanceRecord, account: BetaAccount) {
 
 export function CashAdvancePaymentRecordDetail({ requestId }: { requestId: string }) {
   const [record, setRecord] = useState<CashAdvanceRecord | null>(null);
-  // undefined = session not read yet, null = no session found
-  const [account, setAccount] = useState<BetaAccount | null | undefined>(undefined);
-  const [fetchError, setFetchError] = useState('');
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [error, setError] = useState(() => account ? '' : 'Sign in to view this Cash Advance record.');
 
   useEffect(() => {
+    if (!account) return;
     let cancelled = false;
 
-    Promise.resolve().then(() => {
-      const current = readBetaSession();
-      if (cancelled) return;
-      setAccount(current);
-      if (!current) return;
-
-      return fetchCashAdvance(requestId)
-        .then((result) => {
-          if (!canView(result, current)) throw new Error('This Cash Advance is not available to your account.');
-          if (!cancelled) setRecord(result);
-        })
-        .catch((caught) => {
-          if (!cancelled) setFetchError(caught instanceof Error ? caught.message : 'Cash Advance could not be loaded.');
-        });
-    });
+    fetchCashAdvance(requestId)
+      .then((result) => {
+        if (!canView(result, account)) throw new Error('This Cash Advance is not available to your account.');
+        if (!cancelled) setRecord(result);
+      })
+      .catch((caught) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Cash Advance could not be loaded.');
+      });
 
     return () => { cancelled = true; };
-  }, [requestId]);
+  }, [account, requestId]);
 
-  // Derived: no setError needed for the sign-in message
-  const error = account === null ? 'Sign in to view this Cash Advance record.' : fetchError;
-
-  if (error) return <PaymentPageState title="Cash Advance unavailable" copy={error} backHref="/beta/payment-records/cash-advances" backLabel="Back to Cash Advances" />;
-  if (!record) return <PaymentPageState title="Loading Cash Advance" copy="Reading the payment record…" backHref="/beta/payment-records/cash-advances" backLabel="Back to Cash Advances" />;
+  if (error) return <main className={styles.statePage}><h1>Cash Advance unavailable</h1><p>{error}</p><Link href="/beta/payment-records/cash-advances">Back to Cash Advances</Link></main>;
+  if (!account) return <main className={styles.statePage}><h1>Sign in required</h1><p>Sign in to view this Cash Advance record.</p></main>;
+  if (!record) return <main className={styles.statePage}><h1>Loading Cash Advance</h1><p>Reading the payment record…</p></main>;
 
   const needsReconciliation = record.status === 'PENDING_RECONCILIATION' || (
     record.status === 'RETURNED_TO_STAFF' && record.returnedStage === 'RECONCILIATION'
@@ -67,11 +59,12 @@ export function CashAdvancePaymentRecordDetail({ requestId }: { requestId: strin
   const actionLabel = needsReconciliation
     ? record.status === 'RETURNED_TO_STAFF' ? 'Continue reconciliation →' : 'Start reconciliation →'
     : 'Start corrections →';
-  const actions = needsRequesterAction
-    ? record.status === 'RETURNED_TO_STAFF'
+  const actions = <>
+    <PaymentRecordActionCard account={account} directorApproverId={record.directorApproverId} managerApproverId={record.managerApproverId} paymentType="CA" reference={record.requestNumber} requestId={record.id} status={record.status} />
+    {needsRequesterAction && (record.status === 'RETURNED_TO_STAFF'
       ? <Link className={receiptStyles.returnCorrectionButton} href={requesterActionHref}>{actionLabel}</Link>
-      : <section className={`${receiptStyles.sideCard} ${receiptStyles.reconciliationActionCard}`}><h3>Action required</h3><p className={receiptStyles.muted}>{actionDescription}</p><Link className={`${receiptStyles.primary} ${receiptStyles.actionLink}`} href={requesterActionHref}>{actionLabel}</Link></section>
-    : undefined;
+      : <section className={`${receiptStyles.sideCard} ${receiptStyles.reconciliationActionCard}`}><h3>Action required</h3><p className={receiptStyles.muted}>{actionDescription}</p><Link className={receiptStyles.actionLink} href={requesterActionHref}>{actionLabel}</Link></section>)}
+  </>;
 
   return <CashAdvanceReceipt actions={actions} backHref="/beta/payment-records/cash-advances" record={record} />;
 }

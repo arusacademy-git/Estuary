@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 import type { PettyCashRecord } from '@/domain/payment-requests/petty-cash/types';
 import { getBetaAccount } from '@/lib/auth/beta-accounts';
@@ -37,12 +37,12 @@ export function PettyCashConfirmation({
   const nextReviewer = 'Finance';
   const nextStage = 'Finance processing';
   const workflow = requesterRole === 'staff'
-    ? [['Manager Preview', `Informational preview assigned to ${manager?.name ?? 'Manager'}`], ['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Completed', 'After Finance payment']]
+    ? [['Manager Preview', `Informational preview assigned to ${manager?.name ?? 'Manager'}`], ['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
     : requesterRole === 'manager'
-      ? [['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Completed', 'After Finance payment']]
+      ? [['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
       : requesterRole === 'director'
-        ? [['Finance Processing', 'Sent directly to Finance'], ['Completed', 'After Finance payment']]
-        : [['Independent Preview', `Informational preview assigned to ${independentReviewer?.name ?? 'reviewer'}`], ['Finance Processing', 'Available immediately'], ['Completed', 'After Finance payment']];
+        ? [['Finance Processing', 'Sent directly to Finance'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
+        : [['Independent Preview', `Informational preview assigned to ${independentReviewer?.name ?? 'reviewer'}`], ['Finance Processing', 'Available immediately'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']];
 
   async function copyReference() {
     try {
@@ -91,7 +91,7 @@ export function PettyCashConfirmation({
 
         <section className={styles.confirmationSection}>
           <h2>Workflow progress</h2>
-          <ol className={styles.confirmationWorkflow}>
+          <ol className={styles.confirmationWorkflow} style={{ '--stage-count': workflow.length + 1 } as CSSProperties}>
             <ConfirmationStep state="complete" number="✓" title="Request Submitted" copy={request.requesterName} />
             {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={title === 'Finance Processing' ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
           </ol>

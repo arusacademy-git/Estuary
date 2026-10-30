@@ -98,7 +98,7 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
         </DetailSection>
 
         <DetailSection title="Expense breakdown">
-          <div className={styles.managerReviewTable}><table><thead><tr><th>#</th><th>Date</th><th>Supplier</th><th>Details / purpose</th><th>Account category</th><th>Division</th><th>Receipt</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{date(line.expenseDate)}</td><td>{line.supplier}</td><td>{line.details}</td><td>{line.accountType}</td><td>{line.division}</td><td>{line.proofLink ? <a href={line.proofLink} rel="noreferrer" target="_blank">Open proof ↗</a> : '—'}</td><td><strong>{money(line.amount)}</strong></td></tr>)}</tbody></table></div>
+          <div className={styles.managerReviewTable}><table><thead><tr><th>#</th><th>Details / purpose</th><th>Account category</th><th>Division</th><th>Estimated amount</th></tr></thead><tbody>{record.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{line.details}</td><td>{line.accountType}</td><td>{line.division}</td><td><strong>{money(line.amount)}</strong></td></tr>)}</tbody></table></div>
           <div className={styles.managerReviewTotal}><span>Total requested</span><strong>{money(record.totalAmount)}</strong></div>
         </DetailSection>
 
@@ -112,7 +112,7 @@ export function PettyCashManagerReview({ requestId }: { requestId: string }) {
           <p>Manager action</p>
           <h2>{actionable ? 'Preview Petty Cash request' : 'Preview recorded'}</h2>
           {actionable ? <>
-            <span>Review the expenses and receipt links for visibility. Finance can process this request before or after your preview.</span>
+            <span>Review the planned expenses for visibility. Purchase receipts are provided later during reconciliation.</span>
             <button className={styles.managerApproveButton} disabled={saving} onClick={approve} type="button">Record Manager preview <b aria-hidden="true">→</b></button>
           </> : <>
             <span>Finance processing is independent from this informational preview.</span>

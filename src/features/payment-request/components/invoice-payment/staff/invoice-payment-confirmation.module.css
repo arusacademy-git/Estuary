@@ -38,7 +38,7 @@
     justify-items: center;
     padding: 34px 28px 30px;
     text-align: center;
-    background: #ffff;
+    background: #fff;
 }
 
 .successIcon {
@@ -139,6 +139,7 @@
 .workflowSection {
     padding: 28px 38px;
     border-top: 1px solid #edf1f5;
+    background: #fff;
 }
 
 .summarySection h2,
@@ -194,7 +195,7 @@
 
 .workflow {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     margin: 0;
     padding: 0;
     list-style: none;
@@ -285,14 +286,13 @@
     gap: 16px;
     padding: 20px 38px;
     border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
+    background: #fff;
 }
 
 .actions>div {
     display: flex;
     gap: 10px;
 }
-
 
 .secondaryButton,
 .primaryButton {
@@ -308,7 +308,6 @@
     text-decoration: none;
     cursor: pointer;
 }
-
 
 .secondaryButton {
     border: 1px solid #c8d5e5;
@@ -380,14 +379,9 @@
         flex-direction: column;
     }
 
-    .printButton,
     .secondaryButton,
     .primaryButton {
         width: 100%;
-    }
-
-    .printButton {
-        padding-left: 14px;
     }
 }
 

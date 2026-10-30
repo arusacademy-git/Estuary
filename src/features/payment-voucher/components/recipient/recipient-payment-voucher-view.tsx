@@ -450,8 +450,8 @@ export function RecipientPaymentVoucherView({
             {isDownloading
               ? 'Preparing PDF…'
               : signatureSubmitted
-                ? 'Download signed PDF'
-                : 'Download PDF'}
+                ? 'Download signed PV'
+                : 'Download PV'}
           </button>
         </section>
 

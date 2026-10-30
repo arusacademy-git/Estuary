@@ -313,8 +313,14 @@
 
 .secondary {
   border: 1px solid #bfdbfe;
-  color: #2563eb;
+  color: #173a64;
   background: #ffffff;
+  box-shadow: none;
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: #173a64;
+  background: #f8fbff;
 }
 
 .danger {
@@ -529,8 +535,11 @@
   border-top: 1px solid #e2e8f0;
 }
 
-.formActions .primary {
-  font-size: 14px;
+.formActions .primary,
+.formActions .secondary {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 12px;
 }
 
 .summaryStats {
@@ -2118,7 +2127,7 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 7px;
+  gap: 0;
   min-height: 30px;
   border-radius: 999px;
   padding: 5px 12px;
@@ -2130,11 +2139,7 @@
 }
 
 .voucherStatusDot {
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: currentcolor;
+  display: none;
 }
 
 .voucherStatusBadge[data-tone='green'] {
@@ -2169,17 +2174,29 @@
   gap: 20px;
 }
 
+.voucherRecordTable .statusBadge {
+  box-sizing: border-box;
+  max-width: 100%;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
 .voucherRecordTableWrapper {
   width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
 }
 
 .voucherRecordTable {
   width: 100%;
-  min-width: 0;
+  min-width: 1040px;
   table-layout: fixed;
   border-collapse: collapse;
   background: #ffffff;
@@ -2197,7 +2214,7 @@
 
 .voucherRecordTable th:nth-child(3),
 .voucherRecordTable td:nth-child(3) {
-  width: 17%;
+  width: 14%;
 }
 
 .voucherRecordTable th:nth-child(4),
@@ -2212,7 +2229,7 @@
 
 .voucherRecordTable th:nth-child(6),
 .voucherRecordTable td:nth-child(6) {
-  width: 21%;
+  width: 22%;
 }
 
 .voucherRecordTable th:nth-child(7),
@@ -2222,7 +2239,7 @@
 
 .voucherRecordTable th:nth-child(8),
 .voucherRecordTable td:nth-child(8) {
-  width: 13%;
+  width: 15%;
 }
 
 .voucherRecordTable th,
@@ -2301,8 +2318,9 @@
 }
 
 .voucherRecordTable .voucherStatusBadge {
+  box-sizing: border-box;
   width: max-content;
-  max-width: none;
+  max-width: 100%;
   justify-content: center;
   padding-right: 10px;
   padding-left: 10px;
@@ -2759,6 +2777,101 @@
   border-radius: 18px;
   background: #ffffff;
   padding: 26px;
+}
+
+.approvalFilterCard {
+  overflow: hidden;
+  border: 1px solid #d8e2ef;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.approvalFilterHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 16px;
+}
+
+.approvalFilterHeading h2 {
+  margin: 0 0 6px;
+  color: #1e3a5f;
+}
+
+.approvalFilterHeading p {
+  margin: 0;
+  color: #64748b;
+}
+
+.approvalFilterHeading button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #b9c9dc;
+  border-radius: 9px;
+  color: #173a64;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.approvalFilterFields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.45fr) repeat(4, minmax(140px, 1fr));
+  gap: 14px;
+  padding: 0 24px 24px;
+}
+
+.approvalFilterFields label {
+  display: grid;
+  gap: 7px;
+  color: #526987;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.approvalFilterFields input,
+.approvalFilterFields select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #1e293b;
+  background: #fff;
+  font: inherit;
+}
+
+.approvalFilterFields input:focus,
+.approvalFilterFields select:focus {
+  border-color: #2563eb;
+  outline: 3px solid rgb(37 99 235 / 11%);
+}
+
+.approvalQueuePanel>.approvalWorkspaceTabs,
+.approvalQueuePanel>.approvalFilterTabs,
+.approvalQueueTools .approvalSearch {
+  display: none;
+}
+
+@media (max-width: 1050px) {
+  .approvalFilterFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .approvalFilterHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .approvalFilterFields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .approvalWorkspaceTabs {
@@ -4842,4 +4955,19 @@
     justify-content: flex-start;
     margin-top: 2px;
   }
+}
+
+.fieldError {
+  display: block;
+  margin-top: 6px;
+  color: #b42318 !important;
+  font-size: 11px !important;
+  font-weight: 650;
+  line-height: 1.4;
+  text-transform: none !important;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
 }

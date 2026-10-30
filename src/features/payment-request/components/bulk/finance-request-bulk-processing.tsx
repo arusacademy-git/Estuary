@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { fetchCashAdvances, payCashAdvanceByFinance } from '@/data/payment-requests/cash-advance/cash-advance-api';
 import { fetchClaimRequests, processClaimByFinance } from '@/data/payment-requests/claims/api';
-import { completeInvoicePaymentByFinance, fetchInvoicePayments } from '@/data/payment-requests/invoice-payment/api';
+import {
+  fetchInvoicePayments,
+  processInvoicePaymentByFinance,
+} from '@/data/payment-requests/invoice-payment/api';
 import { fetchPettyCashRequests, markPettyCashPaid, verifyPettyCashByFinance } from '@/data/payment-requests/petty-cash/api';
 import { completeTravelAllowanceByFinance, fetchTravelAllowances } from '@/data/payment-requests/travel-allowance/api';
 import type { CashAdvanceRecord } from '@/domain/payment-requests/cash-advance/types';
@@ -16,7 +19,6 @@ import type { PettyCashRecord } from '@/domain/payment-requests/petty-cash/types
 import type { TravelAllowanceRecord } from '@/domain/payment-requests/travel-allowance/types';
 import { notifyCashAdvancePaid } from '@/features/payment-request/notifications/cash-advance-notifications';
 import { notifyClaimPaid } from '@/features/payment-request/notifications/claim-notifications';
-import { notifyStaffInvoicePaymentCompleted } from '@/features/payment-request/notifications/invoice-payment-notifications';
 import { notifyPettyCashFinanceVerified, notifyPettyCashPaid } from '@/features/payment-request/notifications/petty-cash-notifications';
 import { notifyTravelAllowanceCompleted } from '@/features/payment-request/notifications/travel-allowance-notifications';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
@@ -82,7 +84,6 @@ export function FinanceRequestBulkProcessing({ kind }: { kind: FinanceBulkKind }
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState(today());
   const [remarks, setRemarks] = useState('');
-  const [proofs, setProofs] = useState<Record<string, { dataUrl: string; name: string }>>({});
   const [claimType, setClaimType] = useState('ALL');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [confirmed, setConfirmed] = useState(false);
@@ -136,34 +137,19 @@ export function FinanceRequestBulkProcessing({ kind }: { kind: FinanceBulkKind }
     if (isPettyCash(record) && record.status === 'FINANCE_VERIFIED') return true;
     const paymentReference = paymentReferenceFor(record);
     if (!paymentDate || !paymentReference) return false;
-    return !isPettyCash(record) || Boolean(proofs[record.id]?.dataUrl);
+    return true;
   });
 
   function resetConfirmation() { setConfirmed(false); setMessage(''); setError(''); }
   function toggle(id: string) { setSelectedIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]); resetConfirmation(); }
-  async function selectProof(recordId: string, event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!['application/pdf', 'image/png', 'image/jpeg'].includes(file.type) || file.size > 2.5 * 1024 * 1024) {
-      setError('Petty Cash payment proof must be a PDF, JPG or PNG file no larger than 2.5 MB.');
-      event.target.value = '';
-      return;
-    }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Payment proof could not be read.'));
-      reader.onerror = () => reject(new Error('Payment proof could not be read.'));
-      reader.readAsDataURL(file);
-    });
-    setProofs((current) => ({ ...current, [recordId]: { dataUrl, name: file.name } }));
-    resetConfirmation();
-  }
-
   async function processRecord(record: FinanceRecord, current: BetaAccount) {
     if (isInvoice(record)) {
-      const updated = await completeInvoicePaymentByFinance(record.id, current.id, paymentDate);
-      notifyStaffInvoicePaymentCompleted(updated, current);
-      return updated;
+      return processInvoicePaymentByFinance(
+        record.id,
+        current.id,
+        paymentDate,
+        paymentReferenceFor(record),
+      );
     }
     const paymentReference = paymentReferenceFor(record);
     if (isTravel(record)) {
@@ -177,7 +163,7 @@ export function FinanceRequestBulkProcessing({ kind }: { kind: FinanceBulkKind }
       return updated;
     }
     if (isCashAdvance(record)) {
-      const updated = await payCashAdvanceByFinance(record.id, current.id, paymentDate);
+      const updated = await payCashAdvanceByFinance(record.id, current.id, paymentDate, paymentReference);
       notifyCashAdvancePaid(updated, current);
       return updated;
     }
@@ -187,7 +173,7 @@ export function FinanceRequestBulkProcessing({ kind }: { kind: FinanceBulkKind }
         financeId: current.id,
         paymentDate,
         paymentReference,
-        paymentProofLink: proofs[record.id]?.dataUrl ?? '',
+        paymentProofLink: '',
         notes: remarks.trim() || undefined,
       });
       notifyPettyCashFinanceVerified(verified, current);
@@ -252,13 +238,14 @@ export function FinanceRequestBulkProcessing({ kind }: { kind: FinanceBulkKind }
           <div className={localStyles.paymentTableBody}>{paymentRows.map((record) => {
             const alreadyVerified = isPettyCash(record) && record.status === 'FINANCE_VERIFIED';
             const reviewed = reviewedIds.includes(record.id);
-            return <div className={`${localStyles.paymentRow} ${!needsPaymentDetails ? localStyles.reviewOnlyRow : ''}`} key={record.id}><div className={localStyles.recordCell}><strong>{reference(record)}</strong><small>{requester(record)} · {context(record)}</small></div><strong className={localStyles.rowAmount}>{money(record.totalAmount)}</strong>{needsPaymentDetails && <div className={localStyles.referenceCell}>{alreadyVerified ? <span className={localStyles.verifiedPayment}>{reference(record)}</span> : <input aria-label={`Automatic payment reference for ${reference(record)}`} readOnly value={paymentReferenceFor(record)} />}{isPettyCash(record) && !alreadyVerified && <label className={localStyles.proofField}><span>Payment proof *</span><input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => void selectProof(record.id, event)} type="file" /><small>{proofs[record.id]?.name ?? 'PDF, JPG or PNG · max 2.5 MB'}</small></label>}</div>}<button className={localStyles.reviewStatus} data-reviewed={reviewed} onClick={() => setReviewId(record.id)} type="button">{reviewed ? 'Reviewed' : 'Not reviewed'}</button></div>;
+            return <div className={`${localStyles.paymentRow} ${!needsPaymentDetails ? localStyles.reviewOnlyRow : ''}`} key={record.id}><div className={localStyles.recordCell}><strong>{reference(record)}</strong><small>{requester(record)} · {context(record)}</small></div><strong className={localStyles.rowAmount}>{money(record.totalAmount)}</strong>{needsPaymentDetails && <div className={localStyles.referenceCell}>{alreadyVerified ? <span className={localStyles.verifiedPayment}>{reference(record)}</span> : <input aria-label={`Automatic payment reference for ${reference(record)}`} readOnly value={paymentReferenceFor(record)} />}</div>}<button className={localStyles.reviewStatus} data-reviewed={reviewed} onClick={() => setReviewId(record.id)} type="button">{reviewed ? 'Reviewed' : 'Not reviewed'}</button></div>;
           })}{paymentRows.length === 0 && <p className={localStyles.noRows}>No selected records match this view.</p>}</div>
         </div>
         <p className={localStyles.scrollHint}>Review every selected record{needsPaymentDetails ? ' and add all required payment information' : ''} to continue.</p>
-        <div className={localStyles.requirements}><span data-complete={allReviewed}><i aria-hidden="true" />Review every selected record</span>{needsPaymentDetails && <span data-complete={allPaymentDetailsReady}><i aria-hidden="true" />Confirm automatic references{kind === 'petty-cash' ? ' and payment proofs' : ''}</span>}</div>
+        <div className={localStyles.requirements}><span data-complete={allReviewed}><i aria-hidden="true" />Review every selected record</span>{needsPaymentDetails && <span data-complete={allPaymentDetailsReady}><i aria-hidden="true" />Confirm automatic references</span>}</div>
       </section>
       {kind === 'cash-advance' && <div className={localStyles.processingNote}><strong>Cash Advance workflow</strong>Bulk processing records payment and moves each request to Staff reconciliation. It does not close the Cash Advance until Finance verifies the later reconciliation.</div>}
+      {kind === 'petty-cash' && <div className={localStyles.processingNote}><strong>Petty Cash workflow</strong>Bulk processing releases the money and moves each request to reconciliation. Purchase receipts and any unused balance are recorded afterward.</div>}
       <footer className={localStyles.confirmationFooter}><label><input checked={confirmed} disabled={!allReviewed || !allPaymentDetailsReady} onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" />I confirm the selected records and payment information are correct.</label><button disabled={!confirmed || !allReviewed || !allPaymentDetailsReady || submitting} onClick={submit} type="button">{submitting ? 'Processing records…' : `Process ${selectedIds.length} selected`}</button></footer>
     </section>}
     {reviewRecord && <FinanceReviewModal accountId={account.id} currentRecords={reviewRecords} record={reviewRecord} reviewed={reviewedIds.includes(reviewRecord.id)} onChangeRecord={setReviewId} onClose={() => setReviewId(null)} onReviewed={() => setReviewedIds((current) => current.includes(reviewRecord.id) ? current : [...current, reviewRecord.id])} />}
@@ -274,8 +261,8 @@ function FinanceReviewModal({ accountId, currentRecords, record, reviewed, onCha
 
 function FinanceRecordDetails({ accountId, record }: { accountId: string; record: FinanceRecord }) {
   if (!isClaim(record) && !isPettyCash(record)) return <RequestRecordDetails record={record as RequestApprovalRecord} />;
-  if (isClaim(record)) return <div className={modalStyles.fullDetails}><DetailSection title="Request overview"><DetailGrid values={[[ 'Status', record.status.replaceAll('_', ' ') ], [ 'Claimant', record.requesterName ], [ 'Position', record.requesterPosition ], [ 'Claim type', claimTypeDetails(record.claimType).label ], [ 'Claim date', date(record.claimDate) ], [ 'Contact', record.requesterContact ], [ 'Items', String(record.lines.length) ], [ 'Total', money(record.totalAmount) ]]} /></DetailSection><DetailSection title={`Expense breakdown (${record.lines.length})`}><div className={modalStyles.lineTableWrapper}><table className={modalStyles.lineTable}><thead><tr><th>Date</th><th>Supplier</th><th>Details</th><th>Division</th><th>Receipt</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line) => <tr key={line.id}><td>{date(line.expenseDate)}</td><td>{line.supplier}</td><td>{line.details}</td><td>{line.division}</td><td>{line.receiptLink ? <a href={line.receiptLink} rel="noreferrer" target="_blank">Open ↗</a> : line.receiptDocumentId ? <a href={`/api/v1/payment-requests/claims/documents/${encodeURIComponent(line.receiptDocumentId)}?userId=${encodeURIComponent(accountId)}`} rel="noreferrer" target="_blank">Open ↗</a> : '—'}</td><td>{money(line.amount)}</td></tr>)}</tbody></table></div></DetailSection>{record.notes && <DetailSection title="Notes"><div className={modalStyles.longText}><p>{record.notes}</p></div></DetailSection>}</div>;
-  return <div className={modalStyles.fullDetails}><DetailSection title="Request overview"><DetailGrid values={[[ 'Status', record.status.replaceAll('_', ' ') ], [ 'Requester', record.requesterName ], [ 'Position', record.requesterPosition ], [ 'Location', record.location === 'PENANG' ? 'Penang' : 'Kuala Lumpur' ], [ 'Request date', date(record.requestDate) ], [ 'Contact', record.requesterContact ], [ 'Items', String(record.lines.length) ], [ 'Total', money(record.totalAmount) ]]} /></DetailSection><DetailSection title={`Expense breakdown (${record.lines.length})`}><div className={modalStyles.lineTableWrapper}><table className={modalStyles.lineTable}><thead><tr><th>Date</th><th>Supplier</th><th>Details</th><th>Account</th><th>Proof</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line) => <tr key={line.id}><td>{date(line.expenseDate)}</td><td>{line.supplier}</td><td>{line.details}</td><td>{line.accountType}</td><td>{line.proofLink ? <a href={line.proofLink} rel="noreferrer" target="_blank">Open ↗</a> : '—'}</td><td>{money(line.amount)}</td></tr>)}</tbody></table></div></DetailSection>{record.notes && <DetailSection title="Notes"><div className={modalStyles.longText}><p>{record.notes}</p></div></DetailSection>}</div>;
+  if (isClaim(record)) return <div className={modalStyles.fullDetails}><DetailSection title="Request overview"><DetailGrid values={[['Status', record.status.replaceAll('_', ' ')], ['Claimant', record.requesterName], ['Position', record.requesterPosition], ['Claim type', claimTypeDetails(record.claimType).label], ['Claim date', date(record.claimDate)], ['Contact', record.requesterContact], ['Items', String(record.lines.length)], ['Total', money(record.totalAmount)]]} /></DetailSection><DetailSection title={`Expense breakdown (${record.lines.length})`}><div className={modalStyles.lineTableWrapper}><table className={modalStyles.lineTable}><thead><tr><th>Date</th><th>Supplier</th><th>Details</th><th>Division</th><th>Receipt</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line) => <tr key={line.id}><td>{date(line.expenseDate)}</td><td>{line.supplier}</td><td>{line.details}</td><td>{line.division}</td><td>{line.receiptLink ? <a href={line.receiptLink} rel="noreferrer" target="_blank">Open ↗</a> : line.receiptDocumentId ? <a href={`/api/v1/payment-requests/claims/documents/${encodeURIComponent(line.receiptDocumentId)}?userId=${encodeURIComponent(accountId)}`} rel="noreferrer" target="_blank">Open ↗</a> : '—'}</td><td>{money(line.amount)}</td></tr>)}</tbody></table></div></DetailSection>{record.notes && <DetailSection title="Notes"><div className={modalStyles.longText}><p>{record.notes}</p></div></DetailSection>}</div>;
+  return <div className={modalStyles.fullDetails}><DetailSection title="Request overview"><DetailGrid values={[['Status', record.status.replaceAll('_', ' ')], ['Requester', record.requesterName], ['Position', record.requesterPosition], ['Location', record.location === 'PENANG' ? 'Penang' : 'Kuala Lumpur'], ['Request date', date(record.requestDate)], ['Contact', record.requesterContact], ['Items', String(record.lines.length)], ['Total', money(record.totalAmount)]]} /></DetailSection><DetailSection title={`Expense breakdown (${record.lines.length})`}><div className={modalStyles.lineTableWrapper}><table className={modalStyles.lineTable}><thead><tr><th>Date</th><th>Supplier</th><th>Details</th><th>Account</th><th>Proof</th><th>Amount</th></tr></thead><tbody>{record.lines.map((line) => <tr key={line.id}><td>{date(line.expenseDate)}</td><td>{line.supplier}</td><td>{line.details}</td><td>{line.accountType}</td><td>{line.proofLink ? <a href={line.proofLink} rel="noreferrer" target="_blank">Open ↗</a> : '—'}</td><td>{money(line.amount)}</td></tr>)}</tbody></table></div></DetailSection>{record.notes && <DetailSection title="Notes"><div className={modalStyles.longText}><p>{record.notes}</p></div></DetailSection>}</div>;
 }
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className={modalStyles.detailSection}><h3>{title}</h3>{children}</section>; }
 function DetailGrid({ values }: { values: Array<[string, string]> }) { return <dl className={modalStyles.detailGrid}>{values.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>)}</dl>; }

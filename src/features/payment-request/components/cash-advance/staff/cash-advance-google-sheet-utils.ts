@@ -6,6 +6,25 @@ export function normalizeSheetCell(value: string) {
     .toLowerCase();
 }
 
+export function normalizeDocumentReferenceLabel(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/[‐‑‒–—−]/g, '-')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+export function resolveSheetRichLink(reference: string, richLinks: Record<string, string>) {
+  const direct = richLinks[reference];
+  if (direct) return direct;
+  const normalizedReference = normalizeDocumentReferenceLabel(reference);
+  return Object.entries(richLinks).find(
+    ([label]) => normalizeDocumentReferenceLabel(label) === normalizedReference,
+  )?.[1];
+}
+
 export function parseSheetCsv(text: string) {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -62,7 +81,7 @@ export function parseSheetCsv(text: string) {
   return rows;
 }
 
-export async function retrieveSheetCsv(url: string) {
+export async function retrieveSheetData(url: string) {
   const response = await fetch(
     '/api/v1/payment-requests/google-sheet',
     {
@@ -79,6 +98,7 @@ export async function retrieveSheetCsv(url: string) {
   const body = (await response.json()) as {
     data?: {
       csv: string;
+      richLinks?: Record<string, string>;
     };
     error?: {
       message?: string;
@@ -92,7 +112,11 @@ export async function retrieveSheetCsv(url: string) {
     );
   }
 
-  return body.data.csv;
+  return { csv: body.data.csv, richLinks: body.data.richLinks ?? {} };
+}
+
+export async function retrieveSheetCsv(url: string) {
+  return (await retrieveSheetData(url)).csv;
 }
 
 export function sheetMoney(value: string) {
@@ -175,7 +199,7 @@ export function sheetMetadata(
 
   rows
     .slice(0, endIndex)
-    .forEach((row, rowIndex) =>
+    .forEach((row) =>
       row.forEach((rawCell, columnIndex) => {
         const cell = rawCell.trim();
 
@@ -222,14 +246,6 @@ export function sheetMetadata(
               break;
             }
           }
-        }
-
-        if (!value) {
-          value = String(
-            rows[rowIndex + 1]?.[
-              columnIndex
-            ] ?? '',
-          ).trim();
         }
 
         if (value) {

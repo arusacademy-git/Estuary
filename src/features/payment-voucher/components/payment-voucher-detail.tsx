@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { PaymentPageState } from '@/shared/payment-page-state';
 
 import {
   betaAccounts,
@@ -32,6 +31,8 @@ import {
 import {
   useUserSignature,
 } from '@/features/signatures/hooks/use-user-signature';
+
+import { PaymentRecordActionCard } from '@/features/payment-records/components/shared/payment-record-action-card';
 
 import {
   createLocalNotification,
@@ -191,7 +192,7 @@ function getNextAction(
         title: 'Requester confirmation required',
         description:
           voucher.recipientSignatureMethod ===
-            'MANUAL'
+          'MANUAL'
             ? `${voucher.recipientName} uploaded a manually signed Payment Voucher. The original requester must review the PDF and confirm receipt.`
             : `${voucher.recipientName} signed the Payment Voucher digitally. The original requester must review it and confirm receipt.`,
       };
@@ -323,7 +324,18 @@ export function PaymentVoucherDetail({
   );
 
   if (isLoading) {
-    return <PaymentPageState title="Loading Payment Voucher" copy="Reading the payment record…" backHref="/beta/payment-records" backLabel="Back to Payment Records" />;
+    return (
+      <section
+        className={styles.pvDetailState}
+      >
+        <h1>Loading Payment Voucher</h1>
+
+        <p>
+          Please wait while the Payment
+          Voucher is loaded.
+        </p>
+      </section>
+    );
   }
 
   if (!matchedVoucher) {
@@ -809,132 +821,132 @@ export function PaymentVoucherDetail({
           styles.pvDetailHeader
         }
       >
-        <div>
-          <p
-            className={
-              styles.pvDetailEyebrow
-            }
-          >
-            Payment Voucher
-          </p>
+            <div>
+              <p
+                className={
+                  styles.pvDetailEyebrow
+                }
+              >
+                Payment Voucher
+              </p>
 
-          <div
-            className={
-              styles.pvDetailTitleRow
-            }
-          >
-            <h1>
-              {voucher.voucherNumber}
-            </h1>
+              <div
+                className={
+                  styles.pvDetailTitleRow
+                }
+              >
+                <h1>
+                  {voucher.voucherNumber}
+                </h1>
 
-            <PaymentVoucherStatusBadge
-              status={voucher.status}
-            />
-          </div>
+                <PaymentVoucherStatusBadge
+                  status={voucher.status}
+                />
+              </div>
 
-        </div>
+            </div>
 
       </header>
 
       {voucher.status !== 'REJECTED' && <section className={styles.pvNextAction}>
-        <span
-          aria-hidden="true"
-          className={
-            styles.pvNextActionIcon
-          }
-        >
-          <svg fill="none" viewBox="0 0 24 24">
-            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-          </svg>
-        </span>
-
-        <div
-          className={
-            styles.pvNextActionCopy
-          }
-        >
-          <p className={styles.pvDetailEyebrow}>Current next action</p>
-          <h2>{nextAction.title}</h2>
-          <p>{nextAction.description}</p>
-        </div>
-
-        <div
-          className={
-            styles.pvNextActionDocumentActions
-          }
-        >
-          {voucher.signedPvFileName &&
-            (voucher.recipientSignatureDataUrl ||
-              voucher.signedPvDataUrl) ? (
-            <button
+            <span
+              aria-hidden="true"
               className={
-                styles.pvDetailPrimaryButton
+                styles.pvNextActionIcon
               }
-              disabled={
-                downloadingDocument !== null
-              }
-              onClick={
-                handleDownloadSignedPv
-              }
-              type="button"
             >
-              {downloadingDocument === 'signed'
-                ? 'Preparing PDF…'
-                : (
-                  <>
-                    <svg
-                      aria-hidden="true"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                    Download Signed PV
-                  </>
-                )}
-            </button>
-          ) : voucher.pvPdfFileName ? (
-            <button
+              <svg fill="none" viewBox="0 0 24 24">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+              </svg>
+            </span>
+
+            <div
               className={
-                styles.pvDetailPrimaryButton
+                styles.pvNextActionCopy
               }
-              disabled={
-                downloadingDocument !== null
-              }
-              onClick={
-                handleDownloadGeneratedPv
-              }
-              type="button"
             >
-              {downloadingDocument === 'generated'
-                ? 'Preparing PDF…'
-                : (
-                  <>
-                    <svg
-                      aria-hidden="true"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                    Download PV
-                  </>
-                )}
-            </button>
-          ) : null}
-        </div>
+              <p className={styles.pvDetailEyebrow}>Current next action</p>
+              <h2>{nextAction.title}</h2>
+              <p>{nextAction.description}</p>
+            </div>
+
+            <div
+              className={
+                styles.pvNextActionDocumentActions
+              }
+            >
+              {voucher.signedPvFileName &&
+              (voucher.recipientSignatureDataUrl ||
+                voucher.signedPvDataUrl) ? (
+                <button
+                  className={
+                    styles.pvDetailPrimaryButton
+                  }
+                  disabled={
+                    downloadingDocument !== null
+                  }
+                  onClick={
+                    handleDownloadSignedPv
+                  }
+                  type="button"
+                >
+                  {downloadingDocument === 'signed'
+                    ? 'Preparing PDF…'
+                    : (
+                      <>
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                          />
+                        </svg>
+                        Download Signed PV
+                      </>
+                    )}
+                </button>
+              ) : voucher.pvPdfFileName ? (
+                <button
+                  className={
+                    styles.pvDetailPrimaryButton
+                  }
+                  disabled={
+                    downloadingDocument !== null
+                  }
+                  onClick={
+                    handleDownloadGeneratedPv
+                  }
+                  type="button"
+                >
+                  {downloadingDocument === 'generated'
+                    ? 'Preparing PDF…'
+                    : (
+                      <>
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                          />
+                        </svg>
+                        Download PV
+                      </>
+                    )}
+                </button>
+              ) : null}
+            </div>
 
       </section>}
 
@@ -970,575 +982,575 @@ export function PaymentVoucherDetail({
               styles.pvDetailContentCard
             }
           >
-            <section
+          <section
+            className={
+              styles.pvDetailSection
+            }
+          >
+            <div
               className={
-                styles.pvDetailSection
+                styles.pvSectionHeading
               }
             >
-              <div
-                className={
-                  styles.pvSectionHeading
-                }
-              >
-                <h2>Payment Details</h2>
+              <h2>Payment Details</h2>
 
-                <span>
-                  Reference:{' '}
-                  {voucher.voucherNumber}
-                </span>
-              </div>
+              <span>
+                Reference:{' '}
+                {voucher.voucherNumber}
+              </span>
+            </div>
 
-              <dl
-                className={
-                  styles.pvInformationGrid
-                }
-              >
-                <div>
-                  <dt>PV date</dt>
-                  <dd>
-                    {formatDate(
-                      voucher.pvDate,
-                    )}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt>Submitter</dt>
-                  <dd>{submitterName}</dd>
-                </div>
-
-                <div>
-                  <dt>Organization</dt>
-                  <dd>
-                    {voucher.organizationId}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt>Created</dt>
-                  <dd>
-                    {formatDate(
-                      voucher.createdAt,
-                    )}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt>
-                    Assigned Director
-                  </dt>
-                  <dd>{directorName}</dd>
-                </div>
-
-                <div>
-                  <dt>Division</dt>
-                  <dd>{voucher.division}</dd>
-                </div>
-
-                <div>
-                  <dt>Last updated</dt>
-                  <dd>
-                    {formatDate(
-                      voucher.updatedAt,
-                    )}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt>Project Manager</dt>
-                  <dd>
-                    {projectManagerName}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt>
-                    Director approval date
-                  </dt>
-                  <dd>
-                    {formatDate(
-                      voucher.directorApprovedAt,
-                    )}
-                  </dd>
-                </div>
-              </dl>
-
-              <div
-                className={
-                  styles.pvPurposeSummary
-                }
-              >
-                <div>
-                  <span>
-                    Purpose of payment
-                  </span>
-                  <p>{voucher.purpose}</p>
-                </div>
-
-                <div>
-                  <span>
-                    Amount in words
-                  </span>
-                  <p>{amountInWords}</p>
-                </div>
-              </div>
-            </section>
-
-            <section
+            <dl
               className={
-                styles.pvDetailSection
+                styles.pvInformationGrid
               }
             >
-              <div
-                className={
-                  styles.pvSectionHeading
-                }
-              >
-                <h2>
-                  Recipient Details
-                </h2>
-
-                {(voucher.recipientSignedAt ||
-                  voucher.status === 'COMPLETED') && (
-                    <span
-                      className={
-                        styles.pvVerifiedBadge
-                      }
-                    >
-                      Verified Payee
-                    </span>
+              <div>
+                <dt>PV date</dt>
+                <dd>
+                  {formatDate(
+                    voucher.pvDate,
                   )}
+                </dd>
               </div>
 
-              <dl
-                className={
-                  styles.pvInformationGrid
-                }
-              >
-                <div>
-                  <dt>Recipient name</dt>
-                  <dd>
-                    {voucher.recipientName}
-                  </dd>
-                </div>
+              <div>
+                <dt>Submitter</dt>
+                <dd>{submitterName}</dd>
+              </div>
 
-                <div>
-                  <dt>Recipient email</dt>
-                  <dd>
-                    {voucher.recipientEmail}
-                  </dd>
-                </div>
+              <div>
+                <dt>Organization</dt>
+                <dd>
+                  {voucher.organizationId}
+                </dd>
+              </div>
 
-                <div>
-                  <dt>Payment method</dt>
-                  <dd>
-                    {voucher.paymentMethod}
-                  </dd>
-                </div>
+              <div>
+                <dt>Created</dt>
+                <dd>
+                  {formatDate(
+                    voucher.createdAt,
+                  )}
+                </dd>
+              </div>
 
-                <div>
-                  <dt>
-                    IC / identity number
-                  </dt>
-                  <dd>
-                    {voucher.recipientIc ||
-                      'Not provided'}
-                  </dd>
-                </div>
+              <div>
+                <dt>
+                  Assigned Director
+                </dt>
+                <dd>{directorName}</dd>
+              </div>
 
-                <div>
-                  <dt>Bank name</dt>
-                  <dd>
-                    {voucher.bankName ||
-                      'Not applicable'}
-                  </dd>
-                </div>
+              <div>
+                <dt>Division</dt>
+                <dd>{voucher.division}</dd>
+              </div>
 
-                <div>
-                  <dt>
-                    Recipient reference
-                  </dt>
-                  <dd>
-                    {
-                      voucher.recipientReference
-                    }
-                  </dd>
-                </div>
+              <div>
+                <dt>Last updated</dt>
+                <dd>
+                  {formatDate(
+                    voucher.updatedAt,
+                  )}
+                </dd>
+              </div>
 
-                <div>
-                  <dt>Malaysian</dt>
-                  <dd>
-                    {voucher.recipientIsMalaysian
-                      ? 'Yes'
-                      : 'No'}
-                  </dd>
-                </div>
+              <div>
+                <dt>Project Manager</dt>
+                <dd>
+                  {projectManagerName}
+                </dd>
+              </div>
 
-                <div>
-                  <dt>
-                    Bank account number
-                  </dt>
-                  <dd>
-                    {voucher.bankAccountNumber ||
-                      'Not applicable'}
-                  </dd>
-                </div>
-              </dl>
-            </section>
+              <div>
+                <dt>
+                  Director approval date
+                </dt>
+                <dd>
+                  {formatDate(
+                    voucher.directorApprovedAt,
+                  )}
+                </dd>
+              </div>
+            </dl>
 
-            <section
+            <div
               className={
-                styles.pvBreakdownCard
+                styles.pvPurposeSummary
               }
             >
-              <div
-                className={
-                  styles.pvBreakdownHeader
-                }
-              >
-                <h2>
-                  Payment Breakdown
-                </h2>
-
+              <div>
                 <span>
-                  Itemized accounting receipt •{' '}
-                  {voucher.lines.length}{' '}
-                  {voucher.lines.length === 1
-                    ? 'line item'
-                    : 'line items'}
+                  Purpose of payment
                 </span>
+                <p>{voucher.purpose}</p>
               </div>
 
-              <div
-                className={
-                  styles.pvTableWrapper
-                }
-              >
-                <table
+              <div>
+                <span>
+                  Amount in words
+                </span>
+                <p>{amountInWords}</p>
+              </div>
+            </div>
+          </section>
+
+          <section
+            className={
+              styles.pvDetailSection
+            }
+          >
+            <div
+              className={
+                styles.pvSectionHeading
+              }
+            >
+              <h2>
+                Recipient Details
+              </h2>
+
+              {(voucher.recipientSignedAt ||
+                voucher.status === 'COMPLETED') && (
+                <span
                   className={
-                    styles.pvBreakdownTable
+                    styles.pvVerifiedBadge
                   }
                 >
-                  <thead>
-                    <tr>
-                      <th>Account</th>
-                      <th>Description</th>
-                      <th>Quantity</th>
-                      <th>Unit amount</th>
-                      <th>Tax</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
+                  Verified Payee
+                </span>
+              )}
+            </div>
 
-                  <tbody>
-                    {voucher.lines.map(
-                      (line, index) => {
-                        const lineTotal =
-                          line.quantity *
-                          line.unitAmount +
-                          line.taxAmount;
-
-                        return (
-                          <tr
-                            key={`${line.accountCode}-${index}`}
-                          >
-                            <td>
-                              <strong>
-                                {
-                                  line.accountCode
-                                }
-                              </strong>
-                            </td>
-
-                            <td>
-                              {line.description}
-                            </td>
-
-                            <td>
-                              {line.quantity}
-                            </td>
-
-                            <td>
-                              {formatCurrency(
-                                line.unitAmount,
-                              )}
-                            </td>
-
-                            <td>
-                              {formatCurrency(
-                                line.taxAmount,
-                              )}
-                            </td>
-
-                            <td>
-                              <strong>
-                                {formatCurrency(
-                                  lineTotal,
-                                )}
-                              </strong>
-                            </td>
-                          </tr>
-                        );
-                      },
-                    )}
-                  </tbody>
-
-                </table>
+            <dl
+              className={
+                styles.pvInformationGrid
+              }
+            >
+              <div>
+                <dt>Recipient name</dt>
+                <dd>
+                  {voucher.recipientName}
+                </dd>
               </div>
 
-              <div
+              <div>
+                <dt>Recipient email</dt>
+                <dd>
+                  {voucher.recipientEmail}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Payment method</dt>
+                <dd>
+                  {voucher.paymentMethod}
+                </dd>
+              </div>
+
+              <div>
+                <dt>
+                  IC / identity number
+                </dt>
+                <dd>
+                  {voucher.recipientIc ||
+                    'Not provided'}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Bank name</dt>
+                <dd>
+                  {voucher.bankName ||
+                    'Not applicable'}
+                </dd>
+              </div>
+
+              <div>
+                <dt>
+                  Recipient reference
+                </dt>
+                <dd>
+                  {
+                    voucher.recipientReference
+                  }
+                </dd>
+              </div>
+
+              <div>
+                <dt>Malaysian</dt>
+                <dd>
+                  {voucher.recipientIsMalaysian
+                    ? 'Yes'
+                    : 'No'}
+                </dd>
+              </div>
+
+              <div>
+                <dt>
+                  Bank account number
+                </dt>
+                <dd>
+                  {voucher.bankAccountNumber ||
+                    'Not applicable'}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section
+            className={
+              styles.pvBreakdownCard
+            }
+          >
+            <div
+              className={
+                styles.pvBreakdownHeader
+              }
+            >
+              <h2>
+                Payment Breakdown
+              </h2>
+
+              <span>
+                Itemized accounting receipt •{' '}
+                {voucher.lines.length}{' '}
+                {voucher.lines.length === 1
+                  ? 'line item'
+                  : 'line items'}
+              </span>
+            </div>
+
+            <div
+              className={
+                styles.pvTableWrapper
+              }
+            >
+              <table
                 className={
-                  styles.pvBreakdownSummary
+                  styles.pvBreakdownTable
                 }
               >
-                <dl>
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Unit amount</th>
+                    <th>Tax</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {voucher.lines.map(
+                    (line, index) => {
+                      const lineTotal =
+                        line.quantity *
+                        line.unitAmount +
+                        line.taxAmount;
+
+                      return (
+                        <tr
+                          key={`${line.accountCode}-${index}`}
+                        >
+                          <td>
+                            <strong>
+                              {
+                                line.accountCode
+                              }
+                            </strong>
+                          </td>
+
+                          <td>
+                            {line.description}
+                          </td>
+
+                          <td>
+                            {line.quantity}
+                          </td>
+
+                          <td>
+                            {formatCurrency(
+                              line.unitAmount,
+                            )}
+                          </td>
+
+                          <td>
+                            {formatCurrency(
+                              line.taxAmount,
+                            )}
+                          </td>
+
+                          <td>
+                            <strong>
+                              {formatCurrency(
+                                lineTotal,
+                              )}
+                            </strong>
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )}
+                </tbody>
+
+              </table>
+            </div>
+
+            <div
+              className={
+                styles.pvBreakdownSummary
+              }
+            >
+              <dl>
+                <div>
+                  <dt>Subtotal</dt>
+                  <dd>
+                    {formatCurrency(
+                      subtotalAmount,
+                    )}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>Tax</dt>
+                  <dd>
+                    {formatCurrency(
+                      totalTaxAmount,
+                    )}
+                  </dd>
+                </div>
+              </dl>
+
+              <div>
+                <span>Amount in words</span>
+                <p>{amountInWords}</p>
+              </div>
+
+              <div>
+                <span>Grand total</span>
+                <strong>
+                  {formatCurrency(
+                    voucher.amount,
+                  )}
+                </strong>
+              </div>
+            </div>
+          </section>
+
+          {(voucher.financeReviewedAt ||
+            voucher.paymentReference ||
+            voucher.paymentProofFileName ||
+            voucher.receiptFileName ||
+            voucher.pvPdfFileName ||
+            voucher.recipientLinkSentAt ||
+            voucher.recipientSignatureMethod ||
+            voucher.recipientSignedAt ||
+            voucher.signedPvFileName ||
+            voucher.staffConfirmedSignedPvAt ||
+            voucher.staffVerifiedAt ||
+            voucher.financeVerifiedAt) && (
+              <section
+                className={
+                  styles.pvDetailSection
+                }
+              >
+                <div
+                  className={
+                    styles.pvSectionHeading
+                  }
+                >
+                  <h2>
+                    Finance &amp; Document
+                    Processing Audit
+                  </h2>
+
+                  {(voucher.financeVerifiedAt ||
+                    voucher.status === 'COMPLETED') && (
+                      <span
+                        className={
+                          styles.pvAuditBadge
+                        }
+                      >
+                        Signed &amp; Verified
+                      </span>
+                    )}
+                </div>
+
+                <dl
+                  className={
+                    styles.pvInformationGrid
+                  }
+                >
                   <div>
-                    <dt>Subtotal</dt>
+                    <dt>
+                      Finance reviewed
+                    </dt>
                     <dd>
-                      {formatCurrency(
-                        subtotalAmount,
+                      {formatDate(
+                        voucher.financeReviewedAt,
                       )}
                     </dd>
                   </div>
 
                   <div>
-                    <dt>Tax</dt>
+                    <dt>Payment date</dt>
                     <dd>
-                      {formatCurrency(
-                        totalTaxAmount,
+                      {formatDate(
+                        voucher.paymentDate,
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>
+                      Payment reference
+                    </dt>
+                    <dd>
+                      {voucher.paymentReference ||
+                        'Not available'}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Payment proof</dt>
+                    <dd>
+                      {voucher.paymentProofFileName ||
+                        voucher.receiptFileName ||
+                        'Not uploaded'}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Generated PV</dt>
+
+                    <dd>
+                      {voucher.pvPdfFileName ? (
+                        <button
+                          className={
+                            styles.pvFileLink
+                          }
+                          disabled={
+                            downloadingDocument !==
+                            null
+                          }
+                          onClick={
+                            handleDownloadGeneratedPv
+                          }
+                          type="button"
+                        >
+                          {downloadingDocument ===
+                            'generated'
+                            ? 'Preparing PDF…'
+                            : voucher.pvPdfFileName}
+                        </button>
+                      ) : (
+                        'Not generated'
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>
+                      Recipient link sent
+                    </dt>
+                    <dd>
+                      {formatDate(
+                        voucher.recipientLinkSentAt,
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>
+                      Recipient signed
+                    </dt>
+                    <dd>
+                      {formatDate(
+                        voucher.recipientSignedAt,
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Signing method</dt>
+                    <dd>
+                      {voucher.recipientSignatureMethod === 'DIGITAL'
+                        ? 'Digital signature'
+                        : voucher.recipientSignatureMethod === 'MANUAL'
+                          ? 'Manual signature'
+                          : 'Not selected'}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Signed PV uploaded by</dt>
+                    <dd>
+                      {voucher.signedPvUploadSource === 'RECIPIENT'
+                        ? 'Recipient'
+                        : voucher.signedPvUploadSource === 'STAFF'
+                          ? 'Requester'
+                          : 'Not available'}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>Signed PV</dt>
+
+                    <dd>
+                      {voucher.signedPvFileName &&
+                        (voucher.recipientSignatureDataUrl ||
+                          voucher.signedPvDataUrl) ? (
+                        <button
+                          className={
+                            styles.pvFileLink
+                          }
+                          disabled={
+                            downloadingDocument !==
+                            null
+                          }
+                          onClick={
+                            handleDownloadSignedPv
+                          }
+                          type="button"
+                        >
+                          {downloadingDocument ===
+                            'signed'
+                            ? 'Preparing PDF…'
+                            : voucher.signedPvFileName}
+                        </button>
+                      ) : (
+                        'Not generated'
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>
+                      Requester confirmed
+                    </dt>
+                    <dd>
+                      {formatDate(
+                        voucher.staffConfirmedSignedPvAt ??
+                          voucher.staffVerifiedAt,
+                      )}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>
+                      Finance verified
+                    </dt>
+                    <dd>
+                      {formatDate(
+                        voucher.financeVerifiedAt,
                       )}
                     </dd>
                   </div>
                 </dl>
-
-                <div>
-                  <span>Amount in words</span>
-                  <p>{amountInWords}</p>
-                </div>
-
-                <div>
-                  <span>Grand total</span>
-                  <strong>
-                    {formatCurrency(
-                      voucher.amount,
-                    )}
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            {(voucher.financeReviewedAt ||
-              voucher.paymentReference ||
-              voucher.paymentProofFileName ||
-              voucher.receiptFileName ||
-              voucher.pvPdfFileName ||
-              voucher.recipientLinkSentAt ||
-              voucher.recipientSignatureMethod ||
-              voucher.recipientSignedAt ||
-              voucher.signedPvFileName ||
-              voucher.staffConfirmedSignedPvAt ||
-              voucher.staffVerifiedAt ||
-              voucher.financeVerifiedAt) && (
-                <section
-                  className={
-                    styles.pvDetailSection
-                  }
-                >
-                  <div
-                    className={
-                      styles.pvSectionHeading
-                    }
-                  >
-                    <h2>
-                      Finance &amp; Document
-                      Processing Audit
-                    </h2>
-
-                    {(voucher.financeVerifiedAt ||
-                      voucher.status === 'COMPLETED') && (
-                        <span
-                          className={
-                            styles.pvAuditBadge
-                          }
-                        >
-                          Signed &amp; Verified
-                        </span>
-                      )}
-                  </div>
-
-                  <dl
-                    className={
-                      styles.pvInformationGrid
-                    }
-                  >
-                    <div>
-                      <dt>
-                        Finance reviewed
-                      </dt>
-                      <dd>
-                        {formatDate(
-                          voucher.financeReviewedAt,
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Payment date</dt>
-                      <dd>
-                        {formatDate(
-                          voucher.paymentDate,
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>
-                        Payment reference
-                      </dt>
-                      <dd>
-                        {voucher.paymentReference ||
-                          'Not available'}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Payment proof</dt>
-                      <dd>
-                        {voucher.paymentProofFileName ||
-                          voucher.receiptFileName ||
-                          'Not uploaded'}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Generated PV</dt>
-
-                      <dd>
-                        {voucher.pvPdfFileName ? (
-                          <button
-                            className={
-                              styles.pvFileLink
-                            }
-                            disabled={
-                              downloadingDocument !==
-                              null
-                            }
-                            onClick={
-                              handleDownloadGeneratedPv
-                            }
-                            type="button"
-                          >
-                            {downloadingDocument ===
-                              'generated'
-                              ? 'Preparing PDF…'
-                              : voucher.pvPdfFileName}
-                          </button>
-                        ) : (
-                          'Not generated'
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>
-                        Recipient link sent
-                      </dt>
-                      <dd>
-                        {formatDate(
-                          voucher.recipientLinkSentAt,
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>
-                        Recipient signed
-                      </dt>
-                      <dd>
-                        {formatDate(
-                          voucher.recipientSignedAt,
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Signing method</dt>
-                      <dd>
-                        {voucher.recipientSignatureMethod === 'DIGITAL'
-                          ? 'Digital signature'
-                          : voucher.recipientSignatureMethod === 'MANUAL'
-                            ? 'Manual signature'
-                            : 'Not selected'}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Signed PV uploaded by</dt>
-                      <dd>
-                        {voucher.signedPvUploadSource === 'RECIPIENT'
-                          ? 'Recipient'
-                          : voucher.signedPvUploadSource === 'STAFF'
-                            ? 'Requester'
-                            : 'Not available'}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Signed PV</dt>
-
-                      <dd>
-                        {voucher.signedPvFileName &&
-                          (voucher.recipientSignatureDataUrl ||
-                            voucher.signedPvDataUrl) ? (
-                          <button
-                            className={
-                              styles.pvFileLink
-                            }
-                            disabled={
-                              downloadingDocument !==
-                              null
-                            }
-                            onClick={
-                              handleDownloadSignedPv
-                            }
-                            type="button"
-                          >
-                            {downloadingDocument ===
-                              'signed'
-                              ? 'Preparing PDF…'
-                              : voucher.signedPvFileName}
-                          </button>
-                        ) : (
-                          'Not generated'
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>
-                        Requester confirmed
-                      </dt>
-                      <dd>
-                        {formatDate(
-                          voucher.staffConfirmedSignedPvAt ??
-                          voucher.staffVerifiedAt,
-                        )}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>
-                        Finance verified
-                      </dt>
-                      <dd>
-                        {formatDate(
-                          voucher.financeVerifiedAt,
-                        )}
-                      </dd>
-                    </div>
-                  </dl>
-                </section>
-              )}
+              </section>
+            )}
           </div>
         </main>
 
@@ -1547,6 +1559,18 @@ export function PaymentVoucherDetail({
             styles.pvTrackerColumn
           }
         >
+          {account?.role === 'finance' && (
+            <PaymentRecordActionCard
+              account={account}
+              directorApproverId={voucher.directorId}
+              managerApproverId={voucher.projectManagerId}
+              paymentType="PV"
+              reference={voucher.voucherNumber}
+              requestId={voucher.id}
+              status={voucher.status}
+            />
+          )}
+
           {canSubmitDraft && (
             <section className={styles.pvSubmitterActionCard}>
               <p className={styles.pvDetailEyebrow}>Submitter action</p>
@@ -1591,27 +1615,27 @@ export function PaymentVoucherDetail({
               >
                 {!isDirectorSignatureLoading &&
                   !activeDirectorSignature && (
-                    <div
-                      className={
-                        styles.directorSignatureRequired
-                      }
-                    >
-                      <strong>
-                        Director signature
-                        required
-                      </strong>
+                  <div
+                    className={
+                      styles.directorSignatureRequired
+                    }
+                  >
+                    <strong>
+                      Director signature
+                      required
+                    </strong>
 
-                      <p>
-                        Upload your signature
-                        before approving this
-                        Payment Voucher.
-                      </p>
+                    <p>
+                      Upload your signature
+                      before approving this
+                      Payment Voucher.
+                    </p>
 
-                      <Link href="/beta/settings/signature">
-                        Set up signature
-                      </Link>
-                    </div>
-                  )}
+                    <Link href="/beta/settings/signature">
+                      Set up signature
+                    </Link>
+                  </div>
+                )}
 
                 <PaymentVoucherApprovalPanel
                   voucher={voucher}

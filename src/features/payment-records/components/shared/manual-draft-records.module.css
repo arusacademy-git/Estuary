@@ -1,0 +1,142 @@
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.card {
+    display: grid;
+    grid-template-rows: auto auto auto auto 1fr;
+    gap: 14px;
+    min-width: 0;
+    height: 100%;
+    padding: 22px;
+    border: 1px solid #d7e2f0;
+    border-radius: 18px;
+    background: #fff;
+    color: #102a4c;
+}
+
+.cardTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cardTop span,
+.card p,
+.card dt,
+.tableWrapper small {
+    color: #7085a3;
+}
+
+.cardTop strong,
+.status {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #e9eef5;
+    color: #4d6079;
+    font-size: 0.82rem;
+}
+
+.card h2,
+.card p,
+.card dl {
+    margin: 0;
+}
+
+.card dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f6f8fb;
+}
+
+.card dl div {
+    display: grid;
+    gap: 4px;
+}
+
+.card a,
+.actionCell a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: start;
+    padding: 10px 16px;
+    border: 1px solid #9eb7d5;
+    border-radius: 10px;
+    background: #fff;
+    color: #123b6d;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.card>a {
+    align-self: end;
+    justify-self: end;
+    margin-top: 2px;
+    padding: 9px 14px;
+    font-size: 0.78rem;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    margin-bottom: 16px;
+    border: 1px solid #d7e2f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.tableWrapper table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tableWrapper th,
+.tableWrapper td {
+    padding: 16px 18px;
+    border-bottom: 1px solid #e1e8f2;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.tableWrapper td:first-child {
+    display: grid;
+    gap: 4px;
+}
+
+.actionCell {
+    width: 1%;
+    min-width: 0;
+    text-align: right !important;
+}
+
+.actionCell a {
+    box-sizing: border-box;
+    max-width: 100%;
+    padding-inline: 12px;
+    font-size: 0.76rem;
+}
+
+.draftDate {
+    display: inline-grid;
+    gap: 2px;
+    line-height: 1.25;
+}
+
+.draftDate>span {
+    white-space: nowrap;
+}
+
+.draftDate>small {
+    margin: 0;
+    color: #7085a3;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}

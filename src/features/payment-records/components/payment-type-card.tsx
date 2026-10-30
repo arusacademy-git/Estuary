@@ -27,7 +27,7 @@ export function PaymentTypeCard({
   const hasAttention = attentionCount > 0;
 
   return (
-    <article aria-busy={isLoading} className={styles.paymentTypeCard}>
+    <article aria-busy={isLoading} className={styles.paymentTypeCard} data-type={shortCode}>
       <div className={styles.paymentTypeCardHeader}>
         <span
           className={styles.paymentTypeIcon}

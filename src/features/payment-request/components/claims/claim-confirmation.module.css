@@ -42,7 +42,7 @@
 }
 
 .draftHeader {
-    background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+    background: #fff;
 }
 
 .successIcon {
@@ -159,6 +159,7 @@
 .workflowSection {
     padding: 28px 38px;
     border-top: 1px solid #edf1f5;
+    background: #fff;
 }
 
 .summarySection h2,
@@ -288,31 +289,31 @@
 }
 
 .workflowStep.active>span {
-  color: #fff;
-  background: #173a64;
+    color: #fff;
+    background: #173a64;
 }
 
 .workflowStep.informational>span {
-  color: #2563eb;
-  background: #e7efff;
-  box-shadow: 0 0 0 4px #edf4ff;
+    color: #2563eb;
+    background: #e7efff;
+    box-shadow: 0 0 0 4px #edf4ff;
 }
 
 .workflowStep.informational strong {
-  color: #10213a;
+    color: #10213a;
 }
 
 .workflowStep.informational strong::after {
-  display: inline-flex;
-  margin-left: 5px;
-  padding: 1px 5px;
-  border-radius: 999px;
-  color: #2563eb;
-  background: #e7efff;
-  font-size: 7px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  content: 'Info';
+    display: inline-flex;
+    margin-left: 5px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    color: #2563eb;
+    background: #e7efff;
+    font-size: 7px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    content: 'Info';
 }
 
 .workflowStep.active small {
@@ -335,7 +336,7 @@
     gap: 16px;
     padding: 20px 38px;
     border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
+    background: #fff;
 }
 
 .actions>div {

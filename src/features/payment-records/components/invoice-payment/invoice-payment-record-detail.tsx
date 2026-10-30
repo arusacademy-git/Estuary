@@ -9,11 +9,13 @@ import type {
   PaymentRequestDocument,
   PaymentRequestStatus,
 } from "@/domain/payment-requests/invoice-payment/types";
+import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import {
   getBetaAccount,
   readBetaSession,
   type BetaAccount,
 } from "@/lib/auth/beta-accounts";
+import { PaymentRecordActionCard } from "../shared/payment-record-action-card";
 
 import styles from "./invoice-payment-records.module.css";
 
@@ -29,10 +31,10 @@ function date(value?: string) {
   return Number.isNaN(parsed.getTime())
     ? value
     : new Intl.DateTimeFormat("en-MY", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }).format(parsed);
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(parsed);
 }
 function download(document: PaymentRequestDocument) {
   const link = window.document.createElement("a");
@@ -55,36 +57,19 @@ export function InvoicePaymentRecordDetail({
 }: {
   requestId: string;
 }) {
-  const [account, setAccount] = useState<BetaAccount | null>(null);
+  const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [record, setRecord] = useState<InvoicePaymentRequestRecord | null>(
     null,
   );
-  const [checked, setChecked] = useState(false);
-
+  const [checked, setChecked] = useState(() => !account);
   useEffect(() => {
+    if (!account) return;
     let cancelled = false;
-
-    // Session lives in the browser, so it is read after mount, inside a callback
-    Promise.resolve().then(async () => {
-      const session = readBetaSession();
-      if (cancelled) return;
-      setAccount(session);
-
-      try {
-        const data = await fetchInvoicePayment(requestId);
-        if (!cancelled) setRecord(data);
-      } catch {
-        // Same as before: a failed load leaves record null ("not found" state)
-      } finally {
-        if (!cancelled) setChecked(true);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [requestId]);
-
+    fetchInvoicePayment(requestId)
+      .then((value) => { if (!cancelled) setRecord(value); })
+      .finally(() => { if (!cancelled) setChecked(true); });
+    return () => { cancelled = true; };
+  }, [account, requestId]);
   if (!checked)
     return (
       <State
@@ -227,6 +212,15 @@ export function InvoicePaymentRecordDetail({
           </Section>
         </div>
         <aside className={styles.detailRail}>
+          <PaymentRecordActionCard
+            account={account}
+            directorApproverId={record.directorApproverId}
+            managerApproverId={record.managerApproverId}
+            paymentType="INV"
+            reference={record.requestNumber}
+            requestId={record.id}
+            status={record.status}
+          />
           {returnRemarks && (
             <div className={styles.returnNotice}>
               <div className={styles.returnNoticeHeader}>
@@ -277,6 +271,11 @@ function Progress({
       date: record.financeVerifiedAt,
     },
     {
+      title: "Payment transaction proof uploaded",
+      copy: "Finance uploaded the payment transaction proof for the requester",
+      date: record.financeVerifiedAt,
+    },
+    {
       title: "Completed",
       copy: "Payment verified and request successfully closed",
       date: record.financeVerifiedAt,
@@ -286,13 +285,13 @@ function Progress({
     <section className={styles.progressPanel}>
       <header>
         <p>Payment progress</p>
-        <span>Step {active} of 5</span>
+        <span>Step {active} of 6</span>
       </header>
       <ol>
         {steps.map((step, index) => {
           const number = index + 1;
           const completed =
-            number < active || (record.status === "COMPLETED" && number === 5);
+            number < active || (record.status === "COMPLETED" && number === 6);
           const state = completed
             ? "complete"
             : number === active
@@ -330,23 +329,16 @@ function stageFor(record: InvoicePaymentRequestRecord) {
   if (record.status === "PENDING_MANAGER_REVIEW") return 2;
   if (record.status === "PENDING_DIRECTOR_REVIEW") return 3;
   if (record.status === "PENDING_FINANCE_REVIEW") return 4;
-  if (record.status === "COMPLETED") return 5;
+  if (record.status === "TRANSACTION_PROOF_UPLOADED") return 5;
+  if (record.status === "COMPLETED") return 6;
   if (record.status === "RETURNED_TO_STAFF")
     return record.financeReturnedAt ? 4 : record.directorReturnedAt ? 3 : 2;
   return 1;
 }
-const labels: Record<PaymentRequestStatus, string> = {
-  DRAFT: "Draft",
-  PENDING_MANAGER_REVIEW: "Pending Manager Review",
-  PENDING_DIRECTOR_REVIEW: "Pending Director Review",
-  PENDING_FINANCE_REVIEW: "Pending Finance Verification",
-  COMPLETED: "Completed",
-  RETURNED_TO_STAFF: "Returned to Staff",
-};
 function Status({ status }: { status: PaymentRequestStatus }) {
   return (
     <span className={styles.statusBadge} data-status={status}>
-      {labels[status]}
+      {standardPaymentStatusLabel(status)}
     </span>
   );
 }

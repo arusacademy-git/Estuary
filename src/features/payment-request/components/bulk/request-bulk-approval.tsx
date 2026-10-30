@@ -156,7 +156,7 @@ export function RequestBulkApproval({ role, kind }: Props) {
           ? await fetchTravelAllowances({ role, userId: current.id, approvalOnly: true })
           : kind === 'invoice-payments'
             ? await fetchInvoicePayments({ role, userId: current.id, approvalOnly: true })
-            : await fetchCashAdvances({ role, userId: current.id, approvalOnly: true });
+            : await fetchCashAdvances({ role, userId: current.id });
         if (!cancelled) setRecords(data);
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Approval records could not be loaded.');
