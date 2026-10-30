@@ -64,6 +64,10 @@ function parseCsv(text: string) {
 function dateToIso(value: string, fallbackYear = new Date().getFullYear()) {
   const clean = value.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+  const numericDayMonth = clean.match(/^(\d{1,2})[\/-](\d{1,2})$/);
+  if (numericDayMonth) {
+    return `${fallbackYear}-${numericDayMonth[2].padStart(2, "0")}-${numericDayMonth[1].padStart(2, "0")}`;
+  }
   const numeric = clean.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
   if (numeric) {
     const year =
@@ -299,10 +303,14 @@ export function parseClaimSheet(
       throw new Error(
         `Claim row ${index + 1} must contain a supplier, receipt link and positive total.`,
       );
-    try {
-      const url = new URL(receiptLink);
-      if (url.protocol !== "https:") throw new Error();
-    } catch {
+    if (smartChipLink || /^https?:\/\//i.test(receiptLink)) {
+      try {
+        const url = new URL(receiptLink);
+        if (url.protocol !== "https:") throw new Error();
+      } catch {
+        throw new Error(`Claim row ${index + 1} has an invalid receipt link.`);
+      }
+    } else if (!/\.(pdf|png|jpe?g)$/i.test(receiptLink)) {
       throw new Error(`Claim row ${index + 1} has an invalid receipt link.`);
     }
     const accountType = value(row, "accountType");

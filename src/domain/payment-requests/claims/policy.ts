@@ -85,6 +85,19 @@ export function validateClaimInput(
       ? "Complete every trip, including its division, route and positive distance."
       : "Complete every claim item, provide its receipt link or upload, and enter a positive amount.";
 
+  if (input.claimType === "INTERNET_COMMUTE") {
+    if (input.lines.some((line) => line.expenseDate.slice(0, 7) !== input.claimDate.slice(0, 7))) {
+      return "Internet / Commute claims must be submitted within the same calendar month as the bill or commute expense.";
+    }
+  } else {
+    const claimDay = Date.parse(`${input.claimDate}T00:00:00Z`);
+    if (input.lines.some((line) =>
+      claimDay - Date.parse(`${line.expenseDate}T00:00:00Z`) > 30 * 24 * 60 * 60 * 1000
+    )) {
+      return "Claims must be submitted within 30 days of the purchase date.";
+    }
+  }
+
   const total = claimTotal(input.claimType, input.lines);
   if (total <= 0) return "The claim total must be greater than RM0.00.";
   const limit = claimLimit(input, context);
@@ -173,6 +186,7 @@ export function normalizeTechAllowance(input: CreateClaimInput) {
 
 /** Claims now bypass Manager approval; retained for old screens during route cleanup. */
 export function requiresTechManagerApproval(_input: Pick<CreateClaimInput, "claimType" | "techExtended">) {
+  void _input;
   return false;
 }
 

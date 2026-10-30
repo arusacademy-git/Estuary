@@ -55,11 +55,11 @@ describe('Tech Claim policy', () => {
     expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
   });
 
-  it('automatically uses the extended allowance and Manager approval above RM500', () => {
+  it('automatically uses the extended allowance without Manager approval above RM500', () => {
     const input = normalizeTechAllowance(techClaim(800));
 
     expect(input.techExtended).toBe(true);
-    expect(requiresTechManagerApproval(input)).toBe(true);
+    expect(requiresTechManagerApproval(input)).toBe(false);
     expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
   });
 
