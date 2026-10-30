@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  claimLimit,
+  claimPolicyContext,
   normalizeTechAllowance,
+  proratedAnnualEntitlement,
   requiresTechManagerApproval,
   validateClaimInput,
 } from './policy';
@@ -75,5 +78,51 @@ describe('Tech Claim policy', () => {
       medicalUsedThisYear: 0,
       techExtendedLockedUntil: '2028-10-15',
     })).toContain('Tech claims are unavailable until');
+  });
+});
+
+describe('Claim purchase-date policy', () => {
+  it('allows non-Internet claims through day 30 and rejects day 31', () => {
+    const input = techClaim(100);
+    input.lines[0].expenseDate = '2026-09-14';
+    expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('Claims must be submitted within 30 days of the purchase date.');
+    input.lines[0].expenseDate = '2026-09-15';
+    expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
+  });
+
+  it('requires Internet / Commute claims in the same calendar month', () => {
+    const input = techClaim(70);
+    input.claimType = 'INTERNET_COMMUTE';
+    input.lines[0].expenseDate = '2026-09-30';
+    expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('Internet / Commute claims must be submitted within the same calendar month as the bill or commute expense.');
+    input.lines[0].expenseDate = '2026-10-01';
+    expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
+  });
+});
+
+describe('Annual Medical and PD entitlements', () => {
+  it('prorates RM500 from the employee joining month', () => {
+    expect(proratedAnnualEntitlement(500, '2026-07-15', '2026-10-19')).toBe(250);
+    expect(proratedAnnualEntitlement(500, '2025-12-01', '2026-10-19')).toBe(500);
+  });
+
+  it('deducts submitted Medical and PD claims from separate annual balances', () => {
+    const medical = { ...techClaim(100), claimType: 'MEDICAL' as const };
+    const pd = { ...techClaim(75), claimType: 'PD' as const };
+    const records = [medical, pd].map((input, index) => ({
+      ...input,
+      id: `claim-${index}`,
+      claimNumber: `CL26-10-0${index + 1}`,
+      requestType: 'CLAIM_REQUEST' as const,
+      status: 'CLAIM_SUBMITTED' as const,
+      totalAmount: input.lines[0].amount,
+      createdAt: '2026-10-19T00:00:00.000Z',
+      updatedAt: '2026-10-19T00:00:00.000Z',
+    }));
+    const context = claimPolicyContext(records, 'staff-1', '2026-10-19', '2026-07-01');
+    expect(context.medicalAnnualEntitlement).toBe(250);
+    expect(context.pdAnnualEntitlement).toBe(250);
+    expect(claimLimit({ claimType: 'MEDICAL', techExtended: false }, context)).toBe(150);
+    expect(claimLimit({ claimType: 'PD', techExtended: false }, context)).toBe(175);
   });
 });

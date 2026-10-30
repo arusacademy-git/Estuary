@@ -21,6 +21,9 @@ export function validatePettyCashInput(input: CreatePettyCashInput) {
   if (input.requesterRole === 'manager' && !input.directorApproverId) {
     return 'Select the Director previewer.';
   }
+  if (input.requesterRole === 'director' && !input.directorApproverId) {
+    return 'The Director requester could not be identified.';
+  }
   if (input.requesterRole === 'finance') {
     if (!input.financeReviewerId || !input.financeReviewerRole) {
       return 'Select another Finance user, Manager or Director to preview this request.';
@@ -32,16 +35,13 @@ export function validatePettyCashInput(input: CreatePettyCashInput) {
   if (!input.lines.length) return 'Add at least one expense.';
 
   const incomplete = input.lines.some((line) =>
-    !line.expenseDate ||
-    !line.supplier.trim() ||
     !line.details.trim() ||
-    !line.proofLink.trim() ||
     !line.accountType.trim() ||
     !line.division.trim() ||
     !Number.isFinite(Number(line.amount)) ||
     Number(line.amount) <= 0,
   );
-  if (incomplete) return 'Complete every expense row, receipt/invoice link and positive amount.';
+  if (incomplete) return 'Complete every planned expense, account, division and positive amount.';
 
   const total = pettyCashTotal(input.lines);
   if (total <= 0) return 'The request total must be greater than RM0.00.';

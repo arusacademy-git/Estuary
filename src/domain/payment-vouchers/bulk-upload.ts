@@ -1,6 +1,7 @@
 import {
   betaAccounts,
 } from '@/lib/auth/beta-accounts';
+import { bankAccountNumberError, identificationNumberError, normalizeNumericIdentifier } from '@/shared/payment-identity-validation';
 
 import type {
   CreatePaymentVoucherInput,
@@ -569,6 +570,13 @@ export function validateBulkPaymentVoucherRow(
     });
   }
 
+  if (row.recipientIc) {
+    const message = identificationNumberError(row.recipientIc);
+    if (message) errors.push({ field: 'recipientIc', message });
+  } else {
+    errors.push({ field: 'recipientIc', message: 'Recipient identification number is required.' });
+  }
+
   if (
     !row.recipientIsMalaysian
   ) {
@@ -606,6 +614,11 @@ export function validateBulkPaymentVoucherRow(
       row.bankAccountNumber,
       'Bank account number is required for this payment method.',
     );
+
+    if (row.bankName && row.bankAccountNumber) {
+      const message = bankAccountNumberError(row.bankName, row.bankAccountNumber);
+      if (message) errors.push({ field: 'bankAccountNumber', message });
+    }
   }
 
   addRequiredError(
@@ -780,7 +793,7 @@ export function convertBulkRowToCreatePaymentVoucherInput(
         .toLowerCase(),
 
     recipientIc:
-      row.recipientIc.trim() ||
+      normalizeNumericIdentifier(row.recipientIc) ||
       undefined,
 
     recipientIsMalaysian:
@@ -795,7 +808,7 @@ export function convertBulkRowToCreatePaymentVoucherInput(
       undefined,
 
     bankAccountNumber:
-      row.bankAccountNumber.trim() ||
+      normalizeNumericIdentifier(row.bankAccountNumber) ||
       undefined,
 
     purpose: row.purpose.trim(),

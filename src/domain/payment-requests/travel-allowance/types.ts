@@ -4,6 +4,8 @@ export type TravelAllowanceStatus =
   | "PENDING_MANAGER_REVIEW"
   | "PENDING_DIRECTOR_APPROVAL"
   | "PENDING_FINANCE_VERIFICATION"
+  | "PAYMENT_PROCESSED"
+  | "TRANSACTION_PROOF_UPLOADED"
   | "RETURNED_TO_STAFF"
   | "COMPLETED";
 
@@ -93,6 +95,7 @@ export type TravelAllowanceRecord = CreateTravelAllowanceInput & {
   financeVerifiedById?: string;
   financePaymentDate?: string;
   financePaymentReference?: string;
+  financeTransactionProof?: PaymentRequestDocument;
   financeRemarks?: string;
   financeReturnedAt?: string;
   financeReturnedById?: string;
