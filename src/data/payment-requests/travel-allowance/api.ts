@@ -5,13 +5,6 @@ import type {
 
 type Envelope<T> = { data?: T; message?: string };
 
-const travelAllowanceListCache = new Map<string, { expiresAt: number; promise: Promise<TravelAllowanceRecord[]> }>();
-const TRAVEL_ALLOWANCE_LIST_CACHE_MS = 2 * 60 * 1000;
-
-function invalidateTravelAllowanceLists() {
-  travelAllowanceListCache.clear();
-}
-
 async function read<T>(response: Response) {
   const body = (await response.json().catch(() => null)) as Envelope<T> | null;
   if (!response.ok) {
@@ -29,49 +22,23 @@ export async function createTravelAllowance(input: CreateTravelAllowanceInput) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function resubmitTravelAllowance(id: string, input: CreateTravelAllowanceInput) {
-  const record = await read<TravelAllowanceRecord>(await fetch(`/api/v1/payment-requests/travel-allowance/${encodeURIComponent(id)}`, {
+  return read<TravelAllowanceRecord>(await fetch(`/api/v1/payment-requests/travel-allowance/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   }));
-  invalidateTravelAllowanceLists();
-  return record;
 }
 
 export async function fetchTravelAllowances(scope?: { role: 'staff' | 'manager' | 'director' | 'finance'; userId: string; month?: string; includeAll?: boolean; approvalOnly?: boolean }) {
   const query = scope
     ? `?role=${encodeURIComponent(scope.role)}&userId=${encodeURIComponent(scope.userId)}${scope.month ? `&month=${encodeURIComponent(scope.month)}` : ''}${scope.includeAll ? '&includeAll=1' : ''}${scope.approvalOnly ? '&approvalOnly=1' : ''}`
     : '';
-  const cached = travelAllowanceListCache.get(query);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise;
-  const promise = fetch(`/api/v1/payment-requests/travel-allowance${query}`, { cache: 'no-store' })
-    .then(async (response) => {
-      const records = await read<TravelAllowanceRecord[]>(response);
-      if (scope && !scope.approvalOnly && !scope.includeAll && !scope.month && (scope.role === 'manager' || scope.role === 'director')) {
-        const status = scope.role === 'manager' ? 'PENDING_MANAGER_REVIEW' : 'PENDING_DIRECTOR_APPROVAL';
-        const assigned = records.filter((record) => record.status === status && (
-          scope.role === 'manager' ? record.managerApproverId === scope.userId : record.projectDirectorId === scope.userId
-        ));
-        travelAllowanceListCache.set(`${query}&approvalOnly=1`, {
-          expiresAt: Date.now() + TRAVEL_ALLOWANCE_LIST_CACHE_MS,
-          promise: Promise.resolve(assigned),
-        });
-      }
-      return records;
-    });
-  travelAllowanceListCache.set(query, { expiresAt: Date.now() + TRAVEL_ALLOWANCE_LIST_CACHE_MS, promise });
-  try {
-    return await promise;
-  } catch (error) {
-    if (travelAllowanceListCache.get(query)?.promise === promise) travelAllowanceListCache.delete(query);
-    throw error;
-  }
+  const response = await fetch(`/api/v1/payment-requests/travel-allowance${query}`, { cache: 'no-store' });
+  return read<TravelAllowanceRecord[]>(response);
 }
 
 export async function reviewTravelAllowanceByManager(id: string, managerId: string) {
@@ -83,9 +50,7 @@ export async function reviewTravelAllowanceByManager(id: string, managerId: stri
       body: JSON.stringify({ managerId }),
     },
   );
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function returnTravelAllowanceByManager(
@@ -101,9 +66,7 @@ export async function returnTravelAllowanceByManager(
       body: JSON.stringify({ managerId, reason }),
     },
   );
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function approveTravelAllowanceByDirector(id: string, directorId: string) {
@@ -115,9 +78,7 @@ export async function approveTravelAllowanceByDirector(id: string, directorId: s
       body: JSON.stringify({ directorId }),
     },
   );
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function returnTravelAllowanceByDirector(
@@ -133,9 +94,7 @@ export async function returnTravelAllowanceByDirector(
       body: JSON.stringify({ directorId, reason }),
     },
   );
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function completeTravelAllowanceByFinance(
@@ -143,19 +102,20 @@ export async function completeTravelAllowanceByFinance(
   financeId: string,
   paymentDate: string,
   paymentReference: string,
+  transactionProofOrRemarks?: import('@/domain/payment-requests/travel-allowance/types').PaymentRequestDocument | string,
   remarks?: string,
 ) {
+  const transactionProof = typeof transactionProofOrRemarks === 'string' ? undefined : transactionProofOrRemarks;
+  const resolvedRemarks = typeof transactionProofOrRemarks === 'string' ? transactionProofOrRemarks : remarks;
   const response = await fetch(
     `/api/v1/payment-requests/travel-allowance/${encodeURIComponent(id)}/finance-complete`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ financeId, paymentDate, paymentReference, remarks }),
+      body: JSON.stringify({ financeId, paymentDate, paymentReference, transactionProof, remarks: resolvedRemarks }),
     },
   );
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function returnTravelAllowanceByFinance(
@@ -171,9 +131,7 @@ export async function returnTravelAllowanceByFinance(
       body: JSON.stringify({ financeId, reason }),
     },
   );
-  const record = await read<TravelAllowanceRecord>(response);
-  invalidateTravelAllowanceLists();
-  return record;
+  return read<TravelAllowanceRecord>(response);
 }
 
 export async function fetchTravelAllowance(id: string) {

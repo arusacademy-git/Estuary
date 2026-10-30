@@ -3,21 +3,12 @@ import type {
   PettyCashFinanceInput,
   PettyCashLedgerSummary,
   PettyCashLocation,
+  PettyCashReconciliationInput,
   PettyCashRecord,
   PettyCashRole,
 } from '@/domain/payment-requests/petty-cash/types';
 
 type Envelope<T> = { data?: T; message?: string };
-
-const requestListCache = new Map<string, {
-  expiresAt: number;
-  promise: Promise<PettyCashRecord[]>;
-}>();
-const REQUEST_LIST_CACHE_MS = 2 * 60 * 1000;
-
-function invalidatePettyCashRequestLists() {
-  requestListCache.clear();
-}
 
 async function read<T>(response: Response) {
   const body = (await response.json().catch(() => null)) as Envelope<T> | null;
@@ -31,18 +22,14 @@ async function action(id: string, route: string, body: unknown) {
     `/api/v1/payment-requests/petty-cash/${encodeURIComponent(id)}/${route}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
   );
-  const record = await read<PettyCashRecord>(response);
-  invalidatePettyCashRequestLists();
-  return record;
+  return read<PettyCashRecord>(response);
 }
 
 export async function createPettyCashRequest(input: CreatePettyCashInput) {
   const response = await fetch('/api/v1/payment-requests/petty-cash', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
   });
-  const record = await read<PettyCashRecord>(response);
-  invalidatePettyCashRequestLists();
-  return record;
+  return read<PettyCashRecord>(response);
 }
 
 export async function fetchPettyCashRequests(scope: {
@@ -54,22 +41,10 @@ export async function fetchPettyCashRequests(scope: {
   const query = new URLSearchParams({ role: scope.role, userId: scope.userId });
   if (scope.month) query.set('month', scope.month);
   if (scope.includeAll) query.set('includeAll', '1');
-  const key = query.toString();
-  const cached = requestListCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise;
-
-  const promise = fetch(
+  return read<PettyCashRecord[]>(await fetch(
     `/api/v1/payment-requests/petty-cash?${query}`,
     { cache: 'no-store' },
-  ).then((response) => read<PettyCashRecord[]>(response));
-  requestListCache.set(key, { expiresAt: Date.now() + REQUEST_LIST_CACHE_MS, promise });
-
-  try {
-    return await promise;
-  } catch (error) {
-    if (requestListCache.get(key)?.promise === promise) requestListCache.delete(key);
-    throw error;
-  }
+  ));
 }
 
 export async function fetchPettyCashRequest(id: string) {
@@ -95,6 +70,12 @@ export const verifyPettyCashByFinance = (id: string, input: PettyCashFinanceInpu
   action(id, 'finance-verify', input);
 export const markPettyCashPaid = (id: string, financeId: string) =>
   action(id, 'mark-paid', { financeId });
+export const submitPettyCashReconciliation = (id: string, input: PettyCashReconciliationInput) =>
+  action(id, 'reconciliation', input);
+export const verifyPettyCashReconciliation = (id: string, financeId: string) =>
+  action(id, 'finance-reconcile', { financeId });
+export const returnPettyCashReconciliation = (id: string, financeId: string, reason: string) =>
+  action(id, 'reconciliation-return', { financeId, reason });
 export const resubmitPettyCashRequest = (id: string, input: CreatePettyCashInput) =>
   action(id, 'resubmit', input);
 

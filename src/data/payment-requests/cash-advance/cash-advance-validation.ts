@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CASH_ADVANCE_ACCOUNT_TYPES } from '@/domain/payment-requests/cash-advance/types';
+import { bankAccountNumberError } from '@/shared/payment-identity-validation';
 
 const documentSchema = z.object({
   id: z.string().min(1),
@@ -38,6 +39,9 @@ export const createCashAdvanceSchema = z.object({
   supportingDocuments: z.array(documentSchema).max(10),
   remarks: z.string().trim().optional(),
   staffSignatureKey: z.string().trim().min(1),
+}).superRefine((value, context) => {
+  const message = bankAccountNumberError(value.bankName, value.bankAccountNumber);
+  if (message) context.addIssue({ code: 'custom', path: ['bankAccountNumber'], message });
 });
 
 const expenseSchema = z.object({
@@ -49,6 +53,7 @@ const expenseSchema = z.object({
   division: z.string().trim().optional(),
   amount: z.coerce.number().positive(),
   receiptLink: z.string().trim().optional(),
+  receiptLabel: z.string().trim().optional(),
   receipt: documentSchema.optional(),
 });
 
