@@ -32,6 +32,8 @@ type ApprovalViewMode =
   | 'grid'
   | 'list';
 
+type ApprovalSort = 'UPDATED_DESC' | 'UPDATED_ASC' | 'AMOUNT_DESC' | 'AMOUNT_ASC';
+
 const approvedStatuses = new Set([
   'APPROVED_FOR_PAYMENT',
   'FINANCE_PROCESSING',
@@ -105,6 +107,9 @@ export default function ApprovalsPage() {
 
   const [search, setSearch] =
     useState('');
+  const [month, setMonth] = useState('');
+  const [specificDate, setSpecificDate] = useState('');
+  const [sort, setSort] = useState<ApprovalSort>('UPDATED_DESC');
 
   const [
     selectedVoucherId,
@@ -222,9 +227,10 @@ export default function ApprovalsPage() {
           return false;
         }
 
-        if (!normalizedSearch) {
-          return true;
-        }
+        const recordDate = voucher.updatedAt.slice(0, 10);
+        if (month && !recordDate.startsWith(month)) return false;
+        if (specificDate && recordDate !== specificDate) return false;
+        if (!normalizedSearch) return true;
 
         const searchableValues = [
           voucher.voucherNumber,
@@ -242,21 +248,21 @@ export default function ApprovalsPage() {
               .includes(normalizedSearch),
         );
       })
-      .sort(
-        (firstVoucher, secondVoucher) =>
-          new Date(
-            secondVoucher.updatedAt,
-          ).getTime() -
-          new Date(
-            firstVoucher.updatedAt,
-          ).getTime(),
-      );
+      .sort((firstVoucher, secondVoucher) => {
+        if (sort === 'AMOUNT_DESC') return secondVoucher.amount - firstVoucher.amount;
+        if (sort === 'AMOUNT_ASC') return firstVoucher.amount - secondVoucher.amount;
+        const difference = new Date(firstVoucher.updatedAt).getTime() - new Date(secondVoucher.updatedAt).getTime();
+        return sort === 'UPDATED_ASC' ? difference : -difference;
+      });
   }, [
     activeTab,
     historyFilter,
     historyRecords,
+    month,
     pendingRecords,
     search,
+    sort,
+    specificDate,
   ]);
 
   const selectedVoucher = useMemo(
@@ -426,6 +432,20 @@ export default function ApprovalsPage() {
           <strong>{completedRecords.length}</strong>
           <small>Workflow completed</small>
         </article>
+      </section>
+
+      <section className={styles.approvalFilterCard}>
+        <div className={styles.approvalFilterHeading}>
+          <div><h2>Find a Payment Voucher</h2><p>Search, filter and sort your assigned approvals.</p></div>
+          <button onClick={() => { setSearch(''); setActiveTab('PENDING'); setHistoryFilter('ALL'); setMonth(''); setSpecificDate(''); setSort('UPDATED_DESC'); }} type="button">Clear filters</button>
+        </div>
+        <div className={styles.approvalFilterFields}>
+          <label><span>Search</span><input onChange={(event) => setSearch(event.target.value)} placeholder="PV number, recipient or purpose" type="search" value={search} /></label>
+          <label><span>Status</span><select onChange={(event) => { const value = event.target.value; if (value === 'PENDING') { setActiveTab('PENDING'); setHistoryFilter('ALL'); } else { setActiveTab('HISTORY'); setHistoryFilter(value as ApprovalHistoryFilter); } }} value={activeTab === 'PENDING' ? 'PENDING' : historyFilter}><option value="PENDING">Pending approval</option><option value="ALL">All history</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option><option value="COMPLETED">Completed</option></select></label>
+          <label><span>Month</span><input onChange={(event) => { setMonth(event.target.value); if (specificDate && !specificDate.startsWith(event.target.value)) setSpecificDate(''); }} type="month" value={month} /></label>
+          <label><span>Exact date</span><input max={month ? `${month}-31` : undefined} min={month ? `${month}-01` : undefined} onChange={(event) => setSpecificDate(event.target.value)} type="date" value={specificDate} /></label>
+          <label><span>Sort by</span><select onChange={(event) => setSort(event.target.value as ApprovalSort)} value={sort}><option value="UPDATED_DESC">Newest updated</option><option value="UPDATED_ASC">Oldest waiting</option><option value="AMOUNT_DESC">Highest amount</option><option value="AMOUNT_ASC">Lowest amount</option></select></label>
+        </div>
       </section>
 
       <section
@@ -622,7 +642,7 @@ export default function ApprovalsPage() {
                   }
                 >
                   {selectedVoucher.status ===
-                  'PENDING_DIRECTOR_APPROVAL'
+                    'PENDING_DIRECTOR_APPROVAL'
                     ? 'Director decision required'
                     : 'Approval history'}
                 </p>
