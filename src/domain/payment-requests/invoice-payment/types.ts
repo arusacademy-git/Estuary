@@ -43,6 +43,8 @@ export type PaymentRequestStatus =
   | 'PENDING_MANAGER_REVIEW'
   | 'PENDING_DIRECTOR_REVIEW'
   | 'PENDING_FINANCE_REVIEW'
+  | 'PAYMENT_PROCESSED'
+  | 'TRANSACTION_PROOF_UPLOADED'
   | 'COMPLETED'
   | 'RETURNED_TO_STAFF';
 
@@ -59,6 +61,7 @@ export type CreateInvoicePaymentRequestInput = {
   requestDate: string;
   staffId: string;
   staffName: string;
+  requesterRole?: 'staff' | 'manager' | 'director' | 'finance';
   projectName: string;
   title: string;
   purpose: string;
@@ -98,6 +101,7 @@ export type InvoicePaymentRequestRecord =
     financeVerifiedById?: string;
     financePaymentDate?: string;
     financePaymentReference?: string;
+    financeTransactionProof?: PaymentRequestDocument;
     financeReturnedAt?: string;
     financeReturnedById?: string;
     financeReturnRemarks?: string;

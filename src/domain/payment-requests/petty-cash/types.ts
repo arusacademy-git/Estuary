@@ -6,6 +6,10 @@ export type PettyCashStatus =
   | 'PENDING_FINANCE_REVIEW'
   | 'PENDING_FINANCE_PAYMENT'
   | 'FINANCE_VERIFIED'
+  | 'TRANSACTION_PROOF_UPLOADED'
+  | 'PENDING_RECONCILIATION'
+  | 'PENDING_FINANCE_RECONCILIATION'
+  | 'RECONCILED'
   | 'RETURNED_TO_STAFF'
   | 'PAID';
 
@@ -54,6 +58,7 @@ export type PettyCashRecord = CreatePettyCashInput & {
   paymentProofLink?: string;
   paidAt?: string;
   paidById?: string;
+  reconciliation?: PettyCashReconciliation;
   returnRemarks?: string;
   returnedById?: string;
   returnedAt?: string;
@@ -64,9 +69,36 @@ export type PettyCashRecord = CreatePettyCashInput & {
 export type PettyCashFinanceInput = {
   financeId: string;
   paymentDate: string;
-  paymentReference?: string;
-  paymentProofLink: string;
+  paymentReference: string;
+  paymentProofLink?: string;
   notes?: string;
+};
+
+export type PettyCashReconciliationReceipt = {
+  id: string;
+  fileName: string;
+  mimeType: 'application/pdf' | 'image/png' | 'image/jpeg';
+  size: number;
+  dataUrl: string;
+};
+
+export type PettyCashReconciliationInput = {
+  requesterId: string;
+  actualSpent: number;
+  receipts: PettyCashReconciliationReceipt[];
+  returnedBalance: number;
+  balanceReturnDate?: string;
+  balanceReturnReference?: string;
+  balanceReturnProof?: PettyCashReconciliationReceipt;
+  noBalanceRemark?: string;
+  remarks?: string;
+};
+
+export type PettyCashReconciliation = PettyCashReconciliationInput & {
+  calculatedBalance: number;
+  submittedAt: string;
+  financeVerifiedAt?: string;
+  financeVerifiedById?: string;
 };
 
 export type PettyCashLedgerTransaction = {
@@ -109,6 +141,8 @@ export const DIVISION_TYPES = [
   'O-MAKERSPACE-ARUS',
   'O-MANAGEMENT-ARUS',
   'O-WELFARE-ARUS',
+  'O-BMOFFICE-ARUS',
+  'O-KLOFFICE-ARUS',
   'P-BJCK-ARUS',
   'P-MAKERPROG-ARUS',
   'P-PWCDTT-UNICEF',

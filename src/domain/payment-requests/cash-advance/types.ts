@@ -2,8 +2,10 @@ export type CashAdvanceStatus =
   | 'PENDING_MANAGER_APPROVAL'
   | 'PENDING_DIRECTOR_APPROVAL'
   | 'PENDING_FINANCE_PROCESSING'
+  | 'PAYMENT_PROCESSED'
   | 'PENDING_RECONCILIATION'
   | 'PENDING_FINANCE_RECONCILIATION'
+  | 'TRANSACTION_PROOF_UPLOADED'
   | 'RETURNED_TO_STAFF'
   | 'COMPLETED';
 
@@ -32,6 +34,7 @@ export type CashAdvanceExpense = {
   division?: string;
   amount: number;
   receiptLink?: string;
+  receiptLabel?: string;
   receipt?: CashAdvanceDocument;
 };
 
@@ -60,11 +63,11 @@ export type CreateCashAdvanceInput = {
   organizationId: string;
   requestDate: string;
   requesterId: string;
-  requesterRole?: CashAdvanceRole;
   requesterName: string;
   requesterPosition: string;
   requesterDepartment: string;
   requesterContact: string;
+  requesterRole?: CashAdvanceRole;
   accountHolderName: string;
   bankName: string;
   bankAccountNumber: string;
@@ -85,6 +88,7 @@ export type CashAdvanceReconciliation = CashAdvanceReconciliationInput & {
   balance: number;
   outcome: 'EXACT' | 'UNDERSPEND' | 'OVERSPEND';
   submittedAt: string;
+  isDraft?: boolean;
 };
 
 export type CashAdvanceRecord = CreateCashAdvanceInput & {
@@ -94,14 +98,15 @@ export type CashAdvanceRecord = CreateCashAdvanceInput & {
   status: CashAdvanceStatus;
   totalAmount: number;
   staffSignedAt: string;
-  managerPreviewedAt?: string;
   managerSignatureKey?: string;
   managerApprovedAt?: string;
+  managerPreviewedAt?: string;
   directorSignatureKey?: string;
   directorApprovedAt?: string;
   financePaidAt?: string;
   financePaidById?: string;
   financePaymentReference?: string;
+  financeTransactionProof?: CashAdvanceDocument;
   reconciliationDueDate?: string;
   reconciliation?: CashAdvanceReconciliation;
   returnRemarks?: string;
