@@ -1,11 +1,6 @@
 import { fetchDashboardSummary } from "@/data/dashboard/api";
 import { fetchManualFormDrafts } from "@/data/payment-requests/manual-drafts/api";
 import { fetchPaymentVouchers } from "@/data/payment-vouchers/payment-voucher-api";
-import { fetchInvoicePayments } from "@/data/payment-requests/invoice-payment/api";
-import { fetchTravelAllowances } from "@/data/payment-requests/travel-allowance/api";
-import { fetchCashAdvances } from "@/data/payment-requests/cash-advance/cash-advance-api";
-import { fetchPettyCashRequests } from "@/data/payment-requests/petty-cash/api";
-import { fetchClaimRequests } from "@/data/payment-requests/claims/api";
 import type { DashboardSummaryRecord } from "@/domain/dashboard/types";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
 
@@ -151,24 +146,15 @@ export async function fetchSidebarActionCounts(
   account: BetaAccount,
 ): Promise<SidebarActionCounts> {
   if (account.role === "finance") {
-    const [vouchers, invoices, travel, cashAdvances, pettyCash, claims] =
-      await Promise.all([
-        fetchPaymentVouchers(),
-        fetchInvoicePayments({ role: "finance", userId: account.id, includeAll: true }),
-        fetchTravelAllowances({ role: "finance", userId: account.id, includeAll: true }),
-        fetchCashAdvances({ role: "finance", userId: account.id, includeAll: true }),
-        fetchPettyCashRequests({ role: "finance", userId: account.id, includeAll: true }),
-        fetchClaimRequests({ role: "finance", userId: account.id }),
-      ]);
-    const counts = { ...emptyCounts };
-    counts.PAYMENT_VOUCHER = vouchers.filter((record) => ["APPROVED_FOR_PAYMENT", "FINANCE_PROCESSING", "PENDING_FINANCE_VERIFICATION"].includes(record.status)).length;
-    counts.INVOICE_PAYMENT = invoices.filter((record) => ["PENDING_FINANCE_REVIEW", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.TRAVEL_ALLOWANCE = travel.filter((record) => ["PENDING_FINANCE_VERIFICATION", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.CASH_ADVANCE = cashAdvances.filter((record) => ["PENDING_FINANCE_PROCESSING", "PAYMENT_PROCESSED", "PENDING_FINANCE_RECONCILIATION", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.PETTY_CASH = pettyCash.filter((record) => ["PENDING_FINANCE_REVIEW", "PENDING_FINANCE_PAYMENT", "FINANCE_VERIFIED", "PENDING_FINANCE_RECONCILIATION", "TRANSACTION_PROOF_UPLOADED"].includes(record.status) && (record.status !== "PENDING_FINANCE_REVIEW" || record.financeReviewerId === account.id)).length;
-    counts.EXPENSE_CLAIM = claims.filter((record) => ["PENDING_FINANCE_VERIFICATION", "PENDING_FINANCE_PROCESSING", "APPROVED_FOR_PAYMENT", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.ALL_PENDING = counts.PAYMENT_VOUCHER + counts.INVOICE_PAYMENT + counts.TRAVEL_ALLOWANCE + counts.CASH_ADVANCE + counts.PETTY_CASH + counts.EXPENSE_CLAIM;
-    return counts;
+    const query = new URLSearchParams({ role: "finance", userId: account.id });
+    const response = await fetch(`/api/v1/dashboard/finance-action-counts?${query}`, {
+      cache: "no-store",
+    });
+    const body = await response.json().catch(() => null) as { data?: SidebarActionCounts } | null;
+    if (!response.ok || !body?.data) {
+      throw new Error("Finance sidebar counts could not be loaded.");
+    }
+    return body.data;
   }
   const records = await fetchDashboardSummary({
     role: account.role,
