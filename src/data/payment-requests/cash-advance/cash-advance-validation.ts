@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { CASH_ADVANCE_ACCOUNT_TYPES } from '@/domain/payment-requests/cash-advance/types';
-import { bankAccountNumberError } from '@/shared/payment-identity-validation';
 
 const documentSchema = z.object({
   id: z.string().min(1),
@@ -12,10 +11,9 @@ const documentSchema = z.object({
 
 const requestLineSchema = z.object({
   id: z.string().min(1),
-  accountType: z.string().trim().optional(),
-  description: z.string().trim(),
-  purpose: z.string().trim(),
-  amount: z.coerce.number().nonnegative(),
+  description: z.string().trim().min(1),
+  purpose: z.string().trim().min(1),
+  amount: z.coerce.number().positive(),
 });
 
 export const createCashAdvanceSchema = z.object({
@@ -23,15 +21,16 @@ export const createCashAdvanceSchema = z.object({
   requestDate: z.string().min(1),
   requesterId: z.string().min(1),
   requesterName: z.string().trim().min(1),
-  requesterPosition: z.string().trim().min(1),
-  requesterDepartment: z.string().trim().min(1),
+  requesterPosition: z.string().trim().transform((value) => value || 'Not specified').default('Not specified'),
+  requesterDepartment: z.string().trim().transform((value) => value || 'Not specified').default('Not specified'),
+  requesterRole: z.enum(['staff', 'manager', 'director', 'finance']).optional(),
   requesterContact: z.string().trim().min(1),
   accountHolderName: z.string().trim().min(1),
   bankName: z.string().trim().min(1),
   bankAccountNumber: z.string().trim().min(1),
   projectName: z.string().trim().min(1),
   isOtherProject: z.boolean(),
-  managerApproverId: z.string(),
+  managerApproverId: z.string().min(1),
   directorApproverId: z.string().min(1),
   purpose: z.string().trim().min(1),
   currency: z.literal('MYR'),
@@ -39,9 +38,6 @@ export const createCashAdvanceSchema = z.object({
   supportingDocuments: z.array(documentSchema).max(10),
   remarks: z.string().trim().optional(),
   staffSignatureKey: z.string().trim().min(1),
-}).superRefine((value, context) => {
-  const message = bankAccountNumberError(value.bankName, value.bankAccountNumber);
-  if (message) context.addIssue({ code: 'custom', path: ['bankAccountNumber'], message });
 });
 
 const expenseSchema = z.object({
@@ -53,7 +49,6 @@ const expenseSchema = z.object({
   division: z.string().trim().optional(),
   amount: z.coerce.number().positive(),
   receiptLink: z.string().trim().optional(),
-  receiptLabel: z.string().trim().optional(),
   receipt: documentSchema.optional(),
 });
 
@@ -77,7 +72,7 @@ export function cashAdvanceError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
   const status = message.includes('could not be found')
     ? 404
-    : message.includes('another') || message.includes('original requester') || message.includes('not an active')
+    : message.includes('another') || message.includes('original Staff') || message.includes('not an active')
       ? 403
       : 409;
   return Response.json({ error: 'CASH_ADVANCE_OPERATION_FAILED', message }, { status });
