@@ -57,30 +57,6 @@ function paymentRequest(
   };
 }
 
-function pendingApprovalItems(role: 'project-manager' | 'director'): NavigationItem[] {
-  return [
-    ...(role === 'project-manager'
-      ? [{ label: 'Payment Voucher Preview', href: '/beta/project-manager/payment-vouchers', actionType: 'PAYMENT_VOUCHER' as const }]
-      : [{ label: 'Payment Voucher', href: '/beta/approvals', actionType: 'PAYMENT_VOUCHER' as const }]),
-    ...(role === 'project-manager'
-      ? [{ label: 'Petty Cash', href: '/beta/project-manager/payment-requests/petty-cash', actionType: 'PETTY_CASH' as const }]
-      : [{ label: 'Petty Cash', href: '/beta/director/payment-requests/petty-cash', actionType: 'PETTY_CASH' as const }]),
-    { label: 'Invoice Payment', href: `/beta/${role}/payment-requests/invoice-payments`, actionType: 'INVOICE_PAYMENT' as const },
-    { label: 'Travel Allowance', href: `/beta/${role}/payment-requests/travel-allowances`, actionType: 'TRAVEL_ALLOWANCE' as const },
-    { label: 'Cash Advance', href: `/beta/${role}/payment-requests/cash-advance`, actionType: 'CASH_ADVANCE' as const },
-    { label: 'Claims', href: role === 'project-manager' ? '/beta/project-manager/payment-requests/claims' : '/beta/director/payment-requests/claims', actionType: 'EXPENSE_CLAIM' as const },
-  ];
-}
-
-const financeProcessing: NavigationItem[] = [
-  { label: 'Payment Voucher', href: '/beta/finance', actionType: 'PAYMENT_VOUCHER' },
-  { label: 'Petty Cash', href: '/beta/finance/payment-requests/petty-cash', actionType: 'PETTY_CASH' },
-  { label: 'Invoice Payment', href: '/beta/finance/payment-requests/invoice-payments', actionType: 'INVOICE_PAYMENT' },
-  { label: 'Travel Allowance', href: '/beta/finance/payment-requests/travel-allowances', actionType: 'TRAVEL_ALLOWANCE' },
-  { label: 'Cash Advance', href: '/beta/finance/payment-requests/cash-advance', actionType: 'CASH_ADVANCE' },
-  { label: 'Claims', href: '/beta/finance/payment-requests/claims', actionType: 'EXPENSE_CLAIM' },
-];
-
 const pettyCash: NavigationItem = {
   label: 'Petty Cash',
   children: [
@@ -117,7 +93,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     },
     {
       label: 'Approvals',
-      items: [{ label: 'Pending Approvals', children: pendingApprovalItems('project-manager') }],
+      items: [{ label: 'Pending Approvals', href: '/beta/project-manager/pending-approvals', actionType: 'ALL_PENDING' }],
     },
     {
       label: 'Records',
@@ -135,7 +111,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     },
     {
       label: 'Approvals',
-      items: [{ label: 'Pending Approvals', children: pendingApprovalItems('director') }],
+      items: [{ label: 'Pending Approvals', href: '/beta/director/pending-approvals', actionType: 'ALL_PENDING' }],
     },
     { label: 'Petty cash', items: [pettyCash] },
     {
@@ -144,6 +120,10 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
         { label: 'Payment Records', href: '/beta/payment-records' },
         { label: 'My Requests', href: '/beta/payment-records?scope=mine', actionType: 'MY_REQUESTS' },
       ],
+    },
+    {
+      label: 'System',
+      items: [{ label: 'Administration', href: '/beta/administration' }],
     },
   ],
   finance: [
@@ -157,7 +137,13 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     },
     {
       label: 'Payment processing',
-      items: [{ label: 'Pending Processing', children: financeProcessing }],
+      items: [{ label: 'Pending Processing', href: '/beta/finance/pending-processing', actionType: 'ALL_PENDING' }],
+    },
+    {
+      label: 'SQL system',
+      items: [
+        { label: 'SQL Entry Tracker', href: '/beta/finance/sql-entry-tracker' },
+      ],
     },
     { label: 'Petty cash', items: [pettyCash] },
     {
@@ -203,13 +189,24 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
 
   useEffect(() => {
     let active = true;
-    fetchSidebarActionCounts(account).then((counts) => {
-      if (active) setActionCounts(counts);
-    }).catch(() => {
-      if (active) setActionCounts(createEmptySidebarActionCounts());
-    });
-    return () => { active = false; };
-  }, [account]);
+    const refreshCounts = () => {
+      fetchSidebarActionCounts(account).then((counts) => {
+        if (active) setActionCounts(counts);
+      }).catch(() => {
+        if (active) setActionCounts(createEmptySidebarActionCounts());
+      });
+    };
+    refreshCounts();
+    const refreshTimer = window.setInterval(refreshCounts, 15_000);
+    window.addEventListener('focus', refreshCounts);
+    window.addEventListener('estuary:action-counts-changed', refreshCounts);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', refreshCounts);
+      window.removeEventListener('estuary:action-counts-changed', refreshCounts);
+    };
+  }, [account, currentUrl]);
 
   function itemActionCount(item: NavigationItem): number {
     if (item.actionType) return actionCounts[item.actionType];
