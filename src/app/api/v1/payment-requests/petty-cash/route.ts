@@ -14,7 +14,7 @@ export const pettyCashInputSchema = z.object({
   requesterId: z.string().trim().min(1),
   requesterRole: z.enum(['staff', 'manager', 'director', 'finance']),
   requesterName: z.string().trim().min(1),
-  requesterPosition: z.string().trim().min(1),
+  requesterPosition: z.string().trim(),
   requesterContact: z.string().trim().min(1),
   requestDate: z.string().trim().min(1),
   location: z.enum(['PENANG', 'KUALA_LUMPUR']),
@@ -25,7 +25,7 @@ export const pettyCashInputSchema = z.object({
   lines: z.array(z.object({
     id: z.string().trim().min(1),
     expenseDate: z.string().trim().min(1),
-    supplier: z.string().trim().min(1),
+    supplier: z.string().trim(),
     details: z.string().trim().min(1),
     proofLink: z.string().trim(),
     accountType: z.string().trim().min(1),
