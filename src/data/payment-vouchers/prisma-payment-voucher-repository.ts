@@ -18,7 +18,6 @@ import type {
   PaymentVoucherLineInput,
   PaymentVoucherRecord,
 } from '@/domain/payment-vouchers/types';
-import { paymentVoucherRecipientReference } from '@/domain/payment-vouchers/payment-reference';
 
 const paymentVoucherInclude = {
   pv_detail: true,
@@ -76,7 +75,6 @@ type PaymentVoucherSnapshot = {
 export type FinancePaymentInformationInput = {
   financeId: string;
   paymentDate: string;
-  paymentReference?: string;
   paymentRemarks?: string;
   paymentProofFileName?: string;
 };
@@ -290,9 +288,7 @@ export function mapStoredPaymentVoucher(
     division: snapshot.division ?? '',
     recipientName: detail.recipient_name,
     recipientEmail: detail.recipient_email,
-    recipientReference: paymentVoucherRecipientReference(
-      voucher.submission_number ?? voucher.id,
-    ),
+    recipientReference: voucher.submission_number ?? voucher.id,
     recipientIc: detail.recipient_ic ?? undefined,
     recipientIsMalaysian: snapshot.recipientIsMalaysian ?? true,
     paymentMethod: fromPaymentMode(detail.payment_mode),
@@ -527,7 +523,7 @@ export async function createPaymentVoucherInDatabase(
       input.organizationId,
       now,
     );
-    const recipientReference = paymentVoucherRecipientReference(voucherNumber);
+    const recipientReference = voucherNumber;
 
     const snapshot: PaymentVoucherSnapshot = {
       division: input.division,
@@ -694,17 +690,7 @@ export async function resubmitPaymentVoucherInDatabase(
       accounts.map((account) => [account.code, account.id]),
     );
 
-    const missingAccountCode = accountCodes.find(
-      (code) => !accountIdByCode.has(code),
-    );
-
-    if (missingAccountCode) {
-      throw new Error(`GL account ${missingAccountCode} was not found for this organization.`);
-    }
-
-    const recipientReference = paymentVoucherRecipientReference(
-      voucher.submission_number ?? voucher.id,
-    );
+    const recipientReference = voucher.submission_number ?? voucher.id;
     const snapshot: PaymentVoucherSnapshot = {
       division: input.division,
       directorId: input.directorId,
@@ -1267,11 +1253,28 @@ export async function savePaymentVoucherFinanceInformationInDatabase(
       throw new Error('Payment Voucher could not be found.');
     }
 
-    const paymentReference = voucher.submission_number;
+    const paymentReference = voucher.submission_number?.trim();
 
-    if (voucher.current_state_code !== 'FINANCE_PROCESSING') {
+    if (!paymentReference) {
       throw new Error(
-        'Payment information can only be edited while Finance is processing the Payment Voucher.',
+        'The Payment Voucher number is required before Finance can process it.',
+      );
+    }
+
+    const isInitialPaymentStage =
+      voucher.current_state_code === 'FINANCE_PROCESSING';
+    const isFinalVerificationStage =
+      voucher.current_state_code === 'PENDING_FINANCE_VERIFICATION';
+
+    if (!isInitialPaymentStage && !isFinalVerificationStage) {
+      throw new Error(
+        'Finance information can only be updated while processing or verifying the signed Payment Voucher.',
+      );
+    }
+
+    if (isFinalVerificationStage && !paymentProofFileName) {
+      throw new Error(
+        'Upload the payment transaction proof before archiving the Payment Voucher.',
       );
     }
 
@@ -1280,28 +1283,42 @@ export async function savePaymentVoucherFinanceInformationInDatabase(
       voucher.organization_id,
       input.financeId,
     );
+    const existingFinanceTransition = findTransition(
+      voucher,
+      'SAVE_PAYMENT_INFORMATION',
+    );
+    const existingFinanceMetadata =
+      existingFinanceTransition?.metadata_json;
 
-    await transaction.paymentVoucherDetail.update({
-      where: { submission_id: voucher.id },
-      data: {
-        paid_at: paidAt,
-        paid_reference: paymentReference,
-      },
-    });
+    if (isInitialPaymentStage) {
+      await transaction.paymentVoucherDetail.update({
+        where: { submission_id: voucher.id },
+        data: {
+          paid_at: paidAt,
+          paid_reference: paymentReference,
+        },
+      });
+    }
 
     await transaction.submissionTransition.create({
       data: {
         submission_id: voucher.id,
-        from_state_code: 'FINANCE_PROCESSING',
+        from_state_code: voucher.current_state_code,
         action_code: 'SAVE_PAYMENT_INFORMATION',
-        to_state_code: 'FINANCE_PROCESSING',
+        to_state_code: voucher.current_state_code,
         actor_type: ActorType.INTERNAL_USER,
         actor_user_id: input.financeId,
         actor_membership_id: membership.id,
         metadata_json: {
-          paymentRemarks,
+          paymentRemarks:
+            paymentRemarks ||
+            (isRecord(existingFinanceMetadata) &&
+            typeof existingFinanceMetadata.paymentRemarks === 'string'
+              ? existingFinanceMetadata.paymentRemarks
+              : undefined),
           paymentProofFileName,
           paymentProofStoragePending: Boolean(paymentProofFileName),
+          finalVerificationProof: isFinalVerificationStage,
         },
       },
     });
@@ -1319,7 +1336,9 @@ export async function savePaymentVoucherFinanceInformationInDatabase(
       data: {
         organization_id: voucher.organization_id,
         submission_id: voucher.id,
-        event_type: 'payment_voucher.payment_information_saved',
+        event_type: isFinalVerificationStage
+          ? 'payment_voucher.transaction_proof_uploaded'
+          : 'payment_voucher.payment_information_saved',
         actor_type: ActorType.INTERNAL_USER,
         actor_user_id: input.financeId,
         payload_json: {
@@ -2148,6 +2167,22 @@ export async function completePaymentVoucherInDatabase(
     ) {
       throw new Error(
         'The recipient signature must be collected and confirmed by the original requester first.',
+      );
+    }
+
+    const proofTransition = findTransition(
+      voucher,
+      'SAVE_PAYMENT_INFORMATION',
+    );
+    const proofMetadata = proofTransition?.metadata_json;
+    const hasTransactionProof =
+      isRecord(proofMetadata) &&
+      typeof proofMetadata.paymentProofFileName === 'string' &&
+      proofMetadata.paymentProofFileName.trim().length > 0;
+
+    if (!hasTransactionProof) {
+      throw new Error(
+        'Upload the payment transaction proof before archiving the Payment Voucher.',
       );
     }
 

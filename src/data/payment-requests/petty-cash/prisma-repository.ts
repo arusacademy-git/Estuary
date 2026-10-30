@@ -8,7 +8,6 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
-import { paymentRequestReference } from '@/domain/payment-requests/finance-payment-reference';
 import {
   PETTY_CASH_MONTHLY_ALLOCATION,
   pettyCashTotal,
@@ -20,6 +19,8 @@ import type {
   PettyCashLedgerSummary,
   PettyCashLedgerTransaction,
   PettyCashLocation,
+  PettyCashReconciliation,
+  PettyCashReconciliationInput,
   PettyCashRecord,
   PettyCashRole,
 } from '@/domain/payment-requests/petty-cash/types';
@@ -90,6 +91,20 @@ function readRequesterReview(record: StoredPettyCash) {
   } : undefined;
 }
 
+function readReconciliation(record: StoredPettyCash): PettyCashReconciliation | undefined {
+  const transition = latestTransition(record, 'SUBMIT_RECONCILIATION');
+  const metadata = transition?.metadata_json;
+  if (!transition || !isRecord(metadata) || !isRecord(metadata.reconciliation)) return undefined;
+  const reconciliation = metadata.reconciliation as unknown as PettyCashReconciliationInput & { calculatedBalance: number };
+  const verified = latestTransition(record, 'VERIFY_RECONCILIATION');
+  return {
+    ...reconciliation,
+    submittedAt: transition.created_at.toISOString(),
+    financeVerifiedAt: verified?.created_at.toISOString(),
+    financeVerifiedById: verified?.actor_user_id ?? undefined,
+  };
+}
+
 function locationFromFloatName(name: string): PettyCashLocation {
   return name.toLowerCase().includes('kuala') ? 'KUALA_LUMPUR' : 'PENANG';
 }
@@ -105,15 +120,14 @@ function mapPettyCash(record: StoredPettyCash): PettyCashRecord {
   const requesterReview = readRequesterReview(record);
   const paid = latestTransition(record, 'MARK_PAID');
   const returned = [...record.transitions].reverse().find((item) =>
-    ['RETURN_BY_MANAGER', 'RETURN_BY_DIRECTOR', 'RETURN_BY_FINANCE'].includes(item.action_code),
+    ['RETURN_BY_MANAGER', 'RETURN_BY_DIRECTOR', 'RETURN_BY_FINANCE', 'RETURN_RECONCILIATION'].includes(item.action_code),
   );
-  const requestNumber = record.submission_number ?? `PC-DRAFT-${record.id.slice(-6)}`;
 
   return {
     ...snapshot,
     location: snapshot.location ?? locationFromFloatName(record.petty_cash_detail.petty_cash_float.name),
     id: record.id,
-    requestNumber,
+    requestNumber: record.submission_number ?? `PC-DRAFT-${record.id.slice(-6)}`,
     requestType: 'PETTY_CASH_REQUEST',
     status: record.current_state_code as PettyCashRecord['status'],
     totalAmount: Number(record.total_amount),
@@ -124,10 +138,11 @@ function mapPettyCash(record: StoredPettyCash): PettyCashRecord {
     financeVerifiedAt: verification?.at,
     financeVerifiedById: verification?.by,
     paymentDate: verification?.paymentDate,
-    paymentReference: verification ? requestNumber : undefined,
+    paymentReference: verification?.paymentReference,
     paymentProofLink: verification?.paymentProofLink,
     paidAt: paid?.created_at.toISOString(),
     paidById: paid?.actor_user_id ?? undefined,
+    reconciliation: readReconciliation(record),
     returnRemarks: returned?.reason_text ?? undefined,
     returnedById: returned?.actor_user_id ?? undefined,
     returnedAt: returned?.created_at.toISOString(),
@@ -436,7 +451,7 @@ export async function approvePettyCashByManagerInDatabase(
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-          to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
+            to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
             action_code: 'APPROVE_BY_MANAGER',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: managerId,
@@ -486,7 +501,7 @@ export async function approvePettyCashByDirectorInDatabase(
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-          to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
+            to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
             action_code: 'APPROVE_BY_DIRECTOR',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: directorId,
@@ -536,7 +551,7 @@ export async function reviewPettyCashByFinancePeerInDatabase(
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-          to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
+            to_state_code: legacyState ? 'PENDING_FINANCE_PAYMENT' : record.current_state_code,
             action_code: 'REVIEW_FINANCE_REQUEST',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: reviewerId,
@@ -654,8 +669,8 @@ export async function verifyPettyCashByFinanceInDatabase(
   id: string,
   input: PettyCashFinanceInput,
 ) {
-  if (!input.paymentDate || !input.paymentProofLink.trim()) {
-    throw new Error('Complete the payment date and proof link.');
+  if (!input.paymentDate || !input.paymentReference.trim()) {
+    throw new Error('Complete the payment date and reference.');
   }
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
@@ -663,7 +678,6 @@ export async function verifyPettyCashByFinanceInDatabase(
     if (record.current_state_code !== 'PENDING_FINANCE_PAYMENT') {
       throw new Error('Only a request pending Finance payment can be verified.');
     }
-    const automaticReference = paymentRequestReference(record.submission_number ?? `PC-${record.id}`);
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
@@ -679,8 +693,8 @@ export async function verifyPettyCashByFinanceInDatabase(
             actor_user_id: input.financeId,
             metadata_json: {
               paymentDate: input.paymentDate,
-              paymentReference: automaticReference,
-              paymentProofLink: input.paymentProofLink.trim(),
+              paymentReference: input.paymentReference.trim(),
+              paymentProofLink: input.paymentProofLink?.trim() || null,
               notes: input.notes?.trim(),
             },
           }
@@ -736,7 +750,7 @@ export async function markPettyCashPaidInDatabase(id: string, financeId: string)
     const record = await getStored(tx, id);
     await requireRole(tx, record.organization_id, financeId, OrgRole.FINANCE_ADMIN);
     if (!record.petty_cash_detail) throw new Error('Petty Cash fund information is missing.');
-    if (record.current_state_code === 'PAID') return mapPettyCash(record);
+    if (record.current_state_code === 'PENDING_RECONCILIATION') return mapPettyCash(record);
     if (record.current_state_code !== 'FINANCE_VERIFIED') {
       throw new Error('Finance must verify the payment information before marking it paid.');
     }
@@ -760,17 +774,12 @@ export async function markPettyCashPaidInDatabase(id: string, financeId: string)
     if (duplicate) {
       return mapPettyCash(await tx.submission.update({
         where: { id: record.id },
-        data: { current_state_code: 'PAID', current_state_group: StateGroup.COMPLETE, closed_at: new Date() },
+        data: { current_state_code: 'PENDING_RECONCILIATION', current_state_group: StateGroup.IN_REVIEW, current_assignee_id: record.submitted_by_id, closed_at: null },
         include,
       }));
     }
 
     const paymentMonth = verification.paymentDate.slice(0, 7);
-    const snapshot = readSnapshot(record);
-    const receiptProofLink = snapshot.lines.find((line) => line.proofLink.trim())?.proofLink;
-    if (!receiptProofLink) {
-      throw new Error('At least one Staff receipt or invoice link is required before payment.');
-    }
     await ensureMonthlyAllocation(tx, record.petty_cash_detail.petty_cash_float_id, financeId, paymentMonth);
     const float = await tx.pettyCashFloat.findUniqueOrThrow({ where: { id: record.petty_cash_detail.petty_cash_float_id } });
     const amount = Number(record.total_amount);
@@ -784,7 +793,7 @@ export async function markPettyCashPaidInDatabase(id: string, financeId: string)
         amount: new Prisma.Decimal(amount.toFixed(2)),
         description: verification.notes?.trim() ?? '',
         recorded_by_id: financeId,
-        receipt_url: receiptProofLink,
+        receipt_url: verification.paymentProofLink,
         topup_submission_id: record.id,
         created_at: new Date(`${verification.paymentDate}T12:00:00.000Z`),
       },
@@ -796,14 +805,14 @@ export async function markPettyCashPaidInDatabase(id: string, financeId: string)
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
-        current_state_code: 'PAID',
-        current_state_group: StateGroup.COMPLETE,
-        current_assignee_id: null,
-        closed_at: new Date(),
+        current_state_code: 'PENDING_RECONCILIATION',
+        current_state_group: StateGroup.IN_REVIEW,
+        current_assignee_id: record.submitted_by_id,
+        closed_at: null,
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-            to_state_code: 'PAID',
+            to_state_code: 'PENDING_RECONCILIATION',
             action_code: 'MARK_PAID',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: financeId,
@@ -813,6 +822,66 @@ export async function markPettyCashPaidInDatabase(id: string, financeId: string)
       },
       include,
     }));
+  });
+}
+
+export async function submitPettyCashReconciliationInDatabase(id: string, input: PettyCashReconciliationInput) {
+  const actualSpent = Number(input.actualSpent);
+  const returnedBalance = Number(input.returnedBalance);
+  if (!Number.isFinite(actualSpent) || actualSpent < 0) throw new Error('Enter a valid actual spending amount.');
+  if (!input.receipts.length) throw new Error('Upload at least one purchase receipt.');
+  if (input.receipts.some((receipt) => !/^data:(application\/pdf|image\/png|image\/jpeg);base64,/.test(receipt.dataUrl))) throw new Error('Every purchase receipt must be a PDF, JPG or PNG file.');
+
+  return prisma.$transaction(async (tx) => {
+    const record = await getStored(tx, id);
+    if (record.submitted_by_id !== input.requesterId) throw new Error('Only the requester can submit this reconciliation.');
+    if (record.current_state_code !== 'PENDING_RECONCILIATION') throw new Error('This Petty Cash request is not waiting for reconciliation.');
+    const releasedAmount = Number(record.total_amount);
+    if (actualSpent > releasedAmount) throw new Error('Actual spending cannot exceed the amount released by Finance. Submit any excess through the appropriate Claim process.');
+    const calculatedBalance = Number((releasedAmount - actualSpent).toFixed(2));
+    if (Math.abs(returnedBalance - calculatedBalance) > 0.009) throw new Error(`The returned balance must equal RM${calculatedBalance.toFixed(2)}.`);
+    if (calculatedBalance > 0 && (!input.balanceReturnDate || !input.balanceReturnReference?.trim() || !input.balanceReturnProof)) throw new Error('Record the return date, reference and transaction proof for the unused balance.');
+    if (calculatedBalance === 0 && (input.noBalanceRemark?.trim().length ?? 0) < 3) throw new Error('Confirm that no balance remains and provide a short declaration.');
+    const reconciliation = { ...input, actualSpent, returnedBalance, calculatedBalance };
+    const financeId = await activeFinanceUser(tx, record.organization_id);
+    return mapPettyCash(await tx.submission.update({
+      where: { id: record.id },
+      data: {
+        current_state_code: 'PENDING_FINANCE_RECONCILIATION', current_state_group: StateGroup.PENDING_VERIFICATION, current_assignee_id: financeId,
+        transitions: { create: { from_state_code: record.current_state_code, to_state_code: 'PENDING_FINANCE_RECONCILIATION', action_code: 'SUBMIT_RECONCILIATION', actor_type: ActorType.INTERNAL_USER, actor_user_id: input.requesterId, metadata_json: { reconciliation } as unknown as Prisma.InputJsonValue } },
+      },
+      include,
+    }));
+  });
+}
+
+export async function verifyPettyCashReconciliationInDatabase(id: string, financeId: string) {
+  return prisma.$transaction(async (tx) => {
+    const record = await getStored(tx, id);
+    await requireRole(tx, record.organization_id, financeId, OrgRole.FINANCE_ADMIN);
+    if (!record.petty_cash_detail) throw new Error('Petty Cash fund information is missing.');
+    if (record.current_state_code !== 'PENDING_FINANCE_RECONCILIATION') throw new Error('This request is not waiting for Finance reconciliation.');
+    const reconciliation = readReconciliation(record);
+    if (!reconciliation) throw new Error('The Staff reconciliation information is missing.');
+    if (reconciliation.calculatedBalance > 0) {
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM petty_cash_floats WHERE id = ${record.petty_cash_detail.petty_cash_float_id} FOR UPDATE`);
+      const existing = await tx.pettyCashEntry.findFirst({ where: { float_id: record.petty_cash_detail.petty_cash_float_id, entry_type: PettyCashEntryType.TOPUP, topup_submission_id: record.id } });
+      if (!existing) {
+        await tx.pettyCashEntry.create({ data: { float_id: record.petty_cash_detail.petty_cash_float_id, entry_type: PettyCashEntryType.TOPUP, amount: new Prisma.Decimal(reconciliation.calculatedBalance.toFixed(2)), description: `Unused balance returned for ${record.submission_number}`, recorded_by_id: financeId, receipt_url: reconciliation.balanceReturnProof?.dataUrl, topup_submission_id: record.id, created_at: new Date(`${reconciliation.balanceReturnDate}T12:00:00.000Z`) } });
+        await tx.pettyCashFloat.update({ where: { id: record.petty_cash_detail.petty_cash_float_id }, data: { current_balance: { increment: new Prisma.Decimal(reconciliation.calculatedBalance.toFixed(2)) } } });
+      }
+    }
+    return mapPettyCash(await tx.submission.update({ where: { id: record.id }, data: { current_state_code: 'RECONCILED', current_state_group: StateGroup.COMPLETE, current_assignee_id: null, closed_at: new Date(), transitions: { create: { from_state_code: record.current_state_code, to_state_code: 'RECONCILED', action_code: 'VERIFY_RECONCILIATION', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId } } }, include }));
+  });
+}
+
+export async function returnPettyCashReconciliationInDatabase(id: string, financeId: string, reason: string) {
+  if (reason.trim().length < 3) throw new Error('Enter correction remarks before returning the reconciliation.');
+  return prisma.$transaction(async (tx) => {
+    const record = await getStored(tx, id);
+    await requireRole(tx, record.organization_id, financeId, OrgRole.FINANCE_ADMIN);
+    if (record.current_state_code !== 'PENDING_FINANCE_RECONCILIATION') throw new Error('This request is not waiting for Finance reconciliation.');
+    return mapPettyCash(await tx.submission.update({ where: { id: record.id }, data: { current_state_code: 'PENDING_RECONCILIATION', current_state_group: StateGroup.IN_REVIEW, current_assignee_id: record.submitted_by_id, transitions: { create: { from_state_code: record.current_state_code, to_state_code: 'PENDING_RECONCILIATION', action_code: 'RETURN_RECONCILIATION', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, reason_text: reason.trim() } } }, include }));
   });
 }
 
@@ -863,7 +932,7 @@ export async function listPettyCashLedgerFromDatabase(input: {
         notes: `Closing balance carried forward from the previous month`,
       });
     }
-    const hasOpening = entries.some((entry) => entry.entry_type === PettyCashEntryType.TOPUP);
+    const hasOpening = entries.some((entry) => entry.entry_type === PettyCashEntryType.TOPUP && entry.description.startsWith('Monthly allocation'));
     if (!hasOpening) {
       balance += PETTY_CASH_MONTHLY_ALLOCATION;
       transactions.push({

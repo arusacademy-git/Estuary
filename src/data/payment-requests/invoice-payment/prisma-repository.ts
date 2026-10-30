@@ -1,7 +1,6 @@
 import { ActorType, PaymentMode, PaymentType, Prisma, StateGroup } from '@prisma/client';
 
-import type { CreateInvoicePaymentRequestInput, InvoicePaymentRequestRecord, PaymentRequestStatus } from '@/domain/payment-requests/invoice-payment/types';
-import { paymentRequestReference } from '@/domain/payment-requests/finance-payment-reference';
+import type { CreateInvoicePaymentRequestInput, InvoicePaymentRequestRecord, PaymentRequestDocument, PaymentRequestStatus } from '@/domain/payment-requests/invoice-payment/types';
 import { prisma } from '@/lib/db/prisma';
 
 const include = {
@@ -30,6 +29,10 @@ function map(record: Stored): InvoicePaymentRequestRecord {
   const directorReturn = transition('RETURN_BY_DIRECTOR');
   const financeReturn = transition('RETURN_BY_FINANCE');
   const complete = transition('COMPLETE');
+  const paymentProcessed = transition('PAYMENT_PROCESSED');
+  const proofUpload = transition('UPLOAD_TRANSACTION_PROOF');
+  const paymentMetadata = isObject(paymentProcessed?.metadata_json) ? paymentProcessed.metadata_json : undefined;
+  const proofMetadata = isObject(proofUpload?.metadata_json) ? proofUpload.metadata_json : undefined;
   return {
     ...data,
     id: record.id,
@@ -49,8 +52,9 @@ function map(record: Stored): InvoicePaymentRequestRecord {
     directorReturnRemarks: directorReturn?.reason_text ?? undefined,
     financeVerifiedAt: complete?.created_at.toISOString(),
     financeVerifiedById: complete?.actor_user_id ?? undefined,
-    financePaymentDate: record.invoice_detail?.paid_at?.toISOString().slice(0, 10),
-    financePaymentReference: record.invoice_detail?.paid_reference ?? undefined,
+    financePaymentDate: typeof paymentMetadata?.paymentDate === 'string' ? paymentMetadata.paymentDate : typeof proofMetadata?.paymentDate === 'string' ? proofMetadata.paymentDate : undefined,
+    financePaymentReference: typeof paymentMetadata?.paymentReference === 'string' ? paymentMetadata.paymentReference : typeof proofMetadata?.paymentReference === 'string' ? proofMetadata.paymentReference : undefined,
+    financeTransactionProof: isObject(proofMetadata?.transactionProof) ? proofMetadata.transactionProof as unknown as PaymentRequestDocument : undefined,
     financeReturnedAt: financeReturn?.created_at.toISOString(),
     financeReturnedById: financeReturn?.actor_user_id ?? undefined,
     financeReturnRemarks: financeReturn?.reason_text ?? undefined,
@@ -71,28 +75,14 @@ async function nextNumber(tx: Prisma.TransactionClient, organizationId: string, 
   return `IV${shortYear}-${String(month).padStart(2, '0')}-${String(sequence.last_sequence).padStart(2, '0')}`;
 }
 
-export async function listInvoicePaymentsFromDatabase(scope?: { role: 'staff' | 'manager' | 'director' | 'finance'; userId: string; includeAll?: boolean; approvalOnly?: boolean }) {
-  const approvalState = scope?.approvalOnly
-    ? scope.role === 'manager'
-      ? 'PENDING_MANAGER_REVIEW'
-      : scope.role === 'director'
-        ? 'PENDING_DIRECTOR_REVIEW'
-        : undefined
-    : undefined;
-  const mapped = (await prisma.submission.findMany({
-    where: {
-      payment_type: PaymentType.INVOICE_PAYMENT,
-      ...(approvalState ? { current_state_code: approvalState, current_assignee_id: scope!.userId } : {}),
-    },
-    include,
-    orderBy: { updated_at: 'desc' },
-  })).map(map);
+export async function listInvoicePaymentsFromDatabase(scope?: { role: 'staff' | 'manager' | 'director' | 'finance'; userId: string; includeAll?: boolean }) {
+  const mapped = (await prisma.submission.findMany({ where: { payment_type: PaymentType.INVOICE_PAYMENT }, include, orderBy: { updated_at: 'desc' } })).map(map);
   if (!scope) return mapped;
   if (scope.role === 'staff') return mapped.filter((item) => item.staffId === scope.userId);
   if (scope.role === 'manager') return mapped.filter((item) => item.managerApproverId === scope.userId);
   if (scope.role === 'director') return mapped.filter((item) => item.directorApproverId === scope.userId && item.status !== 'PENDING_MANAGER_REVIEW');
   if (scope.includeAll) return mapped;
-  return mapped.filter((item) => item.status === 'PENDING_FINANCE_REVIEW' || item.status === 'COMPLETED' || Boolean(item.financeReturnedAt));
+  return mapped.filter((item) => ['PENDING_FINANCE_REVIEW', 'PAYMENT_PROCESSED', 'TRANSACTION_PROOF_UPLOADED', 'COMPLETED'].includes(item.status) || Boolean(item.financeReturnedAt));
 }
 
 export async function getInvoicePaymentFromDatabase(id: string) {
@@ -111,7 +101,7 @@ export async function createInvoicePaymentInDatabase(input: CreateInvoicePayment
       tx.user.findUnique({ where: { id: input.directorApproverId }, select: { id: true } }),
       tx.project.findFirst({ where: { organization_id: input.organizationId, code: input.projectName }, select: { id: true } }),
     ]);
-    if (!organization || !staff || !manager || !director) throw new Error('Organization, Staff, Manager or Director was not found in PostgreSQL.');
+    if (!organization || !staff || !manager || !director) throw new Error('Organization, requester, Manager or Director was not found in PostgreSQL.');
     const requestNumber = await nextNumber(tx, input.organizationId, new Date(`${input.requestDate}T12:00:00Z`));
     const record = await tx.submission.create({
       data: {
@@ -201,29 +191,56 @@ export const returnInvoicePaymentByManagerInDatabase = (id: string, actorId: str
 export const reviewInvoicePaymentByDirectorInDatabase = (id: string, actorId: string) => approvalAction(id, actorId, 'DIRECTOR', true);
 export const returnInvoicePaymentByDirectorInDatabase = (id: string, actorId: string, reason: string) => approvalAction(id, actorId, 'DIRECTOR', false, reason);
 
-async function financeAction(id: string, financeId: string, complete: boolean, paymentDate?: string, reason?: string) {
+export async function processInvoicePaymentByFinanceInDatabase(id: string, financeId: string, paymentDate: string, paymentReference: string) {
+  if (!paymentDate || !paymentReference.trim()) throw new Error('Payment date and reference are required.');
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.submission.findFirst({ where: { id, payment_type: PaymentType.INVOICE_PAYMENT } });
+    if (!current) throw new Error('Invoice Payment could not be found.');
+    if (current.current_state_code !== 'PENDING_FINANCE_REVIEW') throw new Error('This Invoice Payment is no longer awaiting Finance verification.');
+    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: current.current_state_code, action_code: 'PAYMENT_PROCESSED', to_state_code: 'PAYMENT_PROCESSED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { paymentDate, paymentReference: paymentReference.trim() } as Prisma.InputJsonValue } });
+    await tx.submission.update({ where: { id }, data: { current_state_code: 'PAYMENT_PROCESSED', current_state_group: StateGroup.PENDING_VERIFICATION, current_assignee_id: financeId } });
+    return map(await tx.submission.findUniqueOrThrow({ where: { id }, include }));
+  }, { timeout: 15_000 });
+}
+
+export async function uploadInvoicePaymentProofByFinanceInDatabase(id: string, financeId: string, transactionProof: PaymentRequestDocument) {
+  if (!transactionProof.dataUrl) throw new Error('A payment transaction proof is required.');
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.submission.findFirst({ where: { id, payment_type: PaymentType.INVOICE_PAYMENT } });
+    if (!current) throw new Error('Invoice Payment could not be found.');
+    if (current.current_state_code !== 'PAYMENT_PROCESSED') throw new Error('Verify the payment information before uploading its transaction proof.');
+    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: 'PAYMENT_PROCESSED', action_code: 'UPLOAD_TRANSACTION_PROOF', to_state_code: 'TRANSACTION_PROOF_UPLOADED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { transactionProof } as unknown as Prisma.InputJsonValue } });
+    await tx.submission.update({ where: { id }, data: { current_state_code: 'TRANSACTION_PROOF_UPLOADED', current_state_group: StateGroup.PENDING_VERIFICATION, current_assignee_id: financeId } });
+    return map(await tx.submission.findUniqueOrThrow({ where: { id }, include }));
+  }, { timeout: 15_000 });
+}
+
+export async function completeInvoicePaymentByFinanceInDatabase(id: string, financeId: string) {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.submission.findFirst({ where: { id, payment_type: PaymentType.INVOICE_PAYMENT } });
+    if (!current) throw new Error('Invoice Payment could not be found.');
+    if (current.current_state_code !== 'TRANSACTION_PROOF_UPLOADED') throw new Error('Upload the payment transaction proof before completing this Invoice Payment.');
+    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: 'TRANSACTION_PROOF_UPLOADED', action_code: 'COMPLETE', to_state_code: 'COMPLETED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId } });
+    await tx.submission.update({ where: { id }, data: { current_state_code: 'COMPLETED', current_state_group: StateGroup.COMPLETE, current_assignee_id: null, closed_at: new Date() } });
+    await tx.auditEvent.create({ data: { organization_id: current.organization_id, submission_id: id, event_type: 'invoice_payment.finance_completed', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId } });
+    return map(await tx.submission.findUniqueOrThrow({ where: { id }, include }));
+  }, { timeout: 15_000 });
+}
+
+async function financeAction(id: string, financeId: string, complete: boolean, reason?: string) {
   const cleanReason = reason?.trim();
   if (!complete && (!cleanReason || cleanReason.length < 5)) throw new Error('Enter a clear reason for returning the request.');
   return prisma.$transaction(async (tx) => {
     const current = await tx.submission.findFirst({ where: { id, payment_type: PaymentType.INVOICE_PAYMENT } });
     if (!current) throw new Error('Invoice Payment could not be found.');
-    if (current.current_state_code !== 'PENDING_FINANCE_REVIEW') throw new Error('This Invoice Payment is no longer awaiting Finance verification.');
+    if (!['PENDING_FINANCE_REVIEW', 'PAYMENT_PROCESSED'].includes(current.current_state_code)) throw new Error('This Invoice Payment can no longer be returned by Finance.');
     const to = complete ? 'COMPLETED' : 'RETURNED_TO_STAFF';
     const actionCode = complete ? 'COMPLETE' : 'RETURN_BY_FINANCE';
-    const automaticReference = paymentRequestReference(current.submission_number ?? `IV-${current.id}`);
-    const effectivePaymentDate = paymentDate || new Date().toISOString().slice(0, 10);
-    if (complete) {
-      await tx.invoicePaymentDetail.update({
-        where: { submission_id: id },
-        data: { paid_at: new Date(`${effectivePaymentDate}T12:00:00Z`), paid_reference: automaticReference },
-      });
-    }
-    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: current.current_state_code, action_code: actionCode, to_state_code: to, actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, reason_text: cleanReason, metadata_json: complete ? { paymentDate: effectivePaymentDate, paymentReference: automaticReference } : undefined } });
+    await tx.submissionTransition.create({ data: { submission_id: id, from_state_code: current.current_state_code, action_code: actionCode, to_state_code: to, actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, reason_text: cleanReason } });
     await tx.submission.update({ where: { id }, data: { current_state_code: to, current_state_group: complete ? StateGroup.COMPLETE : StateGroup.REJECTED, current_assignee_id: complete ? null : current.submitted_by_id, closed_at: complete ? new Date() : null } });
     await tx.auditEvent.create({ data: { organization_id: current.organization_id, submission_id: id, event_type: complete ? 'invoice_payment.finance_completed' : 'invoice_payment.returned_by_finance', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, payload_json: cleanReason ? { reason: cleanReason } : undefined } });
     return map(await tx.submission.findUniqueOrThrow({ where: { id }, include }));
   }, { timeout: 15_000 });
 }
 
-export const completeInvoicePaymentByFinanceInDatabase = (id: string, financeId: string, paymentDate?: string) => financeAction(id, financeId, true, paymentDate);
-export const returnInvoicePaymentByFinanceInDatabase = (id: string, financeId: string, reason: string) => financeAction(id, financeId, false, undefined, reason);
+export const returnInvoicePaymentByFinanceInDatabase = (id: string, financeId: string, reason: string) => financeAction(id, financeId, false, reason);

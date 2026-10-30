@@ -6,10 +6,9 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
-import { paymentRequestReference } from '@/domain/payment-requests/finance-payment-reference';
-import { formatTravelAllowanceNumber } from '@/domain/payment-requests/travel-allowance/travel-allowance-number';
 import type {
   CreateTravelAllowanceInput,
+  PaymentRequestDocument,
   TravelAllowanceRecord,
 } from '@/domain/payment-requests/travel-allowance/types';
 
@@ -110,6 +109,7 @@ function mapTravelAllowance(record: StoredTravelAllowance): TravelAllowanceRecor
     financeReturnRemarks: financeReturn?.reason_text ?? undefined,
     financePaymentDate: record.travel_detail?.paid_at?.toISOString().slice(0, 10),
     financePaymentReference: record.travel_detail?.paid_reference ?? undefined,
+    financeTransactionProof: isRecord(financeMetadata?.transactionProof) ? financeMetadata.transactionProof as unknown as PaymentRequestDocument : undefined,
     financeRemarks:
       typeof financeMetadata?.financeRemarks === 'string'
         ? financeMetadata.financeRemarks
@@ -126,6 +126,7 @@ async function nextTravelAllowanceNumber(
 ) {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth() + 1;
+  const shortYear = String(year).slice(-2);
   const sequence = await transaction.documentSequence.upsert({
     where: {
       organization_id_payment_type_year_month: {
@@ -146,7 +147,7 @@ async function nextTravelAllowanceNumber(
     update: { last_sequence: { increment: 1 } },
   });
 
-  return formatTravelAllowanceNumber(year, month, sequence.last_sequence);
+  return `TA${shortYear}-${String(month).padStart(2, '0')}-${String(sequence.last_sequence).padStart(2, '0')}`;
 }
 
 export async function listTravelAllowancesFromDatabase(scope?: {
@@ -154,20 +155,9 @@ export async function listTravelAllowancesFromDatabase(scope?: {
   userId: string;
   month?: string;
   includeAll?: boolean;
-  approvalOnly?: boolean;
 }) {
-  const approvalState = scope?.approvalOnly
-    ? scope.role === 'manager'
-      ? 'PENDING_MANAGER_REVIEW'
-      : scope.role === 'director'
-        ? 'PENDING_DIRECTOR_APPROVAL'
-        : undefined
-    : undefined;
   const records = await prisma.submission.findMany({
-    where: {
-      payment_type: PaymentType.TRAVEL_ALLOWANCE,
-      ...(approvalState ? { current_state_code: approvalState, current_assignee_id: scope!.userId } : {}),
-    },
+    where: { payment_type: PaymentType.TRAVEL_ALLOWANCE },
     include: travelAllowanceInclude,
     orderBy: { updated_at: 'desc' },
   });
@@ -230,8 +220,8 @@ export async function getTravelAllowanceFromDatabase(id: string) {
 export async function createTravelAllowanceInDatabase(
   input: CreateTravelAllowanceInput,
 ) {
-  if (input.requesterRole !== 'manager' || input.managerApproverId !== input.requesterId) {
-    throw new Error('Only a Manager can create a Travel Allowance request.');
+  if (input.requesterRole === 'staff' && !input.managerApproverId) {
+    throw new Error('Select the Manager reviewer.');
   }
 
   const totalAmount = input.lines.reduce(
@@ -250,23 +240,20 @@ export async function createTravelAllowanceInDatabase(
   const now = new Date();
 
   return prisma.$transaction(async (transaction) => {
-    const [organization, requesterMembership, director] = await Promise.all([
+    const [organization, requester, manager, director] = await Promise.all([
       transaction.organization.findUnique({ where: { id: input.organizationId }, select: { id: true } }),
-      transaction.userOrgMembership.findFirst({
-        where: {
-          organization_id: input.organizationId,
-          user_id: input.requesterId,
-          is_active: true,
-          membership_status: 'ACTIVE',
-          roles: { some: { role: 'MANAGER' } },
-        },
-        select: { id: true },
-      }),
+      transaction.user.findUnique({ where: { id: input.requesterId }, select: { id: true } }),
+      input.managerApproverId
+        ? transaction.user.findUnique({ where: { id: input.managerApproverId }, select: { id: true } })
+        : Promise.resolve(null),
       transaction.user.findUnique({ where: { id: input.projectDirectorId }, select: { id: true } }),
     ]);
 
     if (!organization) throw new Error('Travel Allowance organization was not found.');
-    if (!requesterMembership) throw new Error('Only an active Manager can create a Travel Allowance request.');
+    if (!requester) throw new Error('The Staff requester was not found in PostgreSQL.');
+    if (input.requesterRole === 'staff' && !manager) {
+      throw new Error('The assigned Manager was not found in PostgreSQL.');
+    }
     if (!director) throw new Error('The assigned Director was not found in PostgreSQL.');
 
     const projectCodes = [...new Set(input.lines.map((line) => line.projectName))];
@@ -277,8 +264,13 @@ export async function createTravelAllowanceInDatabase(
     const projectIdByCode = new Map(projects.map((project) => [project.code, project.id]));
     const requestNumber = await nextTravelAllowanceNumber(transaction, input.organizationId, new Date(`${input.requestDate}T12:00:00Z`));
 
-    const initialState = 'PENDING_DIRECTOR_APPROVAL';
-    const initialAssigneeId = input.projectDirectorId;
+    const isManagerRequest = input.requesterRole === 'manager';
+    const initialState = isManagerRequest
+      ? 'PENDING_DIRECTOR_APPROVAL'
+      : 'PENDING_MANAGER_REVIEW';
+    const initialAssigneeId = isManagerRequest
+      ? input.projectDirectorId
+      : input.managerApproverId;
 
     const record = await transaction.submission.create({
       data: {
@@ -319,13 +311,13 @@ export async function createTravelAllowanceInDatabase(
               step_number: 1,
               required_role: 'MANAGER',
               assigned_user_id: input.managerApproverId,
-              status_code: 'BYPASSED',
+              status_code: isManagerRequest ? 'BYPASSED' : 'ACTIVE',
             },
             {
               step_number: 2,
               required_role: 'DIRECTOR',
               assigned_user_id: input.projectDirectorId,
-              status_code: 'ACTIVE',
+              status_code: isManagerRequest ? 'ACTIVE' : 'PENDING',
             },
           ],
         },
@@ -336,7 +328,6 @@ export async function createTravelAllowanceInDatabase(
             to_state_code: initialState,
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: input.requesterId,
-            actor_membership_id: requesterMembership.id,
             metadata_json: { snapshot: input } as Prisma.InputJsonValue,
           },
         },
@@ -369,10 +360,6 @@ export async function resubmitTravelAllowanceInDatabase(
   id: string,
   input: CreateTravelAllowanceInput,
 ) {
-  if (input.requesterRole !== 'manager' || input.managerApproverId !== input.requesterId) {
-    throw new Error('Only a Manager can resubmit a Travel Allowance request.');
-  }
-
   const totalAmount = input.lines.reduce(
     (sum, line) => sum + line.meals.reduce(
       (mealTotal, meal) => mealTotal + (meal === 'BREAKFAST' ? 10 : 20),
@@ -391,40 +378,32 @@ export async function resubmitTravelAllowanceInDatabase(
     if (current.current_state_code !== 'RETURNED_TO_STAFF') throw new Error('Only a Travel Allowance returned for correction can be edited.');
     if (current.submitted_by_id !== input.requesterId) throw new Error('Only the original requester can edit this Travel Allowance.');
 
-    const [requesterMembership, director] = await Promise.all([
-      transaction.userOrgMembership.findFirst({
-        where: {
-          organization_id: current.organization_id,
-          user_id: input.requesterId,
-          is_active: true,
-          membership_status: 'ACTIVE',
-          roles: { some: { role: 'MANAGER' } },
-        },
-        select: { id: true },
-      }),
+    const [manager, director] = await Promise.all([
+      input.managerApproverId ? transaction.user.findUnique({ where: { id: input.managerApproverId }, select: { id: true } }) : Promise.resolve(null),
       transaction.user.findUnique({ where: { id: input.projectDirectorId }, select: { id: true } }),
     ]);
-    if (!requesterMembership) throw new Error('Only an active Manager can resubmit a Travel Allowance request.');
+    if (input.requesterRole === 'staff' && !manager) throw new Error('The assigned Manager was not found in PostgreSQL.');
     if (!director) throw new Error('The assigned Director was not found in PostgreSQL.');
 
     const projectCodes = [...new Set(input.lines.map((line) => line.projectName))];
     const projects = await transaction.project.findMany({ where: { organization_id: current.organization_id, code: { in: projectCodes } }, select: { id: true, code: true } });
     const projectIdByCode = new Map(projects.map((project) => [project.code, project.id]));
-    const nextState = 'PENDING_DIRECTOR_APPROVAL';
-    const nextAssignee = input.projectDirectorId;
+    const isManagerRequest = input.requesterRole === 'manager';
+    const nextState = isManagerRequest ? 'PENDING_DIRECTOR_APPROVAL' : 'PENDING_MANAGER_REVIEW';
+    const nextAssignee = isManagerRequest ? input.projectDirectorId : input.managerApproverId;
 
     const stepIds = current.approval_steps.map((step) => step.id);
     await transaction.approvalDecision.deleteMany({ where: { approval_step_id: { in: stepIds } } });
     const managerStep = current.approval_steps.find((step) => step.required_role === 'MANAGER');
     const directorStep = current.approval_steps.find((step) => step.required_role === 'DIRECTOR');
     if (!managerStep || !directorStep) throw new Error('Travel Allowance approval steps are incomplete.');
-    await transaction.approvalStep.update({ where: { id: managerStep.id }, data: { assigned_user_id: input.managerApproverId, status_code: 'BYPASSED' } });
-    await transaction.approvalStep.update({ where: { id: directorStep.id }, data: { assigned_user_id: input.projectDirectorId, status_code: 'ACTIVE' } });
+    await transaction.approvalStep.update({ where: { id: managerStep.id }, data: { assigned_user_id: input.managerApproverId, status_code: isManagerRequest ? 'BYPASSED' : 'ACTIVE' } });
+    await transaction.approvalStep.update({ where: { id: directorStep.id }, data: { assigned_user_id: input.projectDirectorId, status_code: isManagerRequest ? 'ACTIVE' : 'PENDING' } });
 
     await transaction.travelAllowanceDetail.update({ where: { submission_id: id }, data: { purpose_text: input.remarks, travel_start_date: new Date(`${startDate}T12:00:00Z`), travel_end_date: new Date(`${endDate}T12:00:00Z`), manager_user_id: input.managerApproverId, director_user_id: input.projectDirectorId, paid_at: null, paid_reference: null } });
     await transaction.submissionLine.deleteMany({ where: { submission_id: id } });
     await transaction.submissionLine.createMany({ data: input.lines.map((line, index) => ({ submission_id: id, line_number: index + 1, description: line.reason, amount: new Prisma.Decimal((line.meals.reduce((sum, meal) => sum + (meal === 'BREAKFAST' ? 10 : 20), 0) + line.specialAllowance).toFixed(2)), project_id: projectIdByCode.get(line.projectName) })) });
-    await transaction.submissionTransition.create({ data: { submission_id: id, from_state_code: 'RETURNED_TO_STAFF', action_code: 'RESUBMIT', to_state_code: nextState, actor_type: ActorType.INTERNAL_USER, actor_user_id: input.requesterId, actor_membership_id: requesterMembership.id, metadata_json: { snapshot: input } as Prisma.InputJsonValue } });
+    await transaction.submissionTransition.create({ data: { submission_id: id, from_state_code: 'RETURNED_TO_STAFF', action_code: 'RESUBMIT', to_state_code: nextState, actor_type: ActorType.INTERNAL_USER, actor_user_id: input.requesterId, metadata_json: { snapshot: input } as Prisma.InputJsonValue } });
     await transaction.submission.update({ where: { id }, data: { current_state_code: nextState, current_state_group: StateGroup.IN_REVIEW, current_assignee_id: nextAssignee, total_amount: new Prisma.Decimal(totalAmount.toFixed(2)), description: `Travel Allowance for ${input.lines.length} travel ${input.lines.length === 1 ? 'entry' : 'entries'}`, submitted_at: new Date(), closed_at: null } });
     await transaction.auditEvent.create({ data: { organization_id: current.organization_id, submission_id: id, event_type: 'travel_allowance.resubmitted', actor_type: ActorType.INTERNAL_USER, actor_user_id: input.requesterId, payload_json: { requestNumber: current.submission_number, totalAmount: totalAmount.toFixed(2), managerId: input.managerApproverId, directorId: input.projectDirectorId } } });
     return mapTravelAllowance(await transaction.submission.findUniqueOrThrow({ where: { id }, include: travelAllowanceInclude }));
@@ -736,20 +715,40 @@ export async function completeTravelAllowanceByFinanceInDatabase(
   id: string,
   financeId: string,
   paymentDate: string,
-  _paymentReference?: string,
+  paymentReference: string,
+  transactionProof?: PaymentRequestDocument,
   remarks?: string,
 ) {
-  if (!paymentDate) throw new Error('Payment date is required.');
+  const cleanReference = paymentReference.trim();
+  if (!paymentDate || !cleanReference) {
+    throw new Error('Payment date and payment reference are required.');
+  }
 
   return prisma.$transaction(async (transaction) => {
     const current = await transaction.submission.findFirst({
       where: { id, payment_type: PaymentType.TRAVEL_ALLOWANCE },
     });
     if (!current) throw new Error('Travel Allowance could not be found.');
-    if (current.current_state_code !== 'PENDING_FINANCE_VERIFICATION') {
+    if (!['PENDING_FINANCE_VERIFICATION', 'PAYMENT_PROCESSED'].includes(current.current_state_code)) {
       throw new Error('This Travel Allowance is no longer awaiting Finance verification.');
     }
-    const cleanReference = paymentRequestReference(current.submission_number ?? `TA-${current.id}`);
+
+    if (current.current_state_code === 'PAYMENT_PROCESSED') {
+      if (!transactionProof?.dataUrl) throw new Error('Upload the payment transaction proof before continuing.');
+      await transaction.submissionTransition.createMany({ data: [
+        { submission_id: current.id, from_state_code: 'PAYMENT_PROCESSED', action_code: 'UPLOAD_TRANSACTION_PROOF', to_state_code: 'TRANSACTION_PROOF_UPLOADED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { transactionProof } as unknown as Prisma.InputJsonValue },
+        { submission_id: current.id, from_state_code: 'TRANSACTION_PROOF_UPLOADED', action_code: 'COMPLETE', to_state_code: 'COMPLETED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { paymentDate, paymentReference: cleanReference, transactionProof, financeRemarks: remarks?.trim() || null } as unknown as Prisma.InputJsonValue },
+      ] });
+      await transaction.submission.update({
+        where: { id: current.id },
+        data: { current_state_code: 'COMPLETED', current_state_group: StateGroup.COMPLETE, current_assignee_id: null, closed_at: new Date() },
+      });
+      await transaction.auditEvent.create({
+        data: { organization_id: current.organization_id, submission_id: current.id, event_type: 'travel_allowance.finance_completed', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, payload_json: { paymentDate, paymentReference: cleanReference } },
+      });
+      const updated = await transaction.submission.findUniqueOrThrow({ where: { id: current.id }, include: travelAllowanceInclude });
+      return mapTravelAllowance(updated);
+    }
 
     await transaction.travelAllowanceDetail.update({
       where: { submission_id: current.id },
@@ -758,35 +757,22 @@ export async function completeTravelAllowanceByFinanceInDatabase(
         paid_reference: cleanReference,
       },
     });
-    await transaction.submissionTransition.create({
-      data: {
-        submission_id: current.id,
-        from_state_code: current.current_state_code,
-        action_code: 'COMPLETE',
-        to_state_code: 'COMPLETED',
-        actor_type: ActorType.INTERNAL_USER,
-        actor_user_id: financeId,
-        metadata_json: {
-          paymentDate,
-          paymentReference: cleanReference,
-          financeRemarks: remarks?.trim() || null,
-        },
-      },
+    await transaction.submissionTransition.create({ data:
+      { submission_id: current.id, from_state_code: current.current_state_code, action_code: 'PAYMENT_PROCESSED', to_state_code: 'PAYMENT_PROCESSED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { paymentDate, paymentReference: cleanReference, financeRemarks: remarks?.trim() || null } as Prisma.InputJsonValue },
     });
     await transaction.submission.update({
       where: { id: current.id },
       data: {
-        current_state_code: 'COMPLETED',
-        current_state_group: StateGroup.COMPLETE,
-        current_assignee_id: null,
-        closed_at: new Date(),
+        current_state_code: 'PAYMENT_PROCESSED',
+        current_state_group: StateGroup.IN_REVIEW,
+        current_assignee_id: financeId,
       },
     });
     await transaction.auditEvent.create({
       data: {
         organization_id: current.organization_id,
         submission_id: current.id,
-        event_type: 'travel_allowance.finance_completed',
+        event_type: 'travel_allowance.payment_recorded',
         actor_type: ActorType.INTERNAL_USER,
         actor_user_id: financeId,
         payload_json: { paymentDate, paymentReference: cleanReference },
