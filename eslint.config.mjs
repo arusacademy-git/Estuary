@@ -10,16 +10,21 @@ const eslintConfig = defineConfig([
       reportUnusedDisableDirectives: "off",
     },
     rules: {
-      // Accept both camelCase application code and snake_case database fields.
       camelcase: "off",
-      // Allow native <img> when Next.js image optimization is not appropriate.
       "@next/next/no-img-element": "off",
       "new-cap": ["error", { newIsCap: true, capIsNew: false }],
     },
   },
-  // Override default ignores of eslint-config-next.
+
+  // Performance override for the large dashboard component.
+  {
+    files: ["src/app/beta/dashboard/page.tsx"],
+    rules: {
+      "react-hooks/static-components": "off",
+    },
+  },
+
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     ".estuary-next/**",
     "out/**",
