@@ -7,7 +7,6 @@ import {
 } from 'react';
 
 import Link from 'next/link';
-import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 
 import {
   useRouter,
@@ -24,7 +23,7 @@ import {
 } from '@/features/payment-voucher/hooks/use-payment-vouchers';
 
 import {
-  FinancePaymentPanel,
+  FinanceProcessingPanel,
 } from '@/features/payment-voucher/components/finance/finance-payment-panel';
 
 import {
@@ -47,6 +46,8 @@ type FinanceQueueFilter =
 type FinanceViewMode =
   | 'grid'
   | 'list';
+
+type FinanceSort = 'UPDATED_DESC' | 'UPDATED_ASC' | 'AMOUNT_DESC' | 'AMOUNT_ASC';
 
 function formatCurrency(
   amount: number,
@@ -98,6 +99,9 @@ export default function FinancePage() {
 
   const [search, setSearch] =
     useState('');
+  const [month, setMonth] = useState('');
+  const [specificDate, setSpecificDate] = useState('');
+  const [sort, setSort] = useState<FinanceSort>('UPDATED_DESC');
 
   const [viewMode, setViewMode] =
     useState<FinanceViewMode>('list');
@@ -163,12 +167,6 @@ export default function FinancePage() {
     };
   }, []);
 
-  function showProcessingDetail(voucherId: string) {
-    setActiveFilter('PROCESSING');
-    setSelectedVoucherId(voucherId);
-    setTransitionMessage('Finance processing has started. Continue with this voucher below.');
-  }
-
   const financeRecords = useMemo(
     () =>
       records
@@ -198,9 +196,9 @@ export default function FinancePage() {
         financeRecords.filter(
           (voucher) =>
             voucher.status ===
-              'APPROVED_FOR_PAYMENT' ||
+            'APPROVED_FOR_PAYMENT' ||
             voucher.status ===
-              'PENDING_FINANCE_VERIFICATION',
+            'PENDING_FINANCE_VERIFICATION',
         ),
       [financeRecords],
     );
@@ -221,15 +219,15 @@ export default function FinancePage() {
         financeRecords.filter(
           (voucher) =>
             voucher.status ===
-              'AWAITING_RECIPIENT_SIGNATURE' ||
+            'AWAITING_RECIPIENT_SIGNATURE' ||
             voucher.status ===
-              'AWAITING_STAFF_CONFIRMATION' ||
+            'AWAITING_STAFF_CONFIRMATION' ||
             voucher.status ===
-              'AWAITING_SIGNED_PV_UPLOAD' ||
+            'AWAITING_SIGNED_PV_UPLOAD' ||
             voucher.status ===
-              'AWAITING_STAFF_VERIFICATION' ||
+            'AWAITING_STAFF_VERIFICATION' ||
             voucher.status ===
-              'AWAITING_SIGNATURE',
+            'AWAITING_SIGNATURE',
         ),
       [financeRecords],
     );
@@ -258,48 +256,48 @@ export default function FinancePage() {
     const normalizedSearch =
       search.trim().toLowerCase();
 
-    return financeRecords.filter(
+    const matching = financeRecords.filter(
       (voucher) => {
         if (
           activeFilter ===
-            'ACTION_REQUIRED' &&
+          'ACTION_REQUIRED' &&
           voucher.status !==
-            'APPROVED_FOR_PAYMENT' &&
+          'APPROVED_FOR_PAYMENT' &&
           voucher.status !==
-            'PENDING_FINANCE_VERIFICATION'
+          'PENDING_FINANCE_VERIFICATION'
         ) {
           return false;
         }
 
         if (
           activeFilter ===
-            'PROCESSING' &&
+          'PROCESSING' &&
           voucher.status !==
-            'FINANCE_PROCESSING'
+          'FINANCE_PROCESSING'
         ) {
           return false;
         }
 
         if (
           activeFilter ===
-            'AWAITING_STAFF' &&
+          'AWAITING_STAFF' &&
           voucher.status !==
-            'AWAITING_RECIPIENT_SIGNATURE' &&
+          'AWAITING_RECIPIENT_SIGNATURE' &&
           voucher.status !==
-            'AWAITING_STAFF_CONFIRMATION' &&
+          'AWAITING_STAFF_CONFIRMATION' &&
           voucher.status !==
-            'AWAITING_SIGNED_PV_UPLOAD' &&
+          'AWAITING_SIGNED_PV_UPLOAD' &&
           voucher.status !==
-            'AWAITING_STAFF_VERIFICATION' &&
+          'AWAITING_STAFF_VERIFICATION' &&
           voucher.status !==
-            'AWAITING_SIGNATURE'
+          'AWAITING_SIGNATURE'
         ) {
           return false;
         }
 
         if (
           activeFilter ===
-            'COMPLETED' &&
+          'COMPLETED' &&
           voucher.status !== 'COMPLETED'
         ) {
           return false;
@@ -307,15 +305,16 @@ export default function FinancePage() {
 
         if (
           activeFilter ===
-            'INACTIVE' &&
+          'INACTIVE' &&
           voucher.status !== 'INACTIVE'
         ) {
           return false;
         }
 
-        if (!normalizedSearch) {
-          return true;
-        }
+        const recordDate = voucher.updatedAt.slice(0, 10);
+        if (month && !recordDate.startsWith(month)) return false;
+        if (specificDate && recordDate !== specificDate) return false;
+        if (!normalizedSearch) return true;
 
         const searchableValues = [
           voucher.voucherNumber,
@@ -335,10 +334,19 @@ export default function FinancePage() {
         );
       },
     );
+    return [...matching].sort((first, second) => {
+      if (sort === 'AMOUNT_DESC') return second.amount - first.amount;
+      if (sort === 'AMOUNT_ASC') return first.amount - second.amount;
+      const difference = new Date(first.updatedAt).getTime() - new Date(second.updatedAt).getTime();
+      return sort === 'UPDATED_ASC' ? difference : -difference;
+    });
   }, [
     activeFilter,
     financeRecords,
+    month,
     search,
+    sort,
+    specificDate,
   ]);
 
   const selectedVoucher = useMemo(
@@ -448,13 +456,13 @@ export default function FinancePage() {
               voucher.status ===
               'APPROVED_FOR_PAYMENT',
           ) && (
-            <Link
-              className={styles.bulkActionButton}
-              href="/beta/finance/bulk"
-            >
-              Bulk process Payment Vouchers
-            </Link>
-          )}
+              <Link
+                className={styles.bulkActionButton}
+                href="/beta/finance/bulk"
+              >
+                Bulk process Payment Vouchers
+              </Link>
+            )}
         </div>
 
         <div
@@ -529,34 +537,36 @@ export default function FinancePage() {
       </section>
 
       <section
-        className={styles.queueContainer}
+        className={styles.filterCard}
       >
         <div className={styles.queueToolbar}>
           <div>
             <h2>
-              Finance Payment Vouchers
+              Find a Payment Voucher
             </h2>
 
             <p>
-              Select a queue to view its
-              Payment Voucher records.
+              Search and filter the Finance
+              processing queue.
             </p>
           </div>
+          <button className={styles.clearFiltersButton} onClick={() => { setSearch(''); setActiveFilter('ALL'); setMonth(''); setSpecificDate(''); setSort('UPDATED_DESC'); }} type="button">Clear filters</button>
+        </div>
 
-          <label className={styles.searchField}>
-            <span>Search</span>
+        <div className={styles.filterFields}>
+          <label><span>Search</span><input onChange={(event) => setSearch(event.target.value)} placeholder="PV number, recipient or purpose" type="search" value={search} /></label>
+          <label><span>Status</span><select onChange={(event) => setActiveFilter(event.target.value as FinanceQueueFilter)} value={activeFilter}><option value="ALL">All statuses</option><option value="ACTION_REQUIRED">Finance action</option><option value="PROCESSING">In processing</option><option value="AWAITING_STAFF">Signature in progress</option><option value="COMPLETED">Completed</option><option value="INACTIVE">Inactive</option></select></label>
+          <label><span>Month</span><input onChange={(event) => { setMonth(event.target.value); if (specificDate && !specificDate.startsWith(event.target.value)) setSpecificDate(''); }} type="month" value={month} /></label>
+          <label><span>Exact date</span><input max={month ? `${month}-31` : undefined} min={month ? `${month}-01` : undefined} onChange={(event) => setSpecificDate(event.target.value)} type="date" value={specificDate} /></label>
+          <label><span>Sort by</span><select onChange={(event) => setSort(event.target.value as FinanceSort)} value={sort}><option value="UPDATED_DESC">Newest updated</option><option value="UPDATED_ASC">Oldest waiting</option><option value="AMOUNT_DESC">Highest amount</option><option value="AMOUNT_ASC">Lowest amount</option></select></label>
+        </div>
 
-            <input
-              onChange={(event) =>
-                setSearch(
-                  event.target.value,
-                )
-              }
-              placeholder="PV number, recipient or reference"
-              type="search"
-              value={search}
-            />
-          </label>
+      </section>
+
+      <section className={styles.queueContainer}>
+        <div className={styles.queueResultsHeading}>
+          <h2>Finance Payment Vouchers</h2>
+          <p>Select a queue to view its Payment Voucher records.</p>
         </div>
 
         <div
@@ -684,7 +694,49 @@ export default function FinancePage() {
               : 'Payment Vouchers'}
           </div>
 
-          <PaymentViewToggle label="Choose Finance queue view" onChange={setViewMode} value={viewMode} />
+          <div
+            aria-label="Choose Finance queue view"
+            className={styles.viewToggle}
+            role="group"
+          >
+            <span>View</span>
+
+            <button
+              aria-pressed={
+                viewMode === 'grid'
+              }
+              data-active={
+                viewMode === 'grid'
+              }
+              onClick={() =>
+                setViewMode('grid')
+              }
+              type="button"
+            >
+              <span aria-hidden="true">
+                ▦
+              </span>
+              Grid
+            </button>
+
+            <button
+              aria-pressed={
+                viewMode === 'list'
+              }
+              data-active={
+                viewMode === 'list'
+              }
+              onClick={() =>
+                setViewMode('list')
+              }
+              type="button"
+            >
+              <span aria-hidden="true">
+                ☷
+              </span>
+              List
+            </button>
+          </div>
         </div>
 
         {filteredRecords.length === 0 ? (
@@ -916,11 +968,10 @@ export default function FinancePage() {
                 styles.financeModalBody
               }
             >
-              <FinancePaymentPanel
+              <FinanceProcessingPanel
                 finance={account}
                 key={`${selectedVoucher.id}-${selectedVoucher.status}-${selectedVoucher.updatedAt}`}
                 onUpdated={refresh}
-                onProcessingStarted={showProcessingDetail}
                 voucher={selectedVoucher}
               />
             </div>
