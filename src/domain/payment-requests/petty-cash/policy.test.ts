@@ -7,7 +7,7 @@ function request(overrides: Partial<CreatePettyCashInput> = {}): CreatePettyCash
   return {
     organizationId: 'beta-arus-org', requesterId: 'staff-1', requesterRole: 'staff',
     requesterName: 'Staff', requesterPosition: 'Staff', requesterContact: '0123456789',
-    requestDate: '2026-10-17', location: 'PENANG', managerApproverId: '', directorApproverId: 'director-1',
+    requestDate: '2026-10-17', location: 'PENANG', managerApproverId: 'manager-1', directorApproverId: 'director-1',
     lines: [{ id: 'line-1', expenseDate: '2026-10-17', supplier: 'Expected supplier', details: 'Planned stationery', proofLink: '', accountType: '920-000 PRINTING & STATIONERIES', division: 'O-MANAGEMENT-ARUS', amount: 100 }],
     ...overrides,
   };
@@ -18,11 +18,11 @@ describe('Petty Cash request policy', () => {
     expect(validatePettyCashInput(request())).toBe('');
   });
 
-  it('requires every request to have a Director approver', () => {
-    expect(validatePettyCashInput(request({ directorApproverId: '' }))).toBe('Select the mandatory Director approver.');
+  it('requires a Staff request to name a Manager reviewer and Director previewer', () => {
+    expect(validatePettyCashInput(request({ directorApproverId: '' }))).toBe('Select the Manager reviewer and Director previewer.');
   });
 
-  it('requires a Director requester to choose another Director', () => {
-    expect(validatePettyCashInput(request({ requesterId: 'director-1', requesterRole: 'director' }))).toBe('A Director requester must select another Director to approve the request.');
+  it('allows the Director requester to use the optional self-preview', () => {
+    expect(validatePettyCashInput(request({ requesterId: 'director-1', requesterRole: 'director' }))).toBe('');
   });
 });

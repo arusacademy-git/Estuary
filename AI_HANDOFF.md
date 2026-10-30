@@ -11,8 +11,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/add-payment-request-drafts
-- Last Updated: 2026-10-29
+- Current Branch: agent/repair-penang-deployment-build
+- Last Updated: 2026-10-30
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -32,7 +32,13 @@
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
 
-## Current Session Log — 2026-10-29
+## Current Session Log — 2026-10-30
+
+- Penang remains on commit `61eb398`. GitHub `main` advanced to `a518ce6`, but local release checks found a missing shared bulk stylesheet and 15 failing tests. Deployment was held before changing the server.
+- Restored the shared bulk stylesheet used by still-active pages. Reinstated documented Claim purchase-date and smart-chip reference parsing, accepted account-code-only Cash Advance sheet cells by mapping them to the canonical account option, and updated tests for the intentional Claims/Petty Cash approval workflow changes.
+- Full suite: 69/69 tests passed. Production build passed after clearing stale generated development route types. Lint passed with no errors; the remaining unused-parameter warning was removed in this branch. GitHub issue #84 tracks the release fix.
+
+## Previous Session Log — 2026-10-29
 
 - Repaired the three reported compile failures:
   - Payment Voucher Finance information now derives its payment reference from the stored PV number instead of accepting an optional client value that conflicts with the repository contract.
