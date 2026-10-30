@@ -5,6 +5,7 @@ import {
   listPaymentVouchersFromDatabase,
 } from '@/data/payment-vouchers/prisma-payment-voucher-repository';
 import { dataResponse } from '@/lib/api/response';
+import { bankAccountNumberError, identificationNumberError } from '@/shared/payment-identity-validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,13 @@ const createPaymentVoucherSchema = z.object({
   purpose: z.string().trim().min(1),
   lines: z.array(lineSchema).min(1),
   submitForApproval: z.boolean().default(true),
+}).superRefine((value, context) => {
+  const identityError = identificationNumberError(value.recipientIc ?? '');
+  if (identityError) context.addIssue({ code: 'custom', path: ['recipientIc'], message: identityError });
+  if (value.paymentMethod === 'Bank Transfer') {
+    const accountError = bankAccountNumberError(value.bankName ?? '', value.bankAccountNumber ?? '');
+    if (accountError) context.addIssue({ code: 'custom', path: ['bankAccountNumber'], message: accountError });
+  }
 });
 
 function databaseError(error: unknown) {
