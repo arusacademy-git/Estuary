@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PaymentViewToggle } from '@/components/ui/payment-view-toggle';
 
 import {
   readBetaSession,
@@ -19,6 +18,7 @@ import {
 import { usePaymentVouchers } from '@/features/payment-voucher/hooks/use-payment-vouchers';
 
 import { PaymentVoucherRecordList } from '@/features/payment-voucher/components/payment-voucher-record-list';
+import { filterManualDrafts, usePaymentTypeManualDrafts } from '@/features/payment-records/components/shared/manual-draft-records';
 
 import {
   canDownloadSignedPaymentVoucher,
@@ -27,7 +27,6 @@ import {
 
 import styles from '@/features/payment-voucher/components/payment-voucher.module.css';
 import overrides from './payment-voucher-records-overrides.module.css';
-import { PreloadedLink } from '@/shared/preloaded-link';
 
 const statusOptions = [
   {
@@ -151,6 +150,7 @@ export default function PaymentVoucherRecordsPage() {
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const [bulkDownloadMessage, setBulkDownloadMessage] = useState('');
   const [bulkDownloadError, setBulkDownloadError] = useState('');
+  const { drafts, loading: draftsLoading } = usePaymentTypeManualDrafts('PAYMENT_VOUCHER', account, Boolean(account));
 
   useEffect(() => {
     const currentAccount = readBetaSession();
@@ -289,17 +289,9 @@ export default function PaymentVoucherRecordsPage() {
     specificDate,
     sort,
   ]);
-
-  const awaitingRecipientSignatureCount = useMemo(
-    () =>
-      account?.role === 'staff'
-        ? records.filter(
-          (voucher) =>
-            voucher.submitterId === account.id &&
-            voucher.status === 'AWAITING_RECIPIENT_SIGNATURE',
-        ).length
-        : 0,
-    [account, records],
+  const filteredDrafts = useMemo(
+    () => filterManualDrafts(drafts, { status, search, month, specificDate }),
+    [drafts, month, search, specificDate, status],
   );
 
   const downloadableSignedRecords = useMemo(
@@ -349,7 +341,7 @@ export default function PaymentVoucherRecordsPage() {
     setSort('UPDATED_DESC');
   }
 
-  if (!sessionChecked || isLoading) {
+  if (!sessionChecked || isLoading || draftsLoading) {
     return (
       <section className={styles.recordsStateCard}>
         <h1>Loading payment records</h1>
@@ -383,15 +375,6 @@ export default function PaymentVoucherRecordsPage() {
             View and track Payment Vouchers that are
             relevant to your account.
           </p>
-
-          {awaitingRecipientSignatureCount > 0 && (
-            <PreloadedLink
-              className={overrides.staffBulkActionButton}
-              href="/beta/payment-vouchers/signature-follow-up"
-            >
-              Bulk recipient signature follow-up
-            </PreloadedLink>
-          )}
         </div>
 
       </header>
@@ -399,7 +382,7 @@ export default function PaymentVoucherRecordsPage() {
       <section className={styles.recordsOverview}>
         <article>
           <span>All visible records</span>
-          <strong>{visibleRecords.length}</strong>
+          <strong>{visibleRecords.length + drafts.length}</strong>
         </article>
 
         <article>
@@ -412,7 +395,7 @@ export default function PaymentVoucherRecordsPage() {
                   voucher.status !== 'COMPLETED' &&
                   voucher.status !== 'REJECTED' &&
                   voucher.status !== 'DRAFT',
-              ).length
+              ).length + drafts.length
             }
           </strong>
         </article>
@@ -427,7 +410,7 @@ export default function PaymentVoucherRecordsPage() {
                   voucher.status === 'REJECTED' ||
                   voucher.status ===
                   'AWAITING_STAFF_VERIFICATION',
-              ).length
+              ).length + drafts.length
             }
           </strong>
         </article>
@@ -564,8 +547,8 @@ export default function PaymentVoucherRecordsPage() {
             <h2>Payment Vouchers</h2>
 
             <p>
-              Showing {filteredRecords.length} of{' '}
-              {visibleRecords.length} visible records
+              Showing {filteredRecords.length + filteredDrafts.length} of{' '}
+              {visibleRecords.length + drafts.length} visible records
             </p>
           </div>
 
@@ -581,15 +564,59 @@ export default function PaymentVoucherRecordsPage() {
                 : `↓ Download signed PVs (${downloadableSignedRecords.length})`}
             </button>
 
-            <PaymentViewToggle label="Choose Payment Voucher view" onChange={setViewMode} value={viewMode} />
+            <div
+              aria-label="Choose Payment Voucher view"
+              className={styles.recordsViewToggle}
+              role="group"
+            >
+              <span>View</span>
+
+            <button
+              aria-pressed={
+                viewMode === 'grid'
+              }
+              data-active={
+                viewMode === 'grid'
+              }
+              onClick={() =>
+                setViewMode('grid')
+              }
+              type="button"
+            >
+              <span aria-hidden="true">
+                ▦
+              </span>
+              Grid
+            </button>
+
+            <button
+              aria-pressed={
+                viewMode === 'list'
+              }
+              data-active={
+                viewMode === 'list'
+              }
+              onClick={() =>
+                setViewMode('list')
+              }
+              type="button"
+            >
+              <span aria-hidden="true">
+                ☷
+              </span>
+              List
+            </button>
+            </div>
           </div>
         </div>
 
         {bulkDownloadMessage && <p className={overrides.downloadSuccess} role="status">{bulkDownloadMessage}</p>}
         {bulkDownloadError && <p className={overrides.downloadError} role="alert">{bulkDownloadError}</p>}
 
-        {filteredRecords.length > 0 ? (
+        {filteredRecords.length > 0 || filteredDrafts.length > 0 ? (
           <PaymentVoucherRecordList
+            account={account}
+            drafts={filteredDrafts}
             vouchers={filteredRecords}
             viewMode={viewMode}
             emptyTitle="No matching Payment Vouchers"
