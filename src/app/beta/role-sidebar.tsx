@@ -197,7 +197,9 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
       });
     };
     refreshCounts();
-    const refreshTimer = window.setInterval(refreshCounts, 15_000);
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refreshCounts();
+    }, 60_000);
     window.addEventListener('focus', refreshCounts);
     window.addEventListener('estuary:action-counts-changed', refreshCounts);
     return () => {
@@ -235,12 +237,12 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
       </div>;
     }
 
-    return <Link className={`${item.href === activeHref ? styles.activeNavigationItem : styles.navigationItem} ${depth ? styles.nestedNavigationItem : ''}`} href={item.href ?? '/beta/dashboard'} key={key}>{itemLabel(item)}</Link>;
+    return <Link className={`${item.href === activeHref ? styles.activeNavigationItem : styles.navigationItem} ${depth ? styles.nestedNavigationItem : ''}`} href={item.href ?? '/beta/dashboard'} key={key} prefetch={false}>{itemLabel(item)}</Link>;
   }
 
   return <aside className={styles.sidebar}>
     <div className={styles.sidebarIdentity}>
-      <Link className={styles.brand} href="/beta/dashboard">Estuary</Link>
+      <Link className={styles.brand} href="/beta/dashboard" prefetch={false}>Estuary</Link>
       <p className={styles.roleLabel}>{roleLabels[account.role]}</p>
     </div>
     <nav aria-label={`${roleLabels[account.role]} navigation`} className={styles.roleNavigation}>
