@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { Workbook } from 'exceljs';
 
 const maximumSheetSize = 2_000_000;
+const maximumWorkbookSize = 8_000_000;
 
 function googleSheetDetails(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -81,6 +83,98 @@ async function fetchRichLinks(spreadsheetId: string, gid: string | null) {
   return links;
 }
 
+function decodeHtml(value: string) {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+export function richLinksFromHtml(html: string) {
+  const links: Record<string, string> = {};
+  const anchors = html.matchAll(/<a\b[^>]*href=(?:"([^"]+)"|'([^']+)')[^>]*>([\s\S]*?)<\/a>/gi);
+  for (const anchor of anchors) {
+    const label = decodeHtml(anchor[3].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+    let href = decodeHtml(anchor[1] ?? anchor[2] ?? '').trim();
+    try {
+      const redirect = new URL(href, 'https://docs.google.com');
+      if (redirect.hostname.endsWith('google.com') && redirect.pathname === '/url') href = redirect.searchParams.get('q') ?? href;
+    } catch { continue; }
+    if (label && /^https?:\/\//i.test(href)) links[label] = href;
+  }
+  return links;
+}
+
+async function fetchPublicRichLinks(spreadsheetId: string, gid: string | null) {
+  const encodedId = encodeURIComponent(spreadsheetId);
+  const encodedGid = gid ? encodeURIComponent(gid) : null;
+  const urls = [
+    `https://docs.google.com/spreadsheets/d/${encodedId}/htmlview${encodedGid ? `?gid=${encodedGid}` : ''}`,
+    `https://docs.google.com/spreadsheets/d/${encodedId}/gviz/tq?tqx=out:html${encodedGid ? `&gid=${encodedGid}` : ''}`,
+  ];
+  const links: Record<string, string> = {};
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        cache: 'no-store', redirect: 'follow', headers: { Accept: 'text/html' },
+      });
+      if (!response.ok) continue;
+      const html = await response.text();
+      if (!html.trim() || html.length > maximumSheetSize * 2) continue;
+      Object.assign(links, richLinksFromHtml(html));
+    } catch {
+      // Try the next public representation. The optional API-key path remains a fallback.
+    }
+  }
+
+  return links;
+}
+
+export async function richLinksFromWorkbook(data: Uint8Array) {
+  const workbook = new Workbook();
+  const excelBuffer = Buffer.from(data);
+  await workbook.xlsx.load(
+    excelBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+  );
+  const links: Record<string, string> = {};
+
+  workbook.eachSheet((worksheet) => {
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        const value = cell.value;
+        if (!value || typeof value !== 'object' || !('hyperlink' in value)) return;
+        const hyperlink = typeof value.hyperlink === 'string' ? value.hyperlink.trim() : '';
+        const label = 'text' in value && typeof value.text === 'string'
+          ? value.text.trim()
+          : cell.text.trim();
+        if (label && /^https?:\/\//i.test(hyperlink)) links[label] = hyperlink;
+      });
+    });
+  });
+
+  return links;
+}
+
+async function fetchPublicWorkbookRichLinks(spreadsheetId: string) {
+  try {
+    const response = await fetch(
+      `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}/export?format=xlsx`,
+      { cache: 'no-store', redirect: 'follow', headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' } },
+    );
+    if (!response.ok) return {};
+    const contentLength = Number(response.headers.get('content-length') ?? 0);
+    if (contentLength > maximumWorkbookSize) return {};
+    const data = new Uint8Array(await response.arrayBuffer());
+    if (!data.length || data.length > maximumWorkbookSize) return {};
+    return await richLinksFromWorkbook(data);
+  } catch {
+    return {};
+  }
+}
+
 async function fetchGoogleSheetCsv(exportUrls: string[]) {
   const failures: string[] = [];
 
@@ -127,7 +221,12 @@ export async function POST(request: Request) {
     const body = await request.json() as { url?: unknown };
     const { sourceUrl, spreadsheetId, gid, exportUrls } = googleSheetDetails(body.url);
     const csv = await fetchGoogleSheetCsv(exportUrls);
-    const richLinks = await fetchRichLinks(spreadsheetId, gid);
+    const [publicRichLinks, workbookRichLinks, apiRichLinks] = await Promise.all([
+      fetchPublicRichLinks(spreadsheetId, gid),
+      fetchPublicWorkbookRichLinks(spreadsheetId),
+      fetchRichLinks(spreadsheetId, gid),
+    ]);
+    const richLinks = { ...publicRichLinks, ...workbookRichLinks, ...apiRichLinks };
 
     return NextResponse.json({ data: { csv, sourceUrl, richLinks } });
   } catch (error) {
