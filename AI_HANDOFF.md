@@ -11,7 +11,7 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/repair-penang-deployment-build
+- Current Branch: agent/reduce-beta-sidebar-traffic
 - Last Updated: 2026-10-30
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
@@ -34,6 +34,7 @@
 
 ## Current Session Log — 2026-10-30
 
+- Penang performance check: the finance dashboard loaded in roughly 0.6 seconds over NetBird and 2.5–3.5 seconds through the temporary Cloudflare tunnel. The server itself was lightly loaded. Browser inspection found the finance sidebar fetching six full payment lists every 15 seconds and Next.js prefetching many unopened destinations through the tunnel. Issue #86 tracks a 60-second visible-tab polling interval and disabled dashboard, sidebar, and header route prefetch; action-count events and tab focus still trigger refreshes. Local production browser test reduced dashboard prefetch requests from 15 to 0; eight initial Finance API reads remain. Lint, TypeScript check, and production build passed. The change awaits GitHub publishing and Penang deployment before live speed can be retested.
 - Penang remains on commit `61eb398`. GitHub `main` advanced to `a518ce6`, but local release checks found a missing shared bulk stylesheet and 15 failing tests. Deployment was held before changing the server.
 - Restored the shared bulk stylesheet used by still-active pages. Reinstated documented Claim purchase-date and smart-chip reference parsing, accepted account-code-only Cash Advance sheet cells by mapping them to the canonical account option, and updated tests for the intentional Claims/Petty Cash approval workflow changes.
 - Full suite: 69/69 tests passed. Production build passed after clearing stale generated development route types. Lint passed with no errors; the remaining unused-parameter warning was removed in this branch. GitHub issue #84 tracks the release fix.
