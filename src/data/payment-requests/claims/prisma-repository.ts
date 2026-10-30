@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
@@ -26,7 +27,18 @@ import type {
 } from "@/domain/payment-requests/claims/types";
 import { prisma } from "@/lib/db/prisma";
 
-const PRIVATE_ROOT = path.resolve(process.cwd(), "runtime", "private");
+/*
+ * Production containers commonly mount the application directory read-only.
+ * Allow a persistent private volume to be supplied explicitly; otherwise use
+ * the platform's writable temporary directory in production. Local development
+ * keeps the existing project-relative runtime directory.
+ */
+const PRIVATE_ROOT = path.resolve(
+  process.env.ESTUARY_PRIVATE_STORAGE_ROOT ??
+    (process.env.NODE_ENV === "production"
+      ? path.join(tmpdir(), "estuary-private")
+      : path.join(process.cwd(), "runtime", "private")),
+);
 const RECEIPT_MAX_SIZE = 10 * 1024 * 1024;
 const receiptExtensions: Record<ClaimReceiptUpload["mimeType"], string> = {
   "application/pdf": "pdf",
