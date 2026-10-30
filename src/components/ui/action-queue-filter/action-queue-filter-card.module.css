@@ -1,0 +1,134 @@
+.card {
+    overflow: hidden;
+    border: 1px solid #d8e2ef;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.card header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 24px 16px;
+}
+
+.card h2 {
+    margin: 0 0 6px;
+    color: #1e3a5f;
+    font-size: 21px;
+}
+
+.card p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.card header button {
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid #b9c9dc;
+    border-radius: 9px;
+    color: #173a64;
+    background: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.card header button:hover {
+    border-color: #2563eb;
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.card header button:focus-visible {
+    outline: 3px solid rgb(37 99 235 / 16%);
+    outline-offset: 2px;
+}
+
+/*
+ * Default layout used by Invoice, Travel Allowance,
+ * Petty Cash and Cash Advance.
+ */
+.fields {
+    display: grid;
+    grid-template-columns:
+        minmax(220px, 1.45fr)
+        repeat(4, minmax(140px, 1fr));
+    gap: 14px;
+    padding: 0 24px 24px;
+}
+
+/*
+ * Claims receives one additional Claim Type field.
+ * This rule only applies when additionalField is provided.
+ */
+.fields[data-has-additional='true'] {
+    grid-template-columns:
+        minmax(200px, 1.35fr)
+        repeat(5, minmax(125px, 1fr));
+}
+
+.fields label {
+    display: grid;
+    min-width: 0;
+    gap: 7px;
+    color: #526987;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.fields input,
+.fields select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    color: #1e293b;
+    background: #fff;
+    font: inherit;
+}
+
+.fields input:focus,
+.fields select:focus {
+    border-color: #2563eb;
+    outline: 3px solid rgb(37 99 235 / 11%);
+}
+
+/* Claims: six fields become three columns. */
+@media (max-width: 1200px) {
+    .fields[data-has-additional='true'] {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* All filter cards become two columns. */
+@media (max-width: 1050px) {
+    .fields,
+    .fields[data-has-additional='true'] {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* All filter cards become one column on mobile. */
+@media (max-width: 620px) {
+    .card header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .card header button {
+        width: 100%;
+    }
+
+    .fields,
+    .fields[data-has-additional='true'] {
+        grid-template-columns: 1fr;
+    }
+}
