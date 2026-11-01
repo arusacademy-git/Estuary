@@ -1,11 +1,5 @@
 import { fetchDashboardSummary } from "@/data/dashboard/api";
 import { fetchManualFormDrafts } from "@/data/payment-requests/manual-drafts/api";
-import { fetchPaymentVouchers } from "@/data/payment-vouchers/payment-voucher-api";
-import { fetchInvoicePayments } from "@/data/payment-requests/invoice-payment/api";
-import { fetchTravelAllowances } from "@/data/payment-requests/travel-allowance/api";
-import { fetchCashAdvances } from "@/data/payment-requests/cash-advance/cash-advance-api";
-import { fetchPettyCashRequests } from "@/data/payment-requests/petty-cash/api";
-import { fetchClaimRequests } from "@/data/payment-requests/claims/api";
 import type { DashboardSummaryRecord } from "@/domain/dashboard/types";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
 
@@ -20,6 +14,35 @@ export type SidebarPaymentType =
   | "MY_REQUESTS";
 
 export type SidebarActionCounts = Record<SidebarPaymentType, number>;
+
+export const PENDING_QUEUE_COUNT_EVENT = "estuary:pending-queue-count-synced";
+
+function pendingQueueStorageKey(role: BetaAccount["role"]) {
+  return `estuary:pending-queue-count:${role}`;
+}
+
+export function publishPendingQueueCount(
+  role: BetaAccount["role"],
+  count: number,
+) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(pendingQueueStorageKey(role), String(count));
+  window.dispatchEvent(
+    new CustomEvent(PENDING_QUEUE_COUNT_EVENT, {
+      detail: { role, count },
+    }),
+  );
+}
+
+export function readPublishedPendingQueueCount(
+  role: BetaAccount["role"],
+): number | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.sessionStorage.getItem(pendingQueueStorageKey(role));
+  if (stored === null) return null;
+  const count = Number(stored);
+  return Number.isInteger(count) && count >= 0 ? count : null;
+}
 
 const emptyCounts: SidebarActionCounts = {
   PAYMENT_VOUCHER: 0,
@@ -76,6 +99,9 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
   }
 
   if (account.role === "manager") {
+    if (record.paymentType === "TRAVEL_ALLOWANCE") {
+      return false;
+    }
     if (record.paymentType === "PAYMENT_VOUCHER") {
       return (
         record.status === "APPROVED_FOR_PAYMENT" &&
@@ -144,32 +170,13 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
     "APPROVED_PENDING_PAYMENT",
     "PENDING_PAYMENT",
     "RECON_PENDING_CHILD_CLOSURE",
+    "TRANSACTION_PROOF_UPLOADED",
   ].includes(record.status);
 }
 
 export async function fetchSidebarActionCounts(
   account: BetaAccount,
 ): Promise<SidebarActionCounts> {
-  if (account.role === "finance") {
-    const [vouchers, invoices, travel, cashAdvances, pettyCash, claims] =
-      await Promise.all([
-        fetchPaymentVouchers(),
-        fetchInvoicePayments({ role: "finance", userId: account.id, includeAll: true }),
-        fetchTravelAllowances({ role: "finance", userId: account.id, includeAll: true }),
-        fetchCashAdvances({ role: "finance", userId: account.id, includeAll: true }),
-        fetchPettyCashRequests({ role: "finance", userId: account.id, includeAll: true }),
-        fetchClaimRequests({ role: "finance", userId: account.id }),
-      ]);
-    const counts = { ...emptyCounts };
-    counts.PAYMENT_VOUCHER = vouchers.filter((record) => ["APPROVED_FOR_PAYMENT", "FINANCE_PROCESSING", "PENDING_FINANCE_VERIFICATION"].includes(record.status)).length;
-    counts.INVOICE_PAYMENT = invoices.filter((record) => ["PENDING_FINANCE_REVIEW", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.TRAVEL_ALLOWANCE = travel.filter((record) => ["PENDING_FINANCE_VERIFICATION", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.CASH_ADVANCE = cashAdvances.filter((record) => ["PENDING_FINANCE_PROCESSING", "PAYMENT_PROCESSED", "PENDING_FINANCE_RECONCILIATION", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.PETTY_CASH = pettyCash.filter((record) => ["PENDING_FINANCE_REVIEW", "PENDING_FINANCE_PAYMENT", "FINANCE_VERIFIED", "PENDING_FINANCE_RECONCILIATION", "TRANSACTION_PROOF_UPLOADED"].includes(record.status) && (record.status !== "PENDING_FINANCE_REVIEW" || record.financeReviewerId === account.id)).length;
-    counts.EXPENSE_CLAIM = claims.filter((record) => ["PENDING_FINANCE_VERIFICATION", "PENDING_FINANCE_PROCESSING", "APPROVED_FOR_PAYMENT", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status)).length;
-    counts.ALL_PENDING = counts.PAYMENT_VOUCHER + counts.INVOICE_PAYMENT + counts.TRAVEL_ALLOWANCE + counts.CASH_ADVANCE + counts.PETTY_CASH + counts.EXPENSE_CLAIM;
-    return counts;
-  }
   const records = await fetchDashboardSummary({
     role: account.role,
     userId: account.id,
@@ -191,19 +198,6 @@ export async function fetchSidebarActionCounts(
     account.id,
   ).catch(() => []);
   counts.MY_REQUESTS += manualDrafts.length;
-
-  if (account.role === "manager") {
-    const vouchers = await fetchPaymentVouchers();
-    const paymentVoucherCount = vouchers.filter(
-      (voucher) =>
-        voucher.projectManagerId === account.id &&
-        !voucher.projectManagerViewedAt &&
-        voucher.status === "APPROVED_FOR_PAYMENT",
-    ).length;
-
-    counts.ALL_PENDING += paymentVoucherCount - counts.PAYMENT_VOUCHER;
-    counts.PAYMENT_VOUCHER = paymentVoucherCount;
-  }
 
   return counts;
 }
