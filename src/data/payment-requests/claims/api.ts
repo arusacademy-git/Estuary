@@ -197,6 +197,16 @@ export async function uploadClaimPaymentProof(
   );
 }
 
+export async function completeClaimByFinance(id: string, financeId: string) {
+  return read<ClaimRecord>(
+    await fetch(`/api/v1/payment-requests/claims/${encodeURIComponent(id)}/finance-complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ financeId }),
+    }),
+  );
+}
+
 export async function returnClaimByFinance(
   id: string,
   financeId: string,

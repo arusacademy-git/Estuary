@@ -729,22 +729,36 @@ export async function completeTravelAllowanceByFinanceInDatabase(
       where: { id, payment_type: PaymentType.TRAVEL_ALLOWANCE },
     });
     if (!current) throw new Error('Travel Allowance could not be found.');
-    if (!['PENDING_FINANCE_VERIFICATION', 'PAYMENT_PROCESSED'].includes(current.current_state_code)) {
+    if (!['PENDING_FINANCE_VERIFICATION', 'PAYMENT_PROCESSED', 'TRANSACTION_PROOF_UPLOADED'].includes(current.current_state_code)) {
       throw new Error('This Travel Allowance is no longer awaiting Finance verification.');
     }
 
-    if (current.current_state_code === 'PAYMENT_PROCESSED') {
-      if (!transactionProof?.dataUrl) throw new Error('Upload the payment transaction proof before continuing.');
-      await transaction.submissionTransition.createMany({ data: [
-        { submission_id: current.id, from_state_code: 'PAYMENT_PROCESSED', action_code: 'UPLOAD_TRANSACTION_PROOF', to_state_code: 'TRANSACTION_PROOF_UPLOADED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { transactionProof } as unknown as Prisma.InputJsonValue },
-        { submission_id: current.id, from_state_code: 'TRANSACTION_PROOF_UPLOADED', action_code: 'COMPLETE', to_state_code: 'COMPLETED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { paymentDate, paymentReference: cleanReference, transactionProof, financeRemarks: remarks?.trim() || null } as unknown as Prisma.InputJsonValue },
-      ] });
+    if (current.current_state_code === 'TRANSACTION_PROOF_UPLOADED') {
+      await transaction.submissionTransition.create({ data:
+        { submission_id: current.id, from_state_code: 'TRANSACTION_PROOF_UPLOADED', action_code: 'COMPLETE', to_state_code: 'COMPLETED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId },
+      });
       await transaction.submission.update({
         where: { id: current.id },
         data: { current_state_code: 'COMPLETED', current_state_group: StateGroup.COMPLETE, current_assignee_id: null, closed_at: new Date() },
       });
       await transaction.auditEvent.create({
         data: { organization_id: current.organization_id, submission_id: current.id, event_type: 'travel_allowance.finance_completed', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, payload_json: { paymentDate, paymentReference: cleanReference } },
+      });
+      const updated = await transaction.submission.findUniqueOrThrow({ where: { id: current.id }, include: travelAllowanceInclude });
+      return mapTravelAllowance(updated);
+    }
+
+    if (current.current_state_code === 'PAYMENT_PROCESSED') {
+      if (!transactionProof?.dataUrl) throw new Error('Upload the payment transaction proof before continuing.');
+      await transaction.submissionTransition.create({ data:
+        { submission_id: current.id, from_state_code: 'PAYMENT_PROCESSED', action_code: 'UPLOAD_TRANSACTION_PROOF', to_state_code: 'TRANSACTION_PROOF_UPLOADED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, metadata_json: { transactionProof } as unknown as Prisma.InputJsonValue },
+      });
+      await transaction.submission.update({
+        where: { id: current.id },
+        data: { current_state_code: 'TRANSACTION_PROOF_UPLOADED', current_state_group: StateGroup.PENDING_VERIFICATION, current_assignee_id: financeId },
+      });
+      await transaction.auditEvent.create({
+        data: { organization_id: current.organization_id, submission_id: current.id, event_type: 'travel_allowance.transaction_proof_uploaded', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, payload_json: { paymentDate, paymentReference: cleanReference } },
       });
       const updated = await transaction.submission.findUniqueOrThrow({ where: { id: current.id }, include: travelAllowanceInclude });
       return mapTravelAllowance(updated);

@@ -549,17 +549,33 @@ export async function payCashAdvanceByFinanceInDatabase(
 ) {
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
-    if (!['PENDING_FINANCE_PROCESSING', 'PAYMENT_PROCESSED'].includes(record.current_state_code)) throw new Error('This Cash Advance is not ready for payment.');
+    if (!['PENDING_FINANCE_PROCESSING', 'PAYMENT_PROCESSED', 'TRANSACTION_PROOF_UPLOADED'].includes(record.current_state_code)) throw new Error('This Cash Advance is not ready for payment.');
     const membership = await requireRole(tx, record.organization_id, financeId, 'FINANCE_ADMIN');
+    if (record.current_state_code === 'TRANSACTION_PROOF_UPLOADED') {
+      const paidDate = record.ca_detail?.paid_at
+        ? record.ca_detail.paid_at.toISOString().slice(0, 10)
+        : paymentDate;
+      const dueDate = addCalendarDays(paidDate, CASH_ADVANCE_RECONCILIATION_DAYS);
+      await tx.cashAdvanceDetail.update({ where: { submission_id: record.id }, data: { reconciliation_due_at: new Date(`${dueDate}T12:00:00Z`) } });
+      await tx.submissionTransition.create({ data: {
+        submission_id: record.id,
+        from_state_code: 'TRANSACTION_PROOF_UPLOADED',
+        action_code: 'RELEASE_FOR_RECONCILIATION',
+        to_state_code: 'PENDING_RECONCILIATION',
+        actor_type: ActorType.INTERNAL_USER,
+        actor_user_id: financeId,
+        actor_membership_id: membership.id,
+        metadata_json: { reconciliationDueDate: dueDate } as unknown as Prisma.InputJsonValue,
+      } });
+      await tx.submission.update({ where: { id: record.id }, data: { current_state_code: 'PENDING_RECONCILIATION', current_state_group: StateGroup.IN_REVIEW, current_assignee_id: record.submitted_by_id } });
+      return mapCashAdvance(await getStored(tx, record.id));
+    }
     if (record.current_state_code === 'PAYMENT_PROCESSED') {
       if (!transactionProof?.dataUrl) throw new Error('Upload the payment transaction proof before continuing.');
-      const dueDate = addCalendarDays(paymentDate, CASH_ADVANCE_RECONCILIATION_DAYS);
-      await tx.cashAdvanceDetail.update({ where: { submission_id: record.id }, data: { reconciliation_due_at: new Date(`${dueDate}T12:00:00Z`) } });
-      await tx.submissionTransition.createMany({ data: [
+      await tx.submissionTransition.create({ data:
         { submission_id: record.id, from_state_code: 'PAYMENT_PROCESSED', action_code: 'UPLOAD_TRANSACTION_PROOF', to_state_code: 'TRANSACTION_PROOF_UPLOADED', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, actor_membership_id: membership.id, metadata_json: { transactionProof } as unknown as Prisma.InputJsonValue },
-        { submission_id: record.id, from_state_code: 'TRANSACTION_PROOF_UPLOADED', action_code: 'PAY_BY_FINANCE', to_state_code: 'PENDING_RECONCILIATION', actor_type: ActorType.INTERNAL_USER, actor_user_id: financeId, actor_membership_id: membership.id, metadata_json: { paymentDate, paymentReference: paymentReference.trim(), reconciliationDueDate: dueDate, transactionProof } as unknown as Prisma.InputJsonValue },
-      ] });
-      await tx.submission.update({ where: { id: record.id }, data: { current_state_code: 'PENDING_RECONCILIATION', current_state_group: StateGroup.IN_REVIEW, current_assignee_id: record.submitted_by_id } });
+      });
+      await tx.submission.update({ where: { id: record.id }, data: { current_state_code: 'TRANSACTION_PROOF_UPLOADED', current_state_group: StateGroup.IN_REVIEW, current_assignee_id: financeId } });
       const updated = await getStored(tx, record.id);
       return mapCashAdvance(updated);
     }
