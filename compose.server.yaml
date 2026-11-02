@@ -22,12 +22,14 @@ services:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       PORT: 3000
+      ESTUARY_PRIVATE_STORAGE_ROOT: /app/runtime/private
     ports:
       - '${ESTUARY_PORT:-3000}:3000'
     networks:
       - database
     volumes:
       - ./runtime:/app/runtime
+      - claims-private:/app/runtime/private
     restart: unless-stopped
     healthcheck:
       test:
@@ -46,3 +48,6 @@ networks:
   database:
     external: true
     name: ${ESTUARY_DATABASE_NETWORK:-estuary-db_default}
+
+volumes:
+  claims-private:

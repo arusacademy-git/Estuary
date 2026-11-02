@@ -1,5 +1,5 @@
-import { ClaimForm } from '@/features/payment-request/components/claims/claim-form';
+import { redirect } from 'next/navigation';
 
 export default function ClaimDraftPage() {
-  return <ClaimForm resumeDraft />;
+  redirect('/beta/payment-records/claims?scope=mine');
 }

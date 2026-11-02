@@ -570,15 +570,9 @@ export default function PaymentRecordsPage() {
             title="Claim"
             description="Track Claim Drafts, review stages, supporting receipts and Finance payment."
             shortCode="CL"
-            totalRecords={
-              visibleClaims.length +
-              (personalOnly ? manualDraftCountFor("CLAIM") : 0)
-            }
-            attentionCount={
-              claimAttention +
-              (personalOnly ? manualDraftCountFor("CLAIM") : 0)
-            }
-            isLoading={categoryLoading.claim || categoryLoading.drafts}
+            totalRecords={visibleClaims.length}
+            attentionCount={claimAttention}
+            isLoading={categoryLoading.claim}
             href={
               personalOnly
                 ? "/beta/payment-records/claims?scope=mine"

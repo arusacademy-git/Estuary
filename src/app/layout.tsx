@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import {
   Poppins,
   DM_Sans as DmSans,
-  Fira_Code as FiraCode,
 } from 'next/font/google';
+import localFont from 'next/font/local';
 
 import './globals.css';
 
@@ -19,10 +19,11 @@ const bodyFont = DmSans({
   weight: ['400', '500', '600'],
 });
 
-const monoFont = FiraCode({
+const monoFont = localFont({
+  src: './fonts/FiraCode-wght.ttf',
   variable: '--font-mono',
-  subsets: ['latin'],
-  weight: ['400', '500'],
+  weight: '400 500',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {

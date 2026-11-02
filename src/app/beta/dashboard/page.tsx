@@ -835,6 +835,7 @@ export default function BetaDashboardPage() {
                 data-type={type}
                 href={typeHref(type, account.role)}
                 key={type}
+                prefetch={false}
               >
                 <div className={styles.typeCardTop}>
                   <i>{typeCodes[type]}</i>
@@ -990,6 +991,7 @@ export default function BetaDashboardPage() {
                 ? "/beta/payment-records?scope=mine"
                 : "/beta/payment-records"
             }
+            prefetch={false}
           >
             View all records
           </Link>
@@ -1034,7 +1036,7 @@ export default function BetaDashboardPage() {
                       </span>
                     </td>
                     <td>
-                      <Link href={record.href}>Open</Link>
+                      <Link href={record.href} prefetch={false}>Open</Link>
                     </td>
                   </tr>
                 ))}
@@ -1083,6 +1085,7 @@ export default function BetaDashboardPage() {
                 <Link
                   href={pendingRecordHref(record, account)}
                   key={`${record.type}-${record.id}`}
+                  prefetch={false}
                 >
                   <div>
                     <strong>{record.reference}</strong>
@@ -1099,7 +1102,7 @@ export default function BetaDashboardPage() {
               ))}
             </div>
             <footer>
-              <Link href={typeHref(selectedActionType, account.role)}>
+              <Link href={typeHref(selectedActionType, account.role)} prefetch={false}>
                 View all {selectedActions.length}{" "}
                 {typeLabels[selectedActionType]} →
               </Link>

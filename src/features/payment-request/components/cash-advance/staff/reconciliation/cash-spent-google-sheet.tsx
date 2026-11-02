@@ -31,11 +31,12 @@ export function parseSummary(csv: string, receiptUrls: Record<string, string> = 
     const expenses = rows.slice(headerIndex + 1).filter((row) => normalizeSheetCell(value(row, 'number')) !== 'e.g' && normalizeSheetCell(value(row, 'number')) !== 'eg' && (value(row, 'expenseDate') || value(row, 'supplier') || value(row, 'description') || value(row, 'amount'))).map((row, index) => {
         const amount = sheetMoney(value(row, 'amount')); const receiptLabel = value(row, 'receiptLink'); const accountType = value(row, 'accountType');
         if (!value(row, 'expenseDate') || !value(row, 'supplier') || !value(row, 'description') || !accountType || !Number.isFinite(amount) || amount <= 0) throw new Error(`Appendix A row ${index + 1} is incomplete.`);
-        if (!CASH_ADVANCE_ACCOUNT_TYPES.includes(accountType as (typeof CASH_ADVANCE_ACCOUNT_TYPES)[number])) throw new Error(`Appendix A row ${index + 1} has an unknown Type of Account: ${accountType}`);
+        const matchedAccountType = CASH_ADVANCE_ACCOUNT_TYPES.find((candidate) => candidate === accountType || candidate.split(' ')[0] === accountType);
+        if (!matchedAccountType) throw new Error(`Appendix A row ${index + 1} has an unknown Type of Account: ${accountType}`);
         const resolvedReceipt = Object.entries(receiptUrls).find(([label]) => comparableReceiptLabel(label) === comparableReceiptLabel(receiptLabel))?.[1];
         const receiptLink = resolvedReceipt || receiptLabel;
         if (resolvedReceipt || /^https?:\/\//i.test(receiptLink)) { try { const parsed = new URL(receiptLink); if (parsed.protocol !== 'https:') throw new Error(); } catch { throw new Error(`Appendix A row ${index + 1} has an invalid receipt link.`); } }
-        return { id: crypto.randomUUID(), expenseDate: sheetDate(value(row, 'expenseDate')), supplier: value(row, 'supplier'), description: value(row, 'description'), accountType, division: value(row, 'division'), receiptLink: receiptLink || undefined, receiptLabel: resolvedReceipt ? receiptLabel : undefined, amount } satisfies CashAdvanceExpense;
+        return { id: crypto.randomUUID(), expenseDate: sheetDate(value(row, 'expenseDate')), supplier: value(row, 'supplier'), description: value(row, 'description'), accountType: matchedAccountType, division: value(row, 'division'), receiptLink: receiptLink || undefined, receiptLabel: resolvedReceipt ? receiptLabel : undefined, amount } satisfies CashAdvanceExpense;
     });
     if (!expenses.length) throw new Error('No completed expenses were found in Appendix A.');
     return expenses;

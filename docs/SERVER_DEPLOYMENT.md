@@ -13,6 +13,10 @@ modified by this deployment.
 The current prototype still stores workflow state, queued email files, and PDF
 exports under `runtime/prototype`. Compose mounts the server's `runtime`
 directory into the container so those files survive a rebuild or restart.
+Claim receipt files are stored separately in the Compose-managed
+`claims-private` volume at `/app/runtime/private`. The app runs as user 1001;
+the image creates that directory with the correct ownership before the volume
+is initialized. Keep this volume when replacing the app container.
 
 ## First deployment
 
@@ -71,12 +75,14 @@ Do not edit application files directly on the server. Do not commit
 
 ## Data that must be backed up
 
-Back up both independently:
+Back up all three independently:
 
 1. the existing PostgreSQL database using the server's normal PostgreSQL backup
    procedure;
 2. the repository's `runtime` directory while the current file-backed
-   prototype is in use.
+   prototype is in use;
+3. the Compose-managed `claims-private` volume containing private Claim receipts.
 
 Rebuilding or replacing the application container does not delete the mounted
 `runtime` directory.
+The `claims-private` volume also survives `up -d --build`.

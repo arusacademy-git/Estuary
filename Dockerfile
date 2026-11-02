@@ -66,7 +66,7 @@ ENV PORT=3000
 
 RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs \
-  && mkdir -p /app/runtime/prototype \
+  && mkdir -p /app/runtime/prototype /app/runtime/private \
   && chown -R nextjs:nodejs /app
 
 COPY --from=builder --chown=nextjs:nodejs /app/.estuary-next/standalone ./
