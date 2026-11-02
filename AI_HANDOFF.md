@@ -11,8 +11,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/fix-penang-font-build
-- Last Updated: 2026-10-30
+- Current Branch: agent/integrate-datas-main (integration for PR #99)
+- Last Updated: 2026-11-02
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -31,6 +31,12 @@
 - Next.js (TypeScript, App Router) + PostgreSQL (RDS target) + Prisma + NextAuth + AWS SES + S3 + Docker + Lightsail
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
+
+## Current Session Log — 2026-11-02
+
+- Integrated current `main` into PR #99's `features/datas` work in a separate worktree. Kept the compact Finance sidebar count API, the Manager Payment Voucher count behavior, the 60-second visible-tab polling, disabled link prefetch, persistent Claim receipt storage, and the bundled Fira Code font.
+- Retained the new pending queue count sharing and payment request changes from `features/datas`. Corrected Claim record counts to use Claim drafts already returned by the Claims API, and made the unused `/beta/payment-requests/claims/draft` route lead to the existing personal Claim records list where saved drafts can be continued.
+- Verification: TypeScript, ESLint, all 70 Vitest tests, and the production Next.js build passed. The Finance sidebar count test was adjusted to use typed mock return values while retaining assertions on the queried payment types.
 
 ## Current Session Log — 2026-10-30
 

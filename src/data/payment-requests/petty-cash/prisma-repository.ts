@@ -574,10 +574,10 @@ async function returnToStaff(id: string, actorId: string, reason: string, role: 
     if (role === OrgRole.DIRECTOR && record.current_state_code !== 'PENDING_DIRECTOR_APPROVAL') {
       throw new Error('This request is not pending Director approval.');
     }
-    if (role === OrgRole.FINANCE_ADMIN && !['PENDING_FINANCE_REVIEW', 'PENDING_FINANCE_PAYMENT', 'FINANCE_VERIFIED'].includes(record.current_state_code)) {
+    if (role === OrgRole.FINANCE_ADMIN && !['PENDING_FINANCE_REVIEW', 'PENDING_FINANCE_PAYMENT', 'PAYMENT_PROCESSED', 'FINANCE_VERIFIED', 'TRANSACTION_PROOF_UPLOADED', 'PENDING_FINANCE_RECONCILIATION'].includes(record.current_state_code)) {
       throw new Error('This request is not pending Finance processing.');
     }
-    if (record.current_assignee_id && record.current_assignee_id !== actorId && record.current_state_code !== 'PENDING_FINANCE_PAYMENT' && record.current_state_code !== 'FINANCE_VERIFIED') {
+    if (record.current_assignee_id && record.current_assignee_id !== actorId && !['PENDING_FINANCE_PAYMENT', 'PAYMENT_PROCESSED', 'FINANCE_VERIFIED', 'TRANSACTION_PROOF_UPLOADED', 'PENDING_FINANCE_RECONCILIATION'].includes(record.current_state_code)) {
       throw new Error('This request is assigned to another reviewer.');
     }
     return mapPettyCash(await tx.submission.update({
@@ -675,26 +675,32 @@ export async function verifyPettyCashByFinanceInDatabase(
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
     await requireRole(tx, record.organization_id, input.financeId, OrgRole.FINANCE_ADMIN);
-    if (record.current_state_code !== 'PENDING_FINANCE_PAYMENT') {
-      throw new Error('Only a request pending Finance payment can be verified.');
+    if (!['PENDING_FINANCE_PAYMENT', 'PAYMENT_PROCESSED'].includes(record.current_state_code)) {
+      throw new Error('This Petty Cash request is not ready for this Finance action.');
     }
+    const previous = readVerification(record);
+    const uploadingProof = record.current_state_code === 'PAYMENT_PROCESSED';
+    if (uploadingProof && !input.paymentProofLink?.trim()) {
+      throw new Error('Upload the Finance payment transaction proof before continuing.');
+    }
+    const nextState = uploadingProof ? 'TRANSACTION_PROOF_UPLOADED' : 'PAYMENT_PROCESSED';
     return mapPettyCash(await tx.submission.update({
       where: { id: record.id },
       data: {
-        current_state_code: 'FINANCE_VERIFIED',
-        current_state_group: StateGroup.PENDING_VERIFICATION,
+        current_state_code: nextState,
+        current_state_group: StateGroup.IN_REVIEW,
         current_assignee_id: input.financeId,
         transitions: {
           create: {
             from_state_code: record.current_state_code,
-            to_state_code: 'FINANCE_VERIFIED',
+            to_state_code: nextState,
             action_code: 'VERIFY_BY_FINANCE',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: input.financeId,
             metadata_json: {
-              paymentDate: input.paymentDate,
-              paymentReference: input.paymentReference.trim(),
-              paymentProofLink: input.paymentProofLink?.trim() || null,
+              paymentDate: input.paymentDate || previous?.paymentDate,
+              paymentReference: input.paymentReference.trim() || previous?.paymentReference,
+              paymentProofLink: input.paymentProofLink?.trim() || previous?.paymentProofLink || null,
               notes: input.notes?.trim(),
             },
           }
@@ -751,8 +757,8 @@ export async function markPettyCashPaidInDatabase(id: string, financeId: string)
     await requireRole(tx, record.organization_id, financeId, OrgRole.FINANCE_ADMIN);
     if (!record.petty_cash_detail) throw new Error('Petty Cash fund information is missing.');
     if (record.current_state_code === 'PENDING_RECONCILIATION') return mapPettyCash(record);
-    if (record.current_state_code !== 'FINANCE_VERIFIED') {
-      throw new Error('Finance must verify the payment information before marking it paid.');
+    if (record.current_state_code !== 'TRANSACTION_PROOF_UPLOADED') {
+      throw new Error('Finance must upload the payment transaction proof before releasing the funds.');
     }
     const verification = readVerification(record);
     if (!verification?.paymentDate || !verification.paymentReference || !verification.paymentProofLink) {

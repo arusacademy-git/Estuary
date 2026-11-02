@@ -16,6 +16,35 @@ export type SidebarPaymentType =
 
 export type SidebarActionCounts = Record<SidebarPaymentType, number>;
 
+export const PENDING_QUEUE_COUNT_EVENT = "estuary:pending-queue-count-synced";
+
+function pendingQueueStorageKey(role: BetaAccount["role"]) {
+  return `estuary:pending-queue-count:${role}`;
+}
+
+export function publishPendingQueueCount(
+  role: BetaAccount["role"],
+  count: number,
+) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(pendingQueueStorageKey(role), String(count));
+  window.dispatchEvent(
+    new CustomEvent(PENDING_QUEUE_COUNT_EVENT, {
+      detail: { role, count },
+    }),
+  );
+}
+
+export function readPublishedPendingQueueCount(
+  role: BetaAccount["role"],
+): number | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.sessionStorage.getItem(pendingQueueStorageKey(role));
+  if (stored === null) return null;
+  const count = Number(stored);
+  return Number.isInteger(count) && count >= 0 ? count : null;
+}
+
 const emptyCounts: SidebarActionCounts = {
   PAYMENT_VOUCHER: 0,
   INVOICE_PAYMENT: 0,
@@ -71,6 +100,9 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
   }
 
   if (account.role === "manager") {
+    if (record.paymentType === "TRAVEL_ALLOWANCE") {
+      return false;
+    }
     if (record.paymentType === "PAYMENT_VOUCHER") {
       return (
         record.status === "APPROVED_FOR_PAYMENT" &&
@@ -139,6 +171,7 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
     "APPROVED_PENDING_PAYMENT",
     "PENDING_PAYMENT",
     "RECON_PENDING_CHILD_CLOSURE",
+    "TRANSACTION_PROOF_UPLOADED",
   ].includes(record.status);
 }
 

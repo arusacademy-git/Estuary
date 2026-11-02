@@ -35,9 +35,9 @@ import { prisma } from "@/lib/db/prisma";
  */
 const PRIVATE_ROOT = path.resolve(
   process.env.ESTUARY_PRIVATE_STORAGE_ROOT ??
-    (process.env.NODE_ENV === "production"
-      ? path.join(tmpdir(), "estuary-private")
-      : path.join(process.cwd(), "runtime", "private")),
+  (process.env.NODE_ENV === "production"
+    ? path.join(tmpdir(), "estuary-private")
+    : path.join(process.cwd(), "runtime", "private")),
 );
 const RECEIPT_MAX_SIZE = 10 * 1024 * 1024;
 const receiptExtensions: Record<ClaimReceiptUpload["mimeType"], string> = {
@@ -113,9 +113,6 @@ function normalizedClaimStatus(status: string): ClaimStatus {
   )
     return "PENDING_FINANCE_VERIFICATION";
   if (status === "PAID") return "PAYMENT_PROCESSED";
-  // Claims completed before the explicit final state was introduced were
-  // closed while still carrying the proof-upload status.
-  if (status === "TRANSACTION_PROOF_UPLOADED") return "COMPLETED";
   return status as ClaimStatus;
 }
 
@@ -153,12 +150,12 @@ function mapClaim(record: StoredClaim): ClaimRecord {
     financeProcessedById: financeProcessing?.actor_user_id ?? undefined,
     paymentDate:
       isRecord(financeMetadata) &&
-      typeof financeMetadata.paymentDate === "string"
+        typeof financeMetadata.paymentDate === "string"
         ? financeMetadata.paymentDate
         : undefined,
     paymentReference:
       isRecord(financeMetadata) &&
-      typeof financeMetadata.paymentReference === "string"
+        typeof financeMetadata.paymentReference === "string"
         ? financeMetadata.paymentReference
         : undefined,
     paymentNotes:
@@ -483,7 +480,7 @@ export async function createClaimInDatabase(
               amount: new Prisma.Decimal(
                 (storedInput.claimType === "MILEAGE"
                   ? Number(line.kilometers) *
-                    (Number(line.kilometers) <= 500 ? 0.5 : 0.3)
+                  (Number(line.kilometers) <= 500 ? 0.5 : 0.3)
                   : Number(line.amount)
                 ).toFixed(2),
               ),
@@ -505,15 +502,15 @@ export async function createClaimInDatabase(
             mode === "draft"
               ? undefined
               : {
-                  create: [
-                    {
-                      step_number: 1,
-                      required_role: OrgRole.DIRECTOR,
-                      assigned_user_id: input.directorApproverId,
-                      status_code: "PENDING",
-                    },
-                  ],
-                },
+                create: [
+                  {
+                    step_number: 1,
+                    required_role: OrgRole.DIRECTOR,
+                    assigned_user_id: input.directorApproverId,
+                    status_code: "PENDING",
+                  },
+                ],
+              },
           evidence: {
             create: [...receiptDocuments.values()].map((documentId) => ({
               document_id: documentId,
@@ -636,12 +633,12 @@ export async function updateClaimDraftInDatabase(
           const upload = prepared.find((item) => item.lineId === line.id);
           return upload
             ? {
-                ...line,
-                receiptDocumentId: receiptDocuments.get(line.id),
-                receiptFileName: upload.fileName,
-                receiptMimeType: upload.mimeType,
-                receiptFileSize: upload.bytes.length,
-              }
+              ...line,
+              receiptDocumentId: receiptDocuments.get(line.id),
+              receiptFileName: upload.fileName,
+              receiptMimeType: upload.mimeType,
+              receiptFileSize: upload.bytes.length,
+            }
             : line;
         }),
       };
@@ -723,7 +720,7 @@ export async function updateClaimDraftInDatabase(
                 amount: new Prisma.Decimal(
                   (storedInput.claimType === "MILEAGE"
                     ? Number(line.kilometers) *
-                      (Number(line.kilometers) <= 500 ? 0.5 : 0.3)
+                    (Number(line.kilometers) <= 500 ? 0.5 : 0.3)
                     : Number(line.amount)
                   ).toFixed(2),
                 ),
@@ -733,15 +730,15 @@ export async function updateClaimDraftInDatabase(
               mode === "draft"
                 ? undefined
                 : {
-                    create: [
-                      {
-                        step_number: 1,
-                        required_role: OrgRole.DIRECTOR,
-                        assigned_user_id: input.directorApproverId,
-                        status_code: "PENDING",
-                      },
-                    ],
-                  },
+                  create: [
+                    {
+                      step_number: 1,
+                      required_role: OrgRole.DIRECTOR,
+                      assigned_user_id: input.directorApproverId,
+                      status_code: "PENDING",
+                    },
+                  ],
+                },
             transitions: {
               create: {
                 from_state_code: existing.current_state_code,
@@ -756,11 +753,11 @@ export async function updateClaimDraftInDatabase(
             },
             evidence: receiptDocuments.size
               ? {
-                  create: [...receiptDocuments.values()].map((documentId) => ({
-                    document_id: documentId,
-                    evidence_type_code: "SUPPORTING_DOC",
-                  })),
-                }
+                create: [...receiptDocuments.values()].map((documentId) => ({
+                  document_id: documentId,
+                  evidence_type_code: "SUPPORTING_DOC",
+                })),
+              }
               : undefined,
           },
           include,
@@ -784,50 +781,50 @@ export async function listClaimsFromDatabase(scope: {
       payment_type: { in: CLAIM_PAYMENT_TYPES },
       ...(scope.role === "manager"
         ? {
+          OR: [
+            { current_assignee_id: scope.userId },
+            { approval_steps: { some: { assigned_user_id: scope.userId } } },
+            { submitted_by_id: scope.userId },
+          ],
+        }
+        : scope.role === "director"
+          ? {
             OR: [
               { current_assignee_id: scope.userId },
-              { approval_steps: { some: { assigned_user_id: scope.userId } } },
+              {
+                approval_steps: { some: { assigned_user_id: scope.userId } },
+              },
               { submitted_by_id: scope.userId },
             ],
           }
-        : scope.role === "director"
-          ? {
+          : scope.role === "finance"
+            ? {
               OR: [
                 { current_assignee_id: scope.userId },
                 {
-                  approval_steps: { some: { assigned_user_id: scope.userId } },
+                  current_state_code: {
+                    in: [
+                      "PENDING_MANAGER_APPROVAL",
+                      "PENDING_FINANCE_PROCESSING",
+                      "PENDING_FINANCE_VERIFICATION",
+                      "APPROVED_FOR_PAYMENT",
+                      "PAYMENT_PROCESSED",
+                    ],
+                  },
                 },
                 { submitted_by_id: scope.userId },
-              ],
-            }
-          : scope.role === "finance"
-            ? {
-                OR: [
-                  { current_assignee_id: scope.userId },
-                  {
-                    current_state_code: {
-                      in: [
-                        "PENDING_MANAGER_APPROVAL",
-                        "PENDING_FINANCE_PROCESSING",
-                        "PENDING_FINANCE_VERIFICATION",
-                        "APPROVED_FOR_PAYMENT",
-                        "PAYMENT_PROCESSED",
-                      ],
-                    },
-                  },
-                  { submitted_by_id: scope.userId },
-                  {
-                    transitions: {
-                      some: {
-                        actor_user_id: scope.userId,
-                        action_code: {
-                          in: ["VERIFY_BY_FINANCE", "PROCESS_BY_FINANCE"],
-                        },
+                {
+                  transitions: {
+                    some: {
+                      actor_user_id: scope.userId,
+                      action_code: {
+                        in: ["VERIFY_BY_FINANCE", "PROCESS_BY_FINANCE"],
                       },
                     },
                   },
-                ],
-              }
+                },
+              ],
+            }
             : scope.role === "staff"
               ? { submitted_by_id: scope.userId }
               : {}),
@@ -982,12 +979,15 @@ export async function verifyClaimByFinanceInDatabase(
   return prisma.$transaction(async (tx) => {
     const record = await getStoredClaim(tx, id);
     const snapshot = readSnapshot(record);
-    if (record.current_state_code !== "PENDING_FINANCE_VERIFICATION")
+    const financeVerificationStates = [
+      "PENDING_FINANCE_VERIFICATION",
+      "PENDING_FINANCE_PROCESSING",
+      "PENDING_MANAGER_APPROVAL",
+    ];
+    if (!financeVerificationStates.includes(record.current_state_code))
       throw new Error(
         "Only a Claim pending Finance verification can be forwarded.",
       );
-    if (record.current_assignee_id !== financeId)
-      throw new Error("This Claim is assigned to another Finance user.");
     await requireRole(
       tx,
       record.organization_id,
@@ -1057,7 +1057,7 @@ export async function forwardClaimByDirectorInDatabase(
     });
     const financeId =
       snapshot.requesterRole === "finance" &&
-      snapshot.requesterId !== directorId
+        snapshot.requesterId !== directorId
         ? snapshot.requesterId
         : await activeFinanceUser(tx, record.organization_id);
     return mapClaim(
@@ -1154,8 +1154,6 @@ export async function processClaimByFinanceInDatabase(
       throw new Error(
         "The Director must approve this Claim before Finance processes payment.",
       );
-    if (record.current_assignee_id !== financeId)
-      throw new Error("This Claim is assigned to another Finance user.");
     await requireRole(
       tx,
       record.organization_id,
@@ -1216,8 +1214,6 @@ export async function uploadClaimPaymentProofInDatabase(
         throw new Error(
           "Process the Claim payment before uploading its transaction proof.",
         );
-      if (record.current_assignee_id !== financeId)
-        throw new Error("This Claim is assigned to another Finance user.");
       await requireRole(
         tx,
         record.organization_id,
@@ -1241,10 +1237,9 @@ export async function uploadClaimPaymentProofInDatabase(
         await tx.submission.update({
           where: { id: record.id },
           data: {
-            current_state_code: "COMPLETED",
-            current_state_group: StateGroup.COMPLETE,
-            current_assignee_id: null,
-            closed_at: new Date(),
+            current_state_code: "TRANSACTION_PROOF_UPLOADED",
+            current_state_group: StateGroup.PENDING_VERIFICATION,
+            current_assignee_id: financeId,
             evidence: {
               create: {
                 document_id: document.id,
@@ -1252,26 +1247,14 @@ export async function uploadClaimPaymentProofInDatabase(
               },
             },
             transitions: {
-              create: [
-                {
-                  from_state_code: record.current_state_code,
-                  to_state_code: "TRANSACTION_PROOF_UPLOADED",
-                  action_code: "UPLOAD_TRANSACTION_PROOF",
-                  actor_type: ActorType.INTERNAL_USER,
-                  actor_user_id: financeId,
-                  metadata_json: {
-                    documentId: document.id,
-                    fileName: upload.fileName,
-                  } as Prisma.InputJsonValue,
-                },
-                {
-                  from_state_code: "TRANSACTION_PROOF_UPLOADED",
-                  to_state_code: "COMPLETED",
-                  action_code: "COMPLETE",
-                  actor_type: ActorType.INTERNAL_USER,
-                  actor_user_id: financeId,
-                },
-              ],
+              create: {
+                from_state_code: record.current_state_code,
+                to_state_code: "TRANSACTION_PROOF_UPLOADED",
+                action_code: "UPLOAD_TRANSACTION_PROOF",
+                actor_type: ActorType.INTERNAL_USER,
+                actor_user_id: financeId,
+                metadata_json: { documentId: document.id, fileName: upload.fileName } as Prisma.InputJsonValue,
+              }
             },
           },
           include,
@@ -1282,6 +1265,34 @@ export async function uploadClaimPaymentProofInDatabase(
     await unlink(filePath).catch(() => undefined);
     throw error;
   }
+}
+
+export async function completeClaimByFinanceInDatabase(id: string, financeId: string) {
+  return prisma.$transaction(async (tx) => {
+    const record = await getStoredClaim(tx, id);
+    if (record.current_state_code !== "TRANSACTION_PROOF_UPLOADED")
+      throw new Error("Upload the payment transaction proof before completing this Claim.");
+    await requireRole(tx, record.organization_id, financeId, OrgRole.FINANCE_ADMIN);
+    return mapClaim(await tx.submission.update({
+      where: { id: record.id },
+      data: {
+        current_state_code: "COMPLETED",
+        current_state_group: StateGroup.COMPLETE,
+        current_assignee_id: null,
+        closed_at: new Date(),
+        transitions: {
+          create: {
+            from_state_code: "TRANSACTION_PROOF_UPLOADED",
+            to_state_code: "COMPLETED",
+            action_code: "COMPLETE",
+            actor_type: ActorType.INTERNAL_USER,
+            actor_user_id: financeId,
+          }
+        },
+      },
+      include,
+    }));
+  });
 }
 
 export async function returnClaimByFinanceInDatabase(
@@ -1299,8 +1310,6 @@ export async function returnClaimByFinanceInDatabase(
       )
     )
       throw new Error("Only a Claim awaiting Finance action can be returned.");
-    if (record.current_assignee_id !== financeId)
-      throw new Error("This Claim is assigned to another Finance user.");
     await requireRole(
       tx,
       record.organization_id,

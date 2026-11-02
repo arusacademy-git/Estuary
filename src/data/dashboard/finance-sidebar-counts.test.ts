@@ -14,12 +14,10 @@ describe('financeSidebarCounts', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns the existing Finance badge counts without loading full voucher, invoice, travel, or cash records', async () => {
-    vi.mocked(prisma.submission.count).mockImplementation(async ({ where }) => {
-      if (where?.payment_type === PaymentType.PAYMENT_VOUCHER) return 5;
-      if (where?.payment_type === PaymentType.INVOICE_PAYMENT) return 1;
-      if (where?.payment_type === PaymentType.TRAVEL_ALLOWANCE) return 4;
-      throw new Error('Unexpected count query');
-    });
+    vi.mocked(prisma.submission.count)
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(4);
     vi.mocked(prisma.submission.findMany).mockResolvedValue([
       { current_state_code: 'PENDING_FINANCE_PROCESSING' },
       { current_state_code: 'PENDING_MANAGER_APPROVAL' },
@@ -49,5 +47,8 @@ describe('financeSidebarCounts', () => {
       select: { current_state_code: true },
       take: 1000,
     }));
+    expect(prisma.submission.count).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: expect.objectContaining({ payment_type: PaymentType.PAYMENT_VOUCHER }) }));
+    expect(prisma.submission.count).toHaveBeenNthCalledWith(2, expect.objectContaining({ where: expect.objectContaining({ payment_type: PaymentType.INVOICE_PAYMENT }) }));
+    expect(prisma.submission.count).toHaveBeenNthCalledWith(3, expect.objectContaining({ where: expect.objectContaining({ payment_type: PaymentType.TRAVEL_ALLOWANCE }) }));
   });
 });

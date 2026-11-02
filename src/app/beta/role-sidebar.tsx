@@ -8,6 +8,8 @@ import type { BetaAccount, BetaRole } from '@/lib/auth/beta-accounts';
 import {
   createEmptySidebarActionCounts,
   fetchSidebarActionCounts,
+  PENDING_QUEUE_COUNT_EVENT,
+  readPublishedPendingQueueCount,
   type SidebarPaymentType,
 } from './sidebar-action-counts';
 import styles from './beta.module.css';
@@ -87,7 +89,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
         { label: 'Payment Voucher', href: '/beta/payment-vouchers/new' },
         paymentRequest(
           true,
-          '/beta/project-manager/payment-requests/travel-allowances/new',
+          '/beta/payment-requests/travel-allowance/new',
         ),
       ],
     },
@@ -189,12 +191,39 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
 
   useEffect(() => {
     let active = true;
+    const isCombinedQueue =
+      (account.role === 'manager' && pathname.startsWith('/beta/project-manager/pending-approvals')) ||
+      (account.role === 'director' && pathname.startsWith('/beta/director/pending-approvals')) ||
+      (account.role === 'finance' && pathname.startsWith('/beta/finance/pending-processing'));
     const refreshCounts = () => {
       fetchSidebarActionCounts(account).then((counts) => {
-        if (active) setActionCounts(counts);
+        if (!active) return;
+        const publishedCount = isCombinedQueue
+          ? readPublishedPendingQueueCount(account.role)
+          : null;
+        setActionCounts({
+          ...counts,
+          ALL_PENDING: publishedCount ?? counts.ALL_PENDING,
+        });
       }).catch(() => {
-        if (active) setActionCounts(createEmptySidebarActionCounts());
+        if (!active) return;
+        const publishedCount = isCombinedQueue
+          ? readPublishedPendingQueueCount(account.role)
+          : null;
+        setActionCounts((current) =>
+          publishedCount === null
+            ? createEmptySidebarActionCounts()
+            : { ...current, ALL_PENDING: publishedCount },
+        );
       });
+    };
+    const syncPendingCount = (event: Event) => {
+      const detail = (event as CustomEvent<{ role: BetaRole; count: number }>).detail;
+      if (!detail || detail.role !== account.role) return;
+      setActionCounts((current) => ({
+        ...current,
+        ALL_PENDING: detail.count,
+      }));
     };
     refreshCounts();
     const refreshTimer = window.setInterval(() => {
@@ -202,13 +231,15 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
     }, 60_000);
     window.addEventListener('focus', refreshCounts);
     window.addEventListener('estuary:action-counts-changed', refreshCounts);
+    window.addEventListener(PENDING_QUEUE_COUNT_EVENT, syncPendingCount);
     return () => {
       active = false;
       window.clearInterval(refreshTimer);
       window.removeEventListener('focus', refreshCounts);
       window.removeEventListener('estuary:action-counts-changed', refreshCounts);
+      window.removeEventListener(PENDING_QUEUE_COUNT_EVENT, syncPendingCount);
     };
-  }, [account, currentUrl]);
+  }, [account, currentUrl, pathname]);
 
   function itemActionCount(item: NavigationItem): number {
     if (item.actionType) return actionCounts[item.actionType];
