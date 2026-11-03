@@ -26,6 +26,7 @@ const failure = (error: unknown) =>
 export async function GET(request: Request) {
   const parsed = z
     .object({
+      id: z.string().min(1).optional(),
       paymentType: paymentType.optional(),
       organizationId: z.string().min(1),
       requesterId: z.string().min(1),
@@ -53,6 +54,7 @@ export async function GET(request: Request) {
         parsed.data.paymentType,
         parsed.data.organizationId,
         parsed.data.requesterId,
+        parsed.data.id,
       ),
     );
   } catch (error) {
@@ -63,6 +65,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const parsed = z
     .object({
+      id: z.string().min(1).optional(),
       organizationId: z.string().min(1),
       requesterId: z.string().min(1),
       paymentType,
