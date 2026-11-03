@@ -497,7 +497,7 @@ export function TravelAllowanceForm({
             {initialRecord
               ? `Edit ${initialRecord.requestNumber}`
               : requestMode === "manager"
-                ? "New Travel Allowance on behalf of Staff"
+                ? "Travel Allowance"
                 : "New Travel Allowance"}
           </h1>
           <span>
