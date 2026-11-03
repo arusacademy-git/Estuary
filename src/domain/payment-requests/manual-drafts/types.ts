@@ -4,6 +4,7 @@ export const MANUAL_DRAFT_TYPES = [
   "INVOICE_PAYMENT",
   "TRAVEL_ALLOWANCE",
   "CASH_ADVANCE",
+  "CLAIM",
 ] as const;
 
 export type ManualDraftType = (typeof MANUAL_DRAFT_TYPES)[number];
