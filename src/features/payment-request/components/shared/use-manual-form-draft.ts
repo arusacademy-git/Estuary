@@ -55,7 +55,11 @@ export function useManualFormDraft<T>({
       requestedDraftId,
     )
       .then((draft) => {
-        if (cancelled || !draft) return;
+        if (cancelled) return;
+        if (!draft) {
+          setDraftMessage("The selected draft could not be found.");
+          return;
+        }
         setDraftId(draft.id);
         restoreSnapshotRef.current(draft.snapshot);
         setDraftMessage(
