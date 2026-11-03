@@ -34,13 +34,18 @@ export function useManualFormDraft<T>({
 
   useEffect(() => {
     if (!requesterId || disabled) return;
-    const shouldRestore =
-      new URLSearchParams(window.location.search).get("draft") === "1";
+    const params = new URLSearchParams(window.location.search);
+    const requestedDraftId = params.get("draftId") || undefined;
+    const shouldRestore = params.get("draft") === "1" || Boolean(requestedDraftId);
     if (!shouldRestore) return;
     let cancelled = false;
-    fetchManualFormDraft<T>(paymentType, organizationId, requesterId)
+    fetchManualFormDraft<T>(paymentType, organizationId, requesterId, requestedDraftId)
       .then((draft) => {
-        if (cancelled || !draft) return;
+        if (cancelled) return;
+        if (!draft) {
+          setDraftMessage("The selected draft could not be found.");
+          return;
+        }
         setDraftId(draft.id);
         restoreSnapshotRef.current(draft.snapshot);
         setDraftMessage(
@@ -62,12 +67,17 @@ export function useManualFormDraft<T>({
     setDraftMessage("");
     try {
       const draft = await saveManualFormDraft({
+        id: draftId,
         organizationId,
         requesterId,
         paymentType,
         snapshot: getSnapshotRef.current(),
       });
       setDraftId(draft.id);
+      const url = new URL(window.location.href);
+      url.searchParams.set("draft", "1");
+      url.searchParams.set("draftId", draft.id);
+      window.history.replaceState(window.history.state, "", url);
       setDraftMessage("Draft saved. You can safely continue it later.");
       window.dispatchEvent(new Event("estuary:action-counts-changed"));
       return draft;

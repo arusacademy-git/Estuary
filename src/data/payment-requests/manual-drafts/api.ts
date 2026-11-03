@@ -29,6 +29,7 @@ export async function fetchManualFormDraft<T>(
     requesterId,
     ...(id ? { id } : {}),
   });
+  if (id) query.set("id", id);
   return read<ManualFormDraft<T> | null>(
     await fetch(`/api/v1/payment-requests/manual-drafts?${query}`, {
       cache: "no-store",

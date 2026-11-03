@@ -75,7 +75,7 @@ model PaymentRequestDraft {
   organization Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
   requester    User         @relation("DraftRequester", fields: [requester_id], references: [id], onDelete: Cascade)
 
-  @@unique([organization_id, requester_id, payment_type])
+  @@index([organization_id, requester_id, payment_type, updated_at])
   @@index([requester_id, updated_at])
   @@map("payment_request_drafts")
 }
