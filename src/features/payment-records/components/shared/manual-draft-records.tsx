@@ -12,20 +12,22 @@ import type { BetaAccount } from "@/lib/auth/beta-accounts";
 
 import styles from "./manual-draft-records.module.css";
 
-const createHref: Record<ManualDraftType, string> = {
+const createHref: Record<string, string> = {
   PAYMENT_VOUCHER: "/beta/payment-vouchers/new",
   INVOICE_PAYMENT: "/beta/payment-requests/invoice-payment/new",
   TRAVEL_ALLOWANCE: "/beta/payment-requests/travel-allowance/new",
   CASH_ADVANCE: "/beta/payment-requests/cash-advance/new",
   PETTY_CASH: "/beta/payment-requests/petty-cash/new",
+  CLAIM: "/beta/payment-requests/claims/new",
 };
 
-const labels: Record<ManualDraftType, string> = {
+const labels: Record<string, string> = {
   PAYMENT_VOUCHER: "Payment Voucher",
   INVOICE_PAYMENT: "Invoice Payment",
   TRAVEL_ALLOWANCE: "Travel Allowance",
   CASH_ADVANCE: "Cash Advance",
   PETTY_CASH: "Petty Cash",
+  CLAIM: "Claim",
 };
 
 function draftTimestamp(value: string) {
@@ -48,9 +50,12 @@ export function manualDraftHref(
   paymentType: ManualDraftType,
   account: BetaAccount,
   snapshot?: unknown,
-  id?: string,
+  draftId?: string,
 ) {
-  const draftQuery = id ? `draft=1&draftId=${encodeURIComponent(id)}` : "draft=1";
+  const draftQuery = new URLSearchParams({
+    draft: "1",
+    ...(draftId ? { draftId } : {}),
+  });
   if (paymentType === "PAYMENT_VOUCHER") {
     const value =
       snapshot && typeof snapshot === "object"
@@ -58,16 +63,20 @@ export function manualDraftHref(
         : null;
     const isMultiple = Boolean(
       value &&
-      (value.creationMode === "multiple" ||
-        value.entryMode === "manual" ||
-        value.entryMode === "spreadsheet" ||
-        Array.isArray(value.manualRows) ||
-        Array.isArray(value.rows)),
+        (value.creationMode === "multiple" ||
+          value.entryMode === "manual" ||
+          value.entryMode === "spreadsheet" ||
+          Array.isArray(value.manualRows) ||
+          Array.isArray(value.rows)),
     );
-    return `/beta/payment-vouchers/new?${draftQuery}&mode=${isMultiple ? "multiple" : "single"}`;
+    draftQuery.set("mode", isMultiple ? "multiple" : "single");
+    return `/beta/payment-vouchers/new?${draftQuery}`;
   }
   if (paymentType === "TRAVEL_ALLOWANCE" && account.role === "manager") {
-    return `/beta/project-manager/payment-requests/travel-allowances/new?${draftQuery}`;
+    return `/beta/payment-requests/travel-allowance/new?${draftQuery}`;
+  }
+  if (paymentType === "CLAIM") {
+    return `/beta/payment-requests/claims/draft?${draftQuery}`;
   }
   return `${createHref[paymentType]}?${draftQuery}`;
 }
