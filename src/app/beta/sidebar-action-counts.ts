@@ -1,6 +1,5 @@
 import { fetchDashboardSummary } from "@/data/dashboard/api";
 import { fetchManualFormDrafts } from "@/data/payment-requests/manual-drafts/api";
-import { fetchPaymentVouchers } from "@/data/payment-vouchers/payment-voucher-api";
 import type { DashboardSummaryRecord } from "@/domain/dashboard/types";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
 
@@ -178,17 +177,6 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
 export async function fetchSidebarActionCounts(
   account: BetaAccount,
 ): Promise<SidebarActionCounts> {
-  if (account.role === "finance") {
-    const query = new URLSearchParams({ role: "finance", userId: account.id });
-    const response = await fetch(`/api/v1/dashboard/finance-action-counts?${query}`, {
-      cache: "no-store",
-    });
-    const body = await response.json().catch(() => null) as { data?: SidebarActionCounts } | null;
-    if (!response.ok || !body?.data) {
-      throw new Error("Finance sidebar counts could not be loaded.");
-    }
-    return body.data;
-  }
   const records = await fetchDashboardSummary({
     role: account.role,
     userId: account.id,
@@ -210,19 +198,6 @@ export async function fetchSidebarActionCounts(
     account.id,
   ).catch(() => []);
   counts.MY_REQUESTS += manualDrafts.length;
-
-  if (account.role === "manager") {
-    const vouchers = await fetchPaymentVouchers();
-    const paymentVoucherCount = vouchers.filter(
-      (voucher) =>
-        voucher.projectManagerId === account.id &&
-        !voucher.projectManagerViewedAt &&
-        voucher.status === "APPROVED_FOR_PAYMENT",
-    ).length;
-
-    counts.ALL_PENDING += paymentVoucherCount - counts.PAYMENT_VOUCHER;
-    counts.PAYMENT_VOUCHER = paymentVoucherCount;
-  }
 
   return counts;
 }
