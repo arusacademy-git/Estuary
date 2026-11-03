@@ -67,7 +67,7 @@ export async function fetchCashAdvance(id: string) {
 export const approveCashAdvanceByManager = (id: string, managerId: string, signatureKey: string) =>
   action(id, 'manager-approve', { managerId, signatureKey });
 export const previewCashAdvanceByManager = (id: string, managerId: string) =>
-  action(id, 'manager-approve', { managerId });
+  action(id, 'manager-preview', { managerId });
 export const returnCashAdvanceByManager = (id: string, managerId: string, reason: string) =>
   action(id, 'manager-return', { managerId, reason });
 export const approveCashAdvanceByDirector = (id: string, directorId: string, signatureKey: string) =>

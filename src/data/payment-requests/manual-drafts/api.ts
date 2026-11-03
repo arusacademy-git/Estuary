@@ -21,11 +21,13 @@ export async function fetchManualFormDraft<T>(
   paymentType: ManualDraftType,
   organizationId: string,
   requesterId: string,
+  id?: string,
 ) {
   const query = new URLSearchParams({
     paymentType,
     organizationId,
     requesterId,
+    ...(id ? { id } : {}),
   });
   return read<ManualFormDraft<T> | null>(
     await fetch(`/api/v1/payment-requests/manual-drafts?${query}`, {
