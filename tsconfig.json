@@ -37,6 +37,11 @@
     ".estuary-next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    "out",
+    "build",
+    "playwright-report",
+    "test-results"
   ]
 }
