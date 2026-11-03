@@ -16,7 +16,6 @@ export function BetaHeaderIcons({ accountId }: BetaHeaderIconsProps) {
       <Link
         className="betaHeaderIconButton"
         href="/beta/settings/signature"
-        prefetch={false}
         aria-label="Signature settings"
         title="Signature settings"
       >
