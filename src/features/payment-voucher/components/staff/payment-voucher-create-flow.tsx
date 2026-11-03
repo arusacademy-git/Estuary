@@ -114,6 +114,7 @@ export function PaymentVoucherCreateFlow({
             "PAYMENT_VOUCHER",
             submittedVoucher.organizationId,
             submittedVoucher.submitterId,
+            new URLSearchParams(window.location.search).get("draftId") || undefined,
           );
           if (savedDraft) {
             await deleteManualFormDraft(
