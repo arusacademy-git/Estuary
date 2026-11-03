@@ -25,6 +25,8 @@ import {
   normalizeNumericIdentifier,
 } from "@/shared/payment-identity-validation";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
+import { ManualDraftConfirmation } from "../../../payment-request/components/shared/manual-draft-confirmation";
+import { ManualDraftStatus } from "../../../payment-request/components/shared/manual-draft-status";
 
 import type {
   CreatePaymentVoucherInput,
@@ -164,6 +166,7 @@ export function PaymentVoucherForm({
 
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<IdentityFieldErrors>({});
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const draft = useManualFormDraft<PaymentVoucherDraftSnapshot>({
     paymentType: "PAYMENT_VOUCHER",
@@ -382,6 +385,16 @@ export function PaymentVoucherForm({
     onContinue(
       voucher,
       selectedFiles.map((file) => file.name),
+    );
+  }
+
+  if (draftSaved) {
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-vouchers/new?mode=single"
+        paymentType="PAYMENT_VOUCHER"
+        recordsHref="/beta/payment-vouchers?scope=mine"
+      />
     );
   }
 
@@ -830,6 +843,7 @@ export function PaymentVoucherForm({
         </section>
 
         <footer className={styles.formActions}>
+          <ManualDraftStatus message={draft.draftMessage} />
           {!initialVoucher && (
             <button
               className={styles.secondary}
@@ -839,6 +853,7 @@ export function PaymentVoucherForm({
                 setFormError("");
                 try {
                   await draft.saveDraft();
+                  setDraftSaved(true);
                 } catch (error) {
                   setFormError(
                     error instanceof Error
@@ -856,11 +871,6 @@ export function PaymentVoucherForm({
               ? "Continue to review amendment"
               : "Continue to review"}
           </button>
-          {draft.draftMessage && (
-            <small className={styles.copy} role="status">
-              {draft.draftMessage}
-            </small>
-          )}
         </footer>
       </form>
     </section>

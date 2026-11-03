@@ -31,7 +31,9 @@ type BulkPreviewPanelProps = {
       BulkPaymentVoucherRow[],
   ) => void | Promise<void>;
 
-  progressLabel?: string;
+  onSaveDraft: (
+    selectedRows: BulkPaymentVoucherRow[],
+  ) => void | Promise<void>;
 };
 
 function formatCurrency(
@@ -51,7 +53,7 @@ export function BulkPreviewPanel({
   source,
   onBack,
   onConfirm,
-  progressLabel,
+  onSaveDraft,
 }: BulkPreviewPanelProps) {
   const [
     selectedRowIds,
@@ -244,6 +246,26 @@ export function BulkPreviewPanel({
     }
   }
 
+  async function handleSaveDraft() {
+    setErrorMessage('');
+    if (selectedRows.length === 0) {
+      setErrorMessage('Select at least one valid Payment Voucher.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onSaveDraft(selectedRows);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to save the Payment Voucher batch draft.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <section className={styles.panel}>
       <div
@@ -262,7 +284,7 @@ export function BulkPreviewPanel({
             Review the{' '}
             {source ===
             'spreadsheet'
-              ? 'spreadsheet rows'
+              ? 'Google Sheet rows'
               : 'manually entered vouchers'}{' '}
             before creating separate draft
             Payment Vouchers.
@@ -550,6 +572,15 @@ export function BulkPreviewPanel({
         </button>
 
         <button
+          className={styles.secondaryButton}
+          disabled={selectedRows.length === 0 || isSubmitting}
+          onClick={handleSaveDraft}
+          type="button"
+        >
+          {isSubmitting ? 'Saving…' : 'Save as draft'}
+        </button>
+
+        <button
           className={styles.primary}
           disabled={
             selectedRows.length === 0 ||
@@ -559,14 +590,14 @@ export function BulkPreviewPanel({
           type="button"
         >
           {isSubmitting
-            ? progressLabel ?? 'Creating drafts…'
-            : `Create ${
+            ? 'Submitting…'
+            : `Submit ${
                 selectedRows.length
               } ${
                 selectedRows.length ===
                 1
-                  ? 'draft'
-                  : 'drafts'
+                  ? 'voucher'
+                  : 'vouchers'
               }`}
         </button>
       </footer>

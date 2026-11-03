@@ -8,7 +8,12 @@ import {
 
 import {
   betaAccounts,
+  readBetaSession,
 } from '@/lib/auth/beta-accounts';
+
+import { ManualDraftConfirmation } from '../../../../payment-request/components/shared/manual-draft-confirmation';
+import { ManualDraftStatus } from '../../../../payment-request/components/shared/manual-draft-status';
+import { useManualFormDraft } from '@/features/payment-request/components/shared/use-manual-form-draft';
 
 import {
   amountToMalayWords,
@@ -56,30 +61,6 @@ type Option = {
   value: string;
   label: string;
 };
-
-type TaxCode =
-  | 'NONE'
-  | 'SST_6'
-  | 'MANUAL';
-
-function calculateSstValue(
-  quantity: string,
-  unitAmount: string,
-) {
-  const numericQuantity =
-    Number(quantity.replace(/,/g, '')) || 0;
-  const numericUnitAmount =
-    Number(unitAmount.replace(/,/g, '')) || 0;
-
-  return (
-    Math.round(
-      numericQuantity *
-        numericUnitAmount *
-        0.06 *
-        100,
-    ) / 100
-  ).toFixed(2);
-}
 
 type InputFieldProps = {
   field: BulkPaymentVoucherField;
@@ -287,24 +268,13 @@ function VoucherEditor({
 
   fieldErrors?: Partial<Record<BulkPaymentVoucherField, string>>;
 }) {
-  const [taxCode, setTaxCode] =
-    useState<TaxCode>(() =>
-      Number(
-        row.taxAmount.replace(/,/g, ''),
-      ) > 0
-        ? 'MANUAL'
-        : 'NONE',
-    );
-
   const amount =
     calculateBulkPaymentVoucherAmount(
-      row,
+      {
+        ...row,
+        taxAmount: '0',
+      },
     );
-
-  const taxAmount =
-    Number(row.taxAmount.replace(/,/g, '')) || 0;
-
-  const subtotal = amount - taxAmount;
 
   const amountInWords =
     amountToMalayWords(amount);
@@ -315,28 +285,6 @@ function VoucherEditor({
   const bankDetailsRequired =
     row.paymentMethod.trim().toLowerCase() ===
     'bank transfer';
-
-  useEffect(() => {
-    if (taxCode !== 'SST_6') {
-      return;
-    }
-
-    const calculatedTax =
-      calculateSstValue(
-        row.quantity,
-        row.unitAmount,
-      );
-
-    if (row.taxAmount !== calculatedTax) {
-      onUpdate('taxAmount', calculatedTax);
-    }
-  }, [
-    onUpdate,
-    row.quantity,
-    row.taxAmount,
-    row.unitAmount,
-    taxCode,
-  ]);
 
   return (
     <div className={styles.voucherBody}>
@@ -422,6 +370,7 @@ function VoucherEditor({
           field="recipientIc"
           label="IC / identity number"
           onUpdate={onUpdate}
+          required
           value={row.recipientIc}
         />
 
@@ -579,7 +528,6 @@ function VoucherEditor({
                 <th>Description</th>
                 <th>Quantity</th>
                 <th>Unit price</th>
-                <th>Tax Code</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -593,48 +541,6 @@ function VoucherEditor({
                 <td><input aria-label="Description" placeholder="Payment description" type="text" value={row.lineDescription} onChange={(event) => onUpdate('lineDescription', event.target.value)} /></td>
                 <td><input aria-label="Quantity" inputMode="decimal" type="text" value={row.quantity} onChange={(event) => onUpdate('quantity', event.target.value)} /></td>
                 <td><input aria-label="Unit price" inputMode="decimal" placeholder="Enter amount" type="text" value={row.unitAmount === '0' ? '' : row.unitAmount} onChange={(event) => onUpdate('unitAmount', event.target.value)} /></td>
-                <td>
-                  <div className={styles.taxControl}>
-                    <select
-                      aria-label="Tax code"
-                      value={taxCode}
-                      onChange={(event) => {
-                        const nextTaxCode = event.target.value as TaxCode;
-                        setTaxCode(nextTaxCode);
-
-                        if (nextTaxCode === 'NONE') {
-                          onUpdate('taxAmount', '0');
-                        } else if (nextTaxCode === 'SST_6') {
-                          onUpdate(
-                            'taxAmount',
-                            calculateSstValue(row.quantity, row.unitAmount),
-                          );
-                        } else {
-                          onUpdate('taxAmount', '');
-                        }
-                      }}
-                    >
-                      <option value="NONE">No tax</option>
-                      <option value="SST_6">SST 6%</option>
-                      <option value="MANUAL">Manual tax</option>
-                    </select>
-
-                    {taxCode === 'MANUAL' && (
-                      <input
-                        aria-label="Manual tax amount"
-                        inputMode="decimal"
-                        placeholder="Enter tax amount"
-                        type="text"
-                        value={row.taxAmount === '0' ? '' : row.taxAmount}
-                        onChange={(event) => onUpdate('taxAmount', event.target.value)}
-                      />
-                    )}
-
-                    {taxCode === 'SST_6' && (
-                      <small>RM {taxAmount.toFixed(2)}</small>
-                    )}
-                  </div>
-                </td>
                 <td><strong>{formatCurrency(amount)}</strong></td>
               </tr>
             </tbody>
@@ -650,8 +556,7 @@ function VoucherEditor({
             <output aria-label="Amount in words" className={styles.amountInWordsOutput}>{amountInWords}</output>
           </div>
           <dl>
-            <div><dt>Subtotal</dt><dd>{formatCurrency(subtotal)}</dd></div>
-            <div><dt>Tax</dt><dd>{formatCurrency(taxAmount)}</dd></div>
+            <div><dt>Subtotal</dt><dd>{formatCurrency(amount)}</dd></div>
             <div><dt>Grand total</dt><dd>{formatCurrency(amount)}</dd></div>
           </dl>
         </div>
@@ -665,6 +570,8 @@ export function BulkManualEntryPanel({
   onChange,
   onContinue,
 }: BulkManualEntryPanelProps) {
+  const [account] = useState(() => readBetaSession());
+  const [draftSaved, setDraftSaved] = useState(false);
   const [
     expandedRowId,
     setExpandedRowId,
@@ -682,18 +589,44 @@ export function BulkManualEntryPanel({
     setFormMessage,
   ] = useState('');
 
+  const draft = useManualFormDraft<{
+    creationMode: 'multiple';
+    manualRows: BulkPaymentVoucherRow[];
+  }>({
+    paymentType: 'PAYMENT_VOUCHER',
+    requesterId: account?.id,
+    getSnapshot: () => ({
+      creationMode: 'multiple',
+      manualRows: rows,
+    }),
+    restoreSnapshot: (snapshot) => {
+      if (
+        snapshot.creationMode === 'multiple' &&
+        Array.isArray(snapshot.manualRows) &&
+        snapshot.manualRows.length > 0
+      ) {
+        onChange(snapshot.manualRows);
+      }
+    },
+  });
+
   const activeExpandedRowId =
     expandedRowId === null ||
     rows.some((row) => row.rowId === expandedRowId)
       ? expandedRowId
       : rows[0]?.rowId ?? null;
 
+  const normalizedRows = useMemo(
+    () => rows.map((row) => ({ ...row, taxAmount: '0' })),
+    [rows],
+  );
+
   const validations = useMemo(
     () =>
       validateBulkPaymentVoucherRows(
-        rows,
+        normalizedRows,
       ),
-    [rows],
+    [normalizedRows],
   );
 
   const validationByRowId =
@@ -722,7 +655,7 @@ export function BulkManualEntryPanel({
 
   const totalAmount = useMemo(
     () =>
-      rows.reduce(
+      normalizedRows.reduce(
         (total, row) =>
           total +
           calculateBulkPaymentVoucherAmount(
@@ -730,7 +663,7 @@ export function BulkManualEntryPanel({
           ),
         0,
       ),
-    [rows],
+    [normalizedRows],
   );
 
   useEffect(() => {
@@ -997,7 +930,17 @@ export function BulkManualEntryPanel({
       return;
     }
 
-    onContinue(rows);
+    onContinue(normalizedRows);
+  }
+
+  if (draftSaved) {
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-vouchers/new?mode=multiple"
+        paymentType="PAYMENT_VOUCHER"
+        recordsHref="/beta/payment-vouchers?scope=mine"
+      />
+    );
   }
 
   return (
@@ -1334,11 +1277,34 @@ export function BulkManualEntryPanel({
           Discard all entries
         </button>
 
+        <ManualDraftStatus message={draft.draftMessage} />
+
         <div
           className={
             styles.pageActionGroup
           }
         >
+          <button
+            className={styles.secondaryButton}
+            disabled={draft.isSavingDraft}
+            onClick={() => {
+              setFormMessage('');
+              draft
+                .saveDraft()
+                .then(() => setDraftSaved(true))
+                .catch((error) =>
+                  setFormMessage(
+                    error instanceof Error
+                      ? error.message
+                      : 'The Payment Voucher draft could not be saved.',
+                  ),
+                );
+            }}
+            type="button"
+          >
+            {draft.isSavingDraft ? 'Saving draft…' : 'Save as draft'}
+          </button>
+
           <button
             className={
               styles.secondaryButton
@@ -1363,3 +1329,5 @@ export function BulkManualEntryPanel({
     </div>
   );
 }
+
+
