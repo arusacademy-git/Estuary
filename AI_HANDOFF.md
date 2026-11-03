@@ -11,8 +11,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/integrate-datas-main (integration for PR #99)
-- Last Updated: 2026-11-02
+- Current Branch: agent/multiple-payment-request-drafts (issue #100)
+- Last Updated: 2026-11-03
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -31,6 +31,12 @@
 - Next.js (TypeScript, App Router) + PostgreSQL (RDS target) + Prisma + NextAuth + AWS SES + S3 + Docker + Lightsail
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
+
+## Current Session Log — 2026-11-03
+
+- Replaced the unique PaymentRequestDraft organization/requester/payment-type constraint with an index that also includes `updated_at`. Added migration `20261103090000_allow_multiple_payment_request_drafts` to drop the actual existing unique index and create Prisma's 63-character index name; the requested longer name would be truncated by PostgreSQL.
+- Updated manual draft save, resume, and Payment Voucher cleanup to use draft IDs. A save without an ID creates a separate draft; saving a resumed draft updates only that draft within its organization, requester, and payment type. Legacy `?draft=1` links still open the latest draft.
+- Verification: Prisma schema validation, generated index-name comparison, TypeScript, ESLint, and 73 Vitest tests passed. Production build was run for release verification.
 
 ## Current Session Log — 2026-11-02
 

@@ -25,9 +25,11 @@ export async function getManualFormDraft<T>(
     paymentType: ManualDraftType,
     organizationId: string,
     requesterId: string,
+    id?: string,
 ) {
     const record = await prisma.paymentRequestDraft.findFirst({
         where: {
+            ...(id ? { id } : {}),
             organization_id: organizationId,
             payment_type: paymentType,
             requester_id: requesterId,
@@ -66,22 +68,24 @@ export async function saveManualFormDraftInDatabase<T>(
     ]);
     if (!organization || !requester)
         throw new Error("The organization or requester was not found.");
-    const record = await prisma.paymentRequestDraft.upsert({
-        where: {
-            organization_id_requester_id_payment_type: {
-                organization_id: input.organizationId,
-                requester_id: input.requesterId,
-                payment_type: input.paymentType,
-            },
-        },
-        create: {
+    const record = input.id
+      ? await prisma.paymentRequestDraft.update({
+          where: {
+            id: input.id,
+            organization_id: input.organizationId,
+            requester_id: input.requesterId,
+            payment_type: input.paymentType,
+          },
+          data: { snapshot_json: input.snapshot as Prisma.InputJsonValue },
+        })
+      : await prisma.paymentRequestDraft.create({
+        data: {
             organization_id: input.organizationId,
             requester_id: input.requesterId,
             payment_type: input.paymentType,
             snapshot_json: input.snapshot as Prisma.InputJsonValue,
         },
-        update: { snapshot_json: input.snapshot as Prisma.InputJsonValue },
-    });
+      });
     return map<T>(record);
 }
 
