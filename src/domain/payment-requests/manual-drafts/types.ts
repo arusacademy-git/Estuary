@@ -19,6 +19,7 @@ export type ManualFormDraft<T = unknown> = {
 };
 
 export type SaveManualFormDraftInput<T = unknown> = {
+  id?: string;
   organizationId: string;
   requesterId: string;
   paymentType: ManualDraftType;

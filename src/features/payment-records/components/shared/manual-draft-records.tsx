@@ -48,7 +48,9 @@ export function manualDraftHref(
   paymentType: ManualDraftType,
   account: BetaAccount,
   snapshot?: unknown,
+  id?: string,
 ) {
+  const draftQuery = id ? `draft=1&draftId=${encodeURIComponent(id)}` : "draft=1";
   if (paymentType === "PAYMENT_VOUCHER") {
     const value =
       snapshot && typeof snapshot === "object"
@@ -62,12 +64,12 @@ export function manualDraftHref(
         Array.isArray(value.manualRows) ||
         Array.isArray(value.rows)),
     );
-    return `/beta/payment-vouchers/new?draft=1&mode=${isMultiple ? "multiple" : "single"}`;
+    return `/beta/payment-vouchers/new?${draftQuery}&mode=${isMultiple ? "multiple" : "single"}`;
   }
   if (paymentType === "TRAVEL_ALLOWANCE" && account.role === "manager") {
-    return "/beta/project-manager/payment-requests/travel-allowances/new?draft=1";
+    return `/beta/project-manager/payment-requests/travel-allowances/new?${draftQuery}`;
   }
-  return `${createHref[paymentType]}?draft=1`;
+  return `${createHref[paymentType]}?${draftQuery}`;
 }
 
 export function usePaymentTypeManualDrafts(
@@ -178,7 +180,7 @@ export function ManualDraftRecordList({
                 <dd>Not submitted</dd>
               </div>
             </dl>
-            <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot)}>
+            <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
               Continue draft
             </Link>
           </article>
@@ -212,7 +214,7 @@ export function ManualDraftRecordList({
                 <span className={styles.status}>Draft</span>
               </td>
               <td className={styles.actionCell}>
-                <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot)}>
+                <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
                   Continue draft
                 </Link>
               </td>
@@ -251,7 +253,7 @@ export function ManualDraftCards({
               <dd>Not submitted</dd>
             </div>
           </dl>
-          <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot)}>
+          <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
             Continue draft
           </Link>
         </article>
@@ -308,7 +310,7 @@ export function ManualDraftTableRows({
             </>
           )}
           <td className={styles.actionCell}>
-            <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot)}>
+            <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
               Continue draft
             </Link>
           </td>
