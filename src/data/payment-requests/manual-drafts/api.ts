@@ -27,6 +27,7 @@ export async function fetchManualFormDraft<T>(
     paymentType,
     organizationId,
     requesterId,
+    ...(id ? { id } : {}),
   });
   if (id) query.set("id", id);
   return read<ManualFormDraft<T> | null>(
