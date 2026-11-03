@@ -4,6 +4,7 @@ export const MANUAL_DRAFT_TYPES = [
   "INVOICE_PAYMENT",
   "TRAVEL_ALLOWANCE",
   "CASH_ADVANCE",
+  "CLAIM",
 ] as const;
 
 export type ManualDraftType = (typeof MANUAL_DRAFT_TYPES)[number];
@@ -19,6 +20,7 @@ export type ManualFormDraft<T = unknown> = {
 };
 
 export type SaveManualFormDraftInput<T = unknown> = {
+  id?: string;
   organizationId: string;
   requesterId: string;
   paymentType: ManualDraftType;
