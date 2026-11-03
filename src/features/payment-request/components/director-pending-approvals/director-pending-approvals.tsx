@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import {
   fetchInvoicePayments,
@@ -32,15 +33,14 @@ import {
   rejectPaymentVoucher,
 } from "@/data/payment-vouchers/payment-voucher-api";
 import type { PaymentVoucherRecord } from "@/domain/payment-vouchers/types";
-import {
-  travelLineTotal,
-  type TravelAllowanceRecord,
-} from "@/domain/payment-requests/travel-allowance/types";
+import type { TravelAllowanceRecord } from "@/domain/payment-requests/travel-allowance/types";
+import { CLAIM_TYPES } from "@/domain/payment-requests/claims/types";
 import { amountToMalayWords } from "@/lib/currency/amount-words";
 import { usePaymentVouchers } from "@/features/payment-voucher/hooks/use-payment-vouchers";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
-import { fetchSidebarActionCounts } from "@/app/beta/sidebar-action-counts";
+import { publishPendingQueueCount } from "@/app/beta/sidebar-action-counts";
+import { TravelAllowanceGroupedTable } from "@/features/payment-request/components/travel-allowance/travel-allowance-grouped-table";
 
 import styles from "../manager-pending-approvals/manager-pending-approvals.module.css";
 import filterStyles from "../manager-pending-approvals/manager-pending-approvals-filter.module.css";
@@ -60,6 +60,7 @@ type Row = {
   documents: Array<{ name: string; href: string; download?: string }>;
   claimType?: string;
   voucher?: PaymentVoucherRecord;
+  travelAllowance?: TravelAllowanceRecord;
 };
 
 const tabs: Array<{ value: PaymentType; label: string; colour: string }> = [
@@ -85,60 +86,6 @@ function displayDate(value: string) {
       });
 }
 
-function travelEmployeeBreakdown(record: TravelAllowanceRecord): Row["lines"] {
-  const grouped = new Map<
-    string,
-    {
-      employeeName: string;
-      dates: string[];
-      projects: Set<string>;
-      reasons: Set<string>;
-      meals: Set<string>;
-      entries: number;
-      total: number;
-    }
-  >();
-
-  record.lines.forEach((line) => {
-    const key = line.employeeId || line.employeeName;
-    const summary = grouped.get(key) ?? {
-      employeeName: line.employeeName,
-      dates: [],
-      projects: new Set<string>(),
-      reasons: new Set<string>(),
-      meals: new Set<string>(),
-      entries: 0,
-      total: 0,
-    };
-    summary.dates.push(line.travelDate);
-    summary.projects.add(line.projectName);
-    summary.reasons.add(line.reason);
-    line.meals.forEach((meal) => summary.meals.add(meal));
-    summary.entries += 1;
-    summary.total += travelLineTotal(line);
-    grouped.set(key, summary);
-  });
-
-  return [...grouped.values()].map((summary) => {
-    const dates = [...new Set(summary.dates)].sort();
-    const dateRange =
-      dates.length < 2
-        ? displayDate(dates[0] ?? "")
-        : `${displayDate(dates[0])} – ${displayDate(dates.at(-1) ?? dates[0])}`;
-    return {
-      label: summary.employeeName,
-      description: [
-        dateRange,
-        [...summary.projects].join(", "),
-        [...summary.reasons].join(", "),
-        [...summary.meals].join(", ") || "No meals",
-        `${summary.entries} ${summary.entries === 1 ? "entry" : "entries"}`,
-      ].join(" · "),
-      amount: summary.total,
-    };
-  });
-}
-
 export function DirectorPendingApprovals() {
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [rows, setRows] = useState<Row[]>([]);
@@ -151,6 +98,7 @@ export function DirectorPendingApprovals() {
     "OLDEST",
   );
   const [claimType, setClaimType] = useState("ALL");
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [reviewedKeys, setReviewedKeys] = useState<string[]>([]);
   const [rejectedKeys, setRejectedKeys] = useState<string[]>([]);
@@ -162,7 +110,6 @@ export function DirectorPendingApprovals() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [waitingCount, setWaitingCount] = useState<number | null>(null);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
@@ -184,28 +131,34 @@ export function DirectorPendingApprovals() {
   }, []);
 
   useEffect(() => {
+    const refresh = () => setRefreshVersion((current) => current + 1);
+    window.addEventListener("estuary:director-queue-changed", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("estuary:director-queue-changed", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!account || account.role !== "director") return;
     let cancelled = false;
     Promise.all([
       fetchInvoicePayments({
         role: "director",
         userId: account.id,
-        includeAll: true,
       }),
       fetchTravelAllowances({
         role: "director",
         userId: account.id,
-        includeAll: true,
       }),
       fetchCashAdvances({
         role: "director",
         userId: account.id,
-        includeAll: true,
       }),
       fetchPettyCashRequests({
         role: "director",
         userId: account.id,
-        includeAll: true,
       }),
       fetchClaimRequests({ role: "director", userId: account.id }),
     ])
@@ -284,7 +237,12 @@ export function DirectorPendingApprovals() {
                   },
                   { label: "Remarks", value: r.remarks || "—" },
                 ],
-                lines: travelEmployeeBreakdown(r),
+                lines: r.lines.map((line) => ({
+                  label: line.employeeName,
+                  description: line.reason,
+                  amount: line.specialAllowance,
+                })),
+                travelAllowance: r,
                 documents: r.supportingDocuments.map((document) => ({
                   name: document.fileName,
                   href: document.dataUrl,
@@ -429,15 +387,10 @@ export function DirectorPendingApprovals() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    fetchSidebarActionCounts(account)
-      .then((counts) => {
-        if (!cancelled) setWaitingCount(counts.ALL_PENDING);
-      })
-      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [account]);
+  }, [account, refreshVersion]);
 
   const voucherRows = useMemo<Row[]>(
     () =>
@@ -475,6 +428,11 @@ export function DirectorPendingApprovals() {
     [account, vouchers],
   );
   const allRows = useMemo(() => [...voucherRows, ...rows], [rows, voucherRows]);
+  useEffect(() => {
+    if (loading || vouchersLoading) return;
+    publishPendingQueueCount("director", allRows.length);
+  }, [allRows.length, loading, vouchersLoading]);
+
   const counts = useMemo(
     () =>
       Object.fromEntries(
@@ -485,18 +443,7 @@ export function DirectorPendingApprovals() {
       ),
     [allRows],
   );
-  const claimTypes = useMemo(
-    () =>
-      [
-        ...new Set(
-          allRows
-            .filter((row) => row.type === "CL")
-            .map((row) => row.claimType)
-            .filter(Boolean),
-        ),
-      ].sort(),
-    [allRows],
-  );
+  const claimTypes = CLAIM_TYPES;
   useEffect(() => {
     if (deepLinkHandled || allRows.length === 0) return;
     const requestedRecord = new URLSearchParams(window.location.search).get(
@@ -674,9 +621,6 @@ export function DirectorPendingApprovals() {
     setShowConfirmation(false);
     setConfirmed(false);
     setSaving(false);
-    fetchSidebarActionCounts(account)
-      .then((counts) => setWaitingCount(counts.ALL_PENDING))
-      .catch(() => undefined);
     if (succeeded.length !== selected.length)
       setError(
         "Some decisions could not be submitted. The remaining selections are ready to retry.",
@@ -763,9 +707,6 @@ export function DirectorPendingApprovals() {
       setReviewIndex(null);
       setShowReject(false);
       setRejectReason("");
-      fetchSidebarActionCounts(account)
-        .then((counts) => setWaitingCount(counts.ALL_PENDING))
-        .catch(() => undefined);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -800,10 +741,6 @@ export function DirectorPendingApprovals() {
           <span>
             Every request waiting for your approval, across all payment types.
           </span>
-        </div>
-        <div>
-          <small>Waiting for you</small>
-          <strong>{waitingCount ?? allRows.length}</strong>
         </div>
       </header>
       <nav className={styles.tabs} aria-label="Payment type filters">
@@ -873,9 +810,9 @@ export function DirectorPendingApprovals() {
                   value={claimType}
                 >
                   <option value="ALL">All Claim types</option>
-                  {claimTypes.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
+                  {claimTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
                     </option>
                   ))}
                 </select>
@@ -1114,7 +1051,10 @@ export function DirectorPendingApprovals() {
                 </p>
                 <h2>{activeReview.reference}</h2>
               </div>
-              <span>
+              <span className={filterStyles.modalPaymentType}>
+                <b className={styles.typeBadge} data-type={activeReview.type}>
+                  {activeReview.type}
+                </b>
                 {tabs.find((tab) => tab.value === activeReview.type)?.label}
               </span>
               <button
@@ -1254,6 +1194,31 @@ export function DirectorPendingApprovals() {
                       </div>
                     </section>
                   </>
+                ) : activeReview.type === "TA" && activeReview.travelAllowance ? (
+                  <>
+                    <section className={filterStyles.travelDirectorOverview}>
+                      <div className={filterStyles.travelDirectorTitle}>
+                        <p><b>TA</b> Travel Allowance request</p>
+                        <h3>Request overview</h3>
+                        <span>
+                          Submitted on {displayDate(activeReview.submittedAt)} by {activeReview.requester}
+                        </span>
+                      </div>
+                      <dl>
+                        <div><dt>Requester</dt><dd>{activeReview.requester}</dd></div>
+                        <div><dt>Requester role</dt><dd>{activeReview.details.find((item) => item.label === "Requester role")?.value ?? "—"}</dd></div>
+                        <div><dt>Programme</dt><dd>{activeReview.programme}</dd></div>
+                        <div><dt>Contact</dt><dd>{activeReview.details.find((item) => item.label === "Contact")?.value ?? "—"}</dd></div>
+                        <div><dt>Payment target</dt><dd>{activeReview.details.find((item) => item.label === "Payment target")?.value ?? "—"}</dd></div>
+                        <div><dt>Supporting documents</dt><dd>{activeReview.documents.length}</dd></div>
+                        <div><dt>Remarks</dt><dd>{activeReview.details.find((item) => item.label === "Remarks")?.value ?? "—"}</dd></div>
+                      </dl>
+                    </section>
+                    <section>
+                      <h3>Request breakdown · {activeReview.travelAllowance.lines.length} entries</h3>
+                      <TravelAllowanceGroupedTable lines={activeReview.travelAllowance.lines} />
+                    </section>
+                  </>
                 ) : (
                   <>
                     <section>
@@ -1333,6 +1298,26 @@ export function DirectorPendingApprovals() {
                 )}
               </div>
               <aside className={filterStyles.directorActionRail}>
+                {["PV", "CA"].includes(activeReview.type) && !signature && (
+                  <section
+                    aria-labelledby="signature-required-title"
+                    className={filterStyles.signatureRequiredCard}
+                    role="alert"
+                  >
+                    <p>
+                      <i aria-hidden="true" /> Action required
+                    </p>
+                    <h3 id="signature-required-title">
+                      Upload your signature
+                    </h3>
+                    <span>
+                      Your signature is not set yet. Add it in Settings before
+                      you can approve this{" "}
+                      {activeReview.type === "PV" ? "voucher" : "request"}.
+                    </span>
+                    <Link href="/beta/settings/signature">Go to Settings</Link>
+                  </section>
+                )}
                 <section className={filterStyles.directorActionCard}>
                   <p>Director action</p>
                   <h3>
@@ -1380,11 +1365,6 @@ export function DirectorPendingApprovals() {
                           ? "Approve for payment"
                           : "Approve and forward"}
                   </button>
-                  {["PV", "CA"].includes(activeReview.type) && !signature && (
-                    <small>
-                      Upload your signature in Settings before approving.
-                    </small>
-                  )}
                 </section>
                 {showReject && (
                   <section className={filterStyles.rejectPanel}>

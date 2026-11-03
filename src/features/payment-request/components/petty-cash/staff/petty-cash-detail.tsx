@@ -37,6 +37,58 @@ export function PettyCashDetail({ requestId, showRoleAction = false }: { request
   const manager = getBetaAccount(record.managerApproverId)?.name ?? record.managerApproverId;
   const location = record.location === 'PENANG' ? 'Penang' : 'Kuala Lumpur';
   const canCorrect = record.status === 'RETURNED_TO_STAFF' && record.requesterId === account.id;
+  const isRequesterReconciliation = record.status === 'PENDING_RECONCILIATION' && record.requesterId === account.id;
+
+  if (isRequesterReconciliation) {
+    return <main className={`${styles.page} ${styles.detailPage} ${styles.reconciliationPage}`}>
+      <div className={styles.backRow}><Link href="/beta/payment-records/petty-cash">← Back to Petty Cash records</Link></div>
+      <header className={`${styles.detailHero} ${styles.reconciliationHero}`}>
+        <div><p>Petty Cash record</p><h1>{record.requestNumber}</h1><span>Submitted by {record.requesterName} · {date(record.createdAt)}</span></div>
+        <div><small>Request total</small><strong>{money(record.totalAmount)}</strong><PettyCashStatusBadge status={record.status} /></div>
+      </header>
+
+      {record.returnRemarks && <div className={styles.detailReturnNotice}><strong>Reconciliation returned for correction</strong><blockquote>{record.returnRemarks}</blockquote></div>}
+
+      <div className={styles.reconciliationLayout}>
+        <PettyCashReconciliationForm onSubmitted={setRecord} record={record} requesterId={account.id} />
+        <aside className={styles.reconciliationContextCard}>
+          <section className={styles.reconciliationContextSection}>
+            <h2>Request overview</h2>
+            <dl className={styles.reconciliationContextGrid}>
+              <Value label="Request date" value={date(record.requestDate)} />
+              <Value label="Requester" value={record.requesterName} />
+              <Value label="Position" value={record.requesterPosition} />
+              <Value label="Manager" value={manager} />
+              <Value label="Office fund" value={`${location} Petty Cash`} />
+              <Value label="Contact" value={record.requesterContact} />
+            </dl>
+          </section>
+
+          <section className={styles.reconciliationContextSection}>
+            <h2>Planned expenses</h2>
+            <div className={styles.reconciliationTableWrap}>
+              <table className={styles.reconciliationTable}>
+                <thead><tr><th>#</th><th>Details / purpose</th><th>Account</th><th>Amount</th></tr></thead>
+                <tbody>{record.lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td><strong>{line.details}</strong><small>{line.division}</small></td><td>{line.accountType}</td><td><strong>{money(line.amount)}</strong></td></tr>)}</tbody>
+              </table>
+            </div>
+            <div className={styles.reconciliationContextTotal}><span>Total requested</span><strong>{money(record.totalAmount)}</strong></div>
+          </section>
+
+          <section className={styles.reconciliationContextSection}>
+            <h2>Finance payment</h2>
+            <dl className={styles.reconciliationContextGrid}>
+              <Value label="Payment date" value={date(record.paymentDate)} />
+              <Value label="Reference" value={record.paymentReference || record.requestNumber} />
+            </dl>
+            {record.paymentProofLink && <a className={styles.reconciliationProofLink} href={record.paymentProofLink} rel="noreferrer" target="_blank">Preview payment proof ↗</a>}
+          </section>
+
+          <Progress record={record} manager={manager} />
+        </aside>
+      </div>
+    </main>;
+  }
 
   return <main className={`${styles.page} ${styles.detailPage}`}>
     <div className={styles.backRow}><Link href="/beta/payment-records/petty-cash">← Back to Petty Cash records</Link></div>

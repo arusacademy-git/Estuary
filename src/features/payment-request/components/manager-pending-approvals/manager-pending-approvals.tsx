@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  approveCashAdvanceByManager,
   fetchCashAdvances,
-  previewCashAdvanceByManager,
 } from "@/data/payment-requests/cash-advance/cash-advance-api";
 import {
   fetchInvoicePayments,
@@ -14,22 +15,18 @@ import {
   approvePettyCashByManager,
   fetchPettyCashRequests,
 } from "@/data/payment-requests/petty-cash/api";
-import {
-  fetchTravelAllowances,
-  reviewTravelAllowanceByManager,
-} from "@/data/payment-requests/travel-allowance/api";
 import { usePaymentVouchers } from "@/features/payment-voucher/hooks/use-payment-vouchers";
 import { markPaymentVoucherManagerViewed } from "@/data/payment-vouchers/payment-voucher-api";
 import type { PaymentVoucherRecord } from "@/domain/payment-vouchers/types";
-import { travelLineTotal } from "@/domain/payment-requests/travel-allowance/types";
 import { amountToMalayWords } from "@/lib/currency/amount-words";
-import { fetchSidebarActionCounts } from "@/app/beta/sidebar-action-counts";
+import { publishPendingQueueCount } from "@/app/beta/sidebar-action-counts";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
+import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 
 import styles from "./manager-pending-approvals.module.css";
 import filterStyles from "./manager-pending-approvals-filter.module.css";
 
-type PaymentType = "PV" | "PC" | "INV" | "TA" | "CA" | "CL";
+type PaymentType = "PV" | "PC" | "INV" | "CA" | "CL";
 type ApprovalRow = {
   key: string;
   id: string;
@@ -55,7 +52,6 @@ const tabs: Array<{ value: PaymentType; label: string; colour: string }> = [
   { value: "PV", label: "Payment Voucher", colour: "#2563eb" },
   { value: "PC", label: "Petty Cash", colour: "#ffffff" },
   { value: "INV", label: "Invoice Payment", colour: "#10b981" },
-  { value: "TA", label: "Travel Allowance", colour: "#f59e0b" },
   { value: "CA", label: "Cash Advance", colour: "#e11d48" },
   { value: "CL", label: "Claims", colour: "#111827" },
 ];
@@ -100,6 +96,7 @@ function initialStatus() {
 
 export function ManagerPendingApprovals() {
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const { signature } = useUserSignature(account?.id);
   const [rows, setRows] = useState<ApprovalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -121,7 +118,6 @@ export function ManagerPendingApprovals() {
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [waitingCount, setWaitingCount] = useState<number | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const {
     records: vouchers,
@@ -147,25 +143,17 @@ export function ManagerPendingApprovals() {
       fetchInvoicePayments({
         role: "manager",
         userId: account.id,
-        includeAll: true,
-      }),
-      fetchTravelAllowances({
-        role: "manager",
-        userId: account.id,
-        includeAll: true,
       }),
       fetchCashAdvances({
         role: "manager",
         userId: account.id,
-        includeAll: true,
       }),
       fetchPettyCashRequests({
         role: "manager",
         userId: account.id,
-        includeAll: true,
       }),
     ])
-      .then(([invoices, travel, cash, petty]) => {
+      .then(([invoices, cash, petty]) => {
         if (cancelled) return;
         const next: ApprovalRow[] = [
           ...invoices
@@ -207,54 +195,6 @@ export function ManagerPendingApprovals() {
                 download: document.fileName,
               })),
               href: `/beta/project-manager/payment-requests/invoice-payments/${record.id}`,
-            })),
-          ...travel
-            .filter((record) => record.managerApproverId === account.id)
-            .map((record) => ({
-              key: `TA:${record.id}`,
-              id: record.id,
-              type: "TA" as const,
-              reference: record.requestNumber,
-              requester: record.requesterName,
-              requesterRole: record.requesterPosition,
-              programme: record.lines[0]?.projectName ?? "—",
-              amount: record.totalAmount,
-              submittedAt: record.requestDate,
-              status: record.status,
-              stage:
-                record.status === "PENDING_MANAGER_REVIEW"
-                  ? "Pending Manager Review"
-                  : record.status === "PENDING_DIRECTOR_APPROVAL"
-                    ? "Pending Director Review"
-                    : record.status === "PENDING_FINANCE_VERIFICATION"
-                      ? "Pending Finance Verification"
-                      : record.status === "COMPLETED"
-                        ? "Completed"
-                        : record.status.replaceAll("_", " "),
-              actionable: record.status === "PENDING_MANAGER_REVIEW",
-              reviewed: record.status !== "PENDING_MANAGER_REVIEW",
-              details: [
-                { label: "Entries", value: String(record.lines.length) },
-                {
-                  label: "Travel month",
-                  value: record.lines[0]?.travelDate?.slice(0, 7) ?? "—",
-                },
-                {
-                  label: "Project",
-                  value: record.lines[0]?.projectName ?? "—",
-                },
-              ],
-              lines: record.lines.map((line) => ({
-                label: line.employeeName,
-                description: `${date(line.travelDate)} · ${line.projectName} · ${line.reason} · ${line.meals.join(", ") || "No meals"}`,
-                amount: travelLineTotal(line),
-              })),
-              documents: record.supportingDocuments.map((document) => ({
-                name: document.fileName,
-                href: document.dataUrl,
-                download: document.fileName,
-              })),
-              href: `/beta/project-manager/payment-requests/travel-allowances/${record.id}`,
             })),
           ...cash
             .filter((record) => record.managerApproverId === account.id)
@@ -356,21 +296,6 @@ export function ManagerPendingApprovals() {
     };
   }, [account]);
 
-  useEffect(() => {
-    if (!account || account.role !== "manager") return;
-    let cancelled = false;
-    fetchSidebarActionCounts(account)
-      .then((counts) => {
-        if (!cancelled) setWaitingCount(counts.ALL_PENDING);
-      })
-      .catch(() => {
-        if (!cancelled) setWaitingCount(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [account]);
-
   const voucherRows = useMemo<ApprovalRow[]>(() => {
     if (!account) return [];
     return vouchers
@@ -415,6 +340,11 @@ export function ManagerPendingApprovals() {
     () => [...voucherRows, ...rows].filter((row) => row.actionable),
     [rows, voucherRows],
   );
+  useEffect(() => {
+    if (loading || vouchersLoading) return;
+    publishPendingQueueCount("manager", allRows.length);
+  }, [allRows.length, loading, vouchersLoading]);
+
 
   useEffect(() => {
     if (deepLinkHandled || allRows.length === 0) return;
@@ -466,7 +396,7 @@ export function ManagerPendingApprovals() {
     const query = search.trim().toLowerCase();
     const matchesStatus = (row: ApprovalRow) => {
       if (statusFilter === "ALL_PENDING") return true;
-      const requiresApproval = row.type === "INV" || row.type === "TA";
+      const requiresApproval = row.type === "INV";
       return statusFilter === "APPROVAL_REQUIRED"
         ? requiresApproval
         : !requiresApproval;
@@ -501,6 +431,7 @@ export function ManagerPendingApprovals() {
   const reviewedCount = selected.filter((row) =>
     reviewedKeys.includes(row.key),
   ).length;
+  const selectedRequiresSignature = selected.some((row) => row.type === "CA");
   const activeReview =
     standaloneReview ??
     (reviewIndex === null ? null : (selected[reviewIndex] ?? null));
@@ -559,7 +490,13 @@ export function ManagerPendingApprovals() {
   }
 
   async function approveSelected() {
-    if (!account || reviewedCount !== selected.length || !confirmed) return;
+    if (
+      !account ||
+      reviewedCount !== selected.length ||
+      !confirmed ||
+      (selectedRequiresSignature && !signature)
+    )
+      return;
     setSaving(true);
     setError("");
     const succeeded: string[] = [];
@@ -567,10 +504,10 @@ export function ManagerPendingApprovals() {
       try {
         if (row.type === "INV")
           await reviewInvoicePaymentByManager(row.id, account.id);
-        if (row.type === "TA")
-          await reviewTravelAllowanceByManager(row.id, account.id);
-        if (row.type === "CA")
-          await previewCashAdvanceByManager(row.id, account.id);
+        if (row.type === "CA") {
+          if (!signature) throw new Error("An active signature is required.");
+          await approveCashAdvanceByManager(row.id, account.id, signature.id);
+        }
         if (row.type === "PC")
           await approvePettyCashByManager(row.id, account.id);
         succeeded.push(row.key);
@@ -622,10 +559,6 @@ export function ManagerPendingApprovals() {
             Every request assigned to you, across all payment types, in one
             list.
           </span>
-        </div>
-        <div>
-          <small>Waiting for you</small>
-          <strong>{waitingCount ?? allRows.length}</strong>
         </div>
       </header>
       <nav className={styles.tabs} aria-label="Payment type filters">
@@ -894,6 +827,19 @@ export function ManagerPendingApprovals() {
               <span>Total selected amount</span>
               <strong>{money(totalSelected)}</strong>
             </div>
+            {selectedRequiresSignature && !signature && (
+              <section className={filterStyles.signatureRequiredCard} role="alert">
+                <p>
+                  <i /> Action required
+                </p>
+                <h3>Upload your signature</h3>
+                <span>
+                  A Cash Advance approval needs your saved signature before it
+                  can be forwarded to the Director.
+                </span>
+                <Link href="/beta/settings/signature">Go to Settings</Link>
+              </section>
+            )}
             <label className={styles.confirmCheck}>
               <input
                 checked={confirmed}
@@ -913,7 +859,10 @@ export function ManagerPendingApprovals() {
               <button
                 className={filterStyles.confirmButton}
                 disabled={
-                  !confirmed || reviewedCount !== selected.length || saving
+                  !confirmed ||
+                  reviewedCount !== selected.length ||
+                  saving ||
+                  (selectedRequiresSignature && !signature)
                 }
                 onClick={approveSelected}
                 type="button"
@@ -930,7 +879,11 @@ export function ManagerPendingApprovals() {
       {activeReview && (
         <div className={styles.backdrop} role="presentation">
           <section
-            className={styles.detailModal}
+            className={`${styles.detailModal} ${
+              activeReview.type === "CA"
+                ? filterStyles.cashAdvancePreviewModal
+                : ""
+            }`}
             role="dialog"
             aria-modal="true"
           >
@@ -943,7 +896,13 @@ export function ManagerPendingApprovals() {
                 </p>
                 <h2>{activeReview.reference}</h2>
               </div>
-              <span>
+              <span
+                className={
+                  activeReview.type === "CA"
+                    ? filterStyles.cashAdvanceType
+                    : undefined
+                }
+              >
                 {tabs.find((tab) => tab.value === activeReview.type)?.label}
               </span>
               <button
@@ -957,8 +916,20 @@ export function ManagerPendingApprovals() {
                 ×
               </button>
             </header>
-            <div className={filterStyles.directorReviewLayout}>
-              <div className={styles.detailBody}>
+            <div
+              className={`${filterStyles.directorReviewLayout} ${
+                activeReview.type === "CA"
+                  ? filterStyles.cashAdvancePreviewLayout
+                  : ""
+              }`}
+            >
+              <div
+                className={`${styles.detailBody} ${
+                  activeReview.type === "CA"
+                    ? filterStyles.cashAdvancePreviewBody
+                    : ""
+                }`}
+              >
                 {activeReview.voucher ? (
                   <>
                     <section>
@@ -1083,7 +1054,83 @@ export function ManagerPendingApprovals() {
                     </section>
                   </>
                 ) : (
-                  <>
+                  activeReview.type === "CA" ? (
+                    <section className={filterStyles.cashAdvanceUnifiedCard}>
+                      <div className={filterStyles.cashAdvanceOverview}>
+                        <h3>Request overview</h3>
+                        <dl>
+                          <div>
+                            <dt>Requester</dt>
+                            <dd>{activeReview.requester}</dd>
+                          </div>
+                          <div>
+                            <dt>Position</dt>
+                            <dd>{activeReview.requesterRole ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt>Date</dt>
+                            <dd>{date(activeReview.submittedAt)}</dd>
+                          </div>
+                          <div>
+                            <dt>Programme / project</dt>
+                            <dd>{activeReview.programme}</dd>
+                          </div>
+                          <div>
+                            <dt>Entries</dt>
+                            <dd>{activeReview.lines.length}</dd>
+                          </div>
+                          <div>
+                            <dt>Total</dt>
+                            <dd>{money(activeReview.amount)}</dd>
+                          </div>
+                        </dl>
+                      </div>
+                      <div className={filterStyles.cashAdvancePurpose}>
+                        <h3>Purpose</h3>
+                        <p>
+                          {activeReview.details.find(
+                            (item) => item.label === "Purpose",
+                          )?.value ?? "—"}
+                        </p>
+                      </div>
+                      <div className={filterStyles.cashAdvanceBreakdown}>
+                        <div className={filterStyles.cashAdvanceSectionTitle}>
+                          <h3>Request breakdown</h3>
+                          <span>
+                            {activeReview.lines.length}{" "}
+                            {activeReview.lines.length === 1
+                              ? "entry"
+                              : "entries"}
+                          </span>
+                        </div>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Item</th>
+                              <th>Details</th>
+                              <th>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeReview.lines.map((line, index) => (
+                              <tr key={`${line.label}-${index}`}>
+                                <td>{index + 1}</td>
+                                <td>{line.label}</td>
+                                <td>{line.description}</td>
+                                <td>
+                                  {line.amount === undefined
+                                    ? "—"
+                                    : money(line.amount)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  ) : (
+                    <>
                     <section>
                       <h3>Request overview</h3>
                       <dl>
@@ -1146,7 +1193,8 @@ export function ManagerPendingApprovals() {
                         </tbody>
                       </table>
                     </section>
-                  </>
+                    </>
+                  )
                 )}
                 {activeReview.documents.length > 0 && (
                   <section>
@@ -1169,16 +1217,36 @@ export function ManagerPendingApprovals() {
                 )}
               </div>
               <aside className={filterStyles.directorActionRail}>
+                {activeReview.type === "CA" && !signature && (
+                  <section
+                    className={filterStyles.signatureRequiredCard}
+                    role="alert"
+                  >
+                    <p>
+                      <i /> Action required
+                    </p>
+                    <h3>Upload your signature</h3>
+                    <span>
+                      Your signature is not set yet. Add it in Settings before
+                      approving this Cash Advance.
+                    </span>
+                    <Link href="/beta/settings/signature">Go to Settings</Link>
+                  </section>
+                )}
                 <section className={filterStyles.directorActionCard}>
                   <p>Manager action</p>
                   <h3>
-                    {activeReview.type === "INV" || activeReview.type === "TA"
+                    {activeReview.type === "INV"
                       ? "Review and forward"
-                      : "Optional preview"}
+                      : activeReview.type === "CA"
+                        ? "Sign and forward"
+                        : "Optional preview"}
                   </h3>
                   <span>
-                    {activeReview.type === "INV" || activeReview.type === "TA"
+                    {activeReview.type === "INV"
                       ? "Review the request details and supporting documents before forwarding it to the next stage."
+                      : activeReview.type === "CA"
+                        ? "Review the request and attach your saved signature before forwarding it to the Director."
                       : "This preview is informational. The request can continue through its workflow even if it is not opened here."}
                   </span>
                   <button
@@ -1186,7 +1254,8 @@ export function ManagerPendingApprovals() {
                     disabled={
                       saving ||
                       activeReview.reviewed ||
-                      !activeReview.actionable
+                      !activeReview.actionable ||
+                      (activeReview.type === "CA" && !signature)
                     }
                     onClick={markReviewed}
                     type="button"
@@ -1195,9 +1264,10 @@ export function ManagerPendingApprovals() {
                       ? "Saving…"
                       : activeReview.reviewed || !activeReview.actionable
                         ? "Reviewed"
-                        : activeReview.type === "INV" ||
-                            activeReview.type === "TA"
+                        : activeReview.type === "INV"
                           ? "Review and continue"
+                          : activeReview.type === "CA"
+                            ? "Sign and forward"
                           : "Mark as previewed"}
                   </button>
                 </section>

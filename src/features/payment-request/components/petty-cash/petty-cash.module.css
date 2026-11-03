@@ -4359,6 +4359,330 @@
   white-space: normal;
 }
 
+/* Requester reconciliation: compact two-column workflow matching the clean review prototype. */
+.reconciliationPage {
+  gap: 18px;
+}
+
+.reconciliationHero {
+  border: 1px solid #d7e2ef;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.reconciliationLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.reconciliationFormCard,
+.reconciliationContextCard {
+  border: 1px solid #d7e2ef;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(15 39 71 / 5%);
+}
+
+.reconciliationFormCard {
+  padding: 24px;
+}
+
+.reconciliationFormHeader {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e4ebf3;
+}
+
+.reconciliationFormHeader p,
+.reconciliationFormHeader h2,
+.reconciliationFormHeader span {
+  margin: 0;
+}
+
+.reconciliationFormHeader p {
+  margin-bottom: 6px;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reconciliationFormHeader h2 {
+  color: #102a4c;
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+.reconciliationFormHeader span {
+  display: block;
+  margin-top: 6px;
+  color: #6b7f99;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.reconciliationEquation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.reconciliationEquation label {
+  display: grid;
+  gap: 6px;
+  min-height: 76px;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #d8e3ef;
+  border-radius: 10px;
+  color: #657a96;
+  background: #f6f9fc;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.reconciliationEquation label:has(input) {
+  border-color: #7aa7ff;
+  background: #fff;
+}
+
+.reconciliationEquation strong {
+  color: #153a66;
+  font-size: 19px;
+}
+
+.reconciliationEquation input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #153a66;
+  background: transparent;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.reconciliationEquation i {
+  color: #7c8ea6;
+  font-size: 18px;
+  font-style: normal;
+}
+
+.reconciliationUpload {
+  display: block;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px dashed #b9cce2;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.reconciliationUpload input {
+  display: block;
+  width: 100%;
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #526987;
+  font-size: 11px;
+}
+
+.reconciliationUpload input::file-selector-button {
+  margin-right: 12px;
+  padding: 9px 13px;
+  border: 1px solid #bfd2e8;
+  border-radius: 8px;
+  color: #173a64;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reconciliationUpload input::file-selector-button:hover {
+  border-color: #173f70;
+  background: #f4f8fd;
+}
+
+.balancePanel {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.balancePanelHeading,
+.balanceProofField {
+  grid-column: 1 / -1;
+}
+
+.balancePanelHeading h3 {
+  color: #765500;
+  font-size: 15px;
+}
+
+.reconciliationSubmit {
+  display: flex;
+  min-width: 240px;
+  min-height: 46px;
+  margin: 20px 0 0 auto;
+  border-radius: 9px;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.reconciliationContextCard {
+  overflow: hidden;
+}
+
+.reconciliationContextSection {
+  padding: 22px;
+  border-bottom: 1px solid #e4ebf3;
+}
+
+.reconciliationContextSection h2 {
+  margin: 0 0 17px;
+  color: #102a4c;
+  font-size: 16px;
+}
+
+.reconciliationContextGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px 22px;
+  margin: 0;
+}
+
+.reconciliationContextGrid dt {
+  margin-bottom: 4px;
+  color: #7186a1;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.reconciliationContextGrid dd {
+  margin: 0;
+  color: #102a4c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reconciliationTableWrap {
+  overflow-x: auto;
+  border: 1px solid #dce6f1;
+  border-radius: 10px 10px 0 0;
+}
+
+.reconciliationTable {
+  width: 100%;
+  border-collapse: collapse;
+  color: #203b5f;
+  font-size: 10px;
+}
+
+.reconciliationTable th,
+.reconciliationTable td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #e5ebf2;
+  text-align: left;
+  vertical-align: top;
+}
+
+.reconciliationTable th {
+  color: #647995;
+  background: #f5f8fc;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reconciliationTable td:last-child,
+.reconciliationTable th:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.reconciliationTable td small {
+  display: block;
+  margin-top: 3px;
+  color: #7c8ea6;
+  font-size: 8px;
+}
+
+.reconciliationContextTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #dce6f1;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  color: #526987;
+  font-size: 10px;
+}
+
+.reconciliationContextTotal strong {
+  color: #102a4c;
+  font-size: 16px;
+}
+
+.reconciliationProofLink {
+  display: inline-flex;
+  margin-top: 15px;
+  color: #1763cf;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.reconciliationContextCard .progressPanel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 1000px) {
+  .reconciliationLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+
+  .reconciliationFormCard,
+  .reconciliationContextSection {
+    padding: 18px;
+  }
+
+  .reconciliationEquation {
+    grid-template-columns: 1fr;
+  }
+
+  .reconciliationEquation i {
+    display: none;
+  }
+
+  .balancePanel,
+  .reconciliationContextGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .reconciliationSubmit {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 .recordsPage .queueTable th:nth-child(3),
 .recordsPage .queueTable td:nth-child(3) {
   width: 64px;

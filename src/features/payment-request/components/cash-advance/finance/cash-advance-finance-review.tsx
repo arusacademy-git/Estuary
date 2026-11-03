@@ -132,6 +132,8 @@ export function CashAdvanceFinanceReview({
             : "Finance",
         );
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "The Finance action failed.",
@@ -198,7 +200,7 @@ export function CashAdvanceFinanceReview({
     actions = (
       <section className={styles.sideCard}>
         <h3>Upload payment receipt</h3>
-        <p className={styles.muted}>The payment is recorded. Add its transaction proof to release the Cash Advance for requester reconciliation.</p>
+        <p className={styles.muted}>The payment is recorded. Upload its transaction proof; the request will remain in the Finance queue for release.</p>
         {error && <div className={styles.error}>{error}</div>}
         <div className={styles.uploadProofBox}>
           <label htmlFor={`cash-proof-${record.id}`}>Choose File</label>
@@ -212,7 +214,18 @@ export function CashAdvanceFinanceReview({
           <small>PDF, JPG or PNG · maximum 2.5 MB</small>
         </div>
         <button className={styles.primary} disabled={saving || !transactionProof} onClick={() => act("pay")} type="button">
-          Upload receipt and continue →
+          Upload transaction proof →
+        </button>
+      </section>
+    );
+  if (record.status === "TRANSACTION_PROOF_UPLOADED")
+    actions = (
+      <section className={styles.sideCard}>
+        <h3>Release for reconciliation</h3>
+        <p className={styles.muted}>The Finance transaction proof is stored. Release the request to the requester to report actual spending and any returned balance.</p>
+        {error && <div className={styles.error}>{error}</div>}
+        <button className={styles.primary} disabled={saving} onClick={() => act("pay")} type="button">
+          Release to requester reconciliation →
         </button>
       </section>
     );

@@ -22,6 +22,8 @@ import {
 } from "@/domain/payment-requests/petty-cash/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
 import { notifyPettyCashSubmitted } from "@/features/payment-request/notifications/petty-cash-notifications";
+import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
+import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import styles from "../petty-cash.module.css";
 import { PettyCashConfirmation } from "./petty-cash-confirmation";
@@ -74,6 +76,7 @@ export function PettyCashForm({
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [draftSaved, setDraftSaved] = useState(false);
   const [created, setCreated] = useState<PettyCashRecord | null>(null);
   const [stage, setStage] = useState<"FORM" | "REVIEW">("FORM");
 
@@ -207,6 +210,15 @@ export function PettyCashForm({
       setSaving(false);
     }
   }
+
+  if (draftSaved)
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-requests/petty-cash/new"
+        paymentType="PETTY_CASH"
+        recordsHref="/beta/payment-records/petty-cash?scope=mine"
+      />
+    );
 
   if (created)
     return (
@@ -612,6 +624,7 @@ export function PettyCashForm({
               onClick={() =>
                 draft
                   .saveDraft()
+                  .then(() => setDraftSaved(true))
                   .catch((caught) =>
                     setError(
                       caught instanceof Error
@@ -631,11 +644,7 @@ export function PettyCashForm({
               Continue to review →
             </button>
           </div>
-          {draft.draftMessage && (
-            <small className={styles.draftMessage} role="status">
-              {draft.draftMessage}
-            </small>
-          )}
+          <ManualDraftStatus message={draft.draftMessage} />
         </section>
       </form>
     </main>

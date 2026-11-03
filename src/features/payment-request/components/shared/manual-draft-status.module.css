@@ -1,0 +1,66 @@
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    min-height: 34px;
+    padding: 7px 13px;
+    border: 1px solid #dbe5f0;
+    border-radius: 999px;
+    color: #526a88;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.25
+}
+
+.pill i {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    border: 1.5px solid #7890ad;
+    border-radius: 50%
+}
+
+.pill i::before,
+.pill i::after {
+    position: absolute;
+    left: 6px;
+    width: 1.5px;
+    border-radius: 1px;
+    background: #7890ad;
+    transform-origin: bottom center;
+    content: ""
+}
+
+.pill i::before {
+    top: 3px;
+    height: 4px
+}
+
+.pill i::after {
+    top: 6px;
+    height: 3px;
+    transform: rotate(125deg)
+}
+
+.pill[data-saved="true"] i {
+    border: 0
+}
+
+.pill[data-saved="true"] i::before {
+    top: 2px;
+    left: 3px;
+    width: 8px;
+    height: 5px;
+    border: solid #0aa46e;
+    border-width: 0 0 1.5px 1.5px;
+    border-radius: 0;
+    background: transparent;
+    transform: rotate(-45deg)
+}
+
+.pill[data-saved="true"] i::after {
+    display: none
+}

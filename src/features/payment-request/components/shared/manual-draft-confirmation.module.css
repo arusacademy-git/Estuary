@@ -1,0 +1,196 @@
+.page {
+    display: grid;
+    min-height: 62vh;
+    place-items: start center;
+    padding: 32px 20px;
+    color: #102a4c;
+}
+
+.card {
+    width: min(100%, 560px);
+    padding: 30px 32px;
+    border: 1px solid #d7e2f0;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 10px 26px rgb(16 42 76 / 7%);
+    text-align: center;
+}
+
+.successIcon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 16px;
+    place-items: center;
+    border: 8px solid #dcfce7;
+    border-radius: 50%;
+    background: #10b981;
+    color: #fff;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.typeLine {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #526987;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.typeBadge {
+    display: inline-grid;
+    min-width: 26px;
+    height: 18px;
+    padding: 0 7px;
+    place-items: center;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: #000;
+    color: #fff;
+    font-size: 10px;
+    letter-spacing: 0;
+}
+
+.paymentVoucherBadge {
+    background: #07456b;
+}
+
+.invoiceBadge {
+    background: #0c6f50;
+}
+
+.travelBadge {
+    background: #f29221;
+}
+
+.cashAdvanceBadge {
+    background: #db224a;
+}
+
+.claimBadge {
+    background: #000;
+}
+
+.pettyCashBadge {
+    border-color: #07456b;
+    background: #fff;
+    color: #07456b;
+}
+
+.card h1 {
+    margin: 0;
+    font-size: clamp(25px, 4vw, 38px);
+    line-height: 1.15;
+}
+
+.intro {
+    margin: 12px auto 18px;
+    color: #637895;
+    line-height: 1.55;
+}
+
+.summary {
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid #d7e2f0;
+    border-radius: 12px;
+    background: #f7faff;
+    text-align: left;
+}
+
+.summary div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 16px;
+}
+
+.summary div+div {
+    border-top: 1px solid #dfe7f2;
+}
+
+.summary dt {
+    color: #6c809b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.summary dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.status {
+    display: inline-flex;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #e8eef6;
+    color: #425b7c;
+    font-weight: 600;
+}
+
+.note {
+    margin: 18px 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f6f8fb;
+    color: #637895;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.secondaryButton,
+.primaryButton {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: 1px solid #173b68;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.secondaryButton {
+    background: #fff;
+    color: #173b68;
+}
+
+.primaryButton {
+    background: #173b68;
+    color: #fff;
+}
+
+@media (max-width: 620px) {
+    .card {
+        padding: 24px 18px;
+    }
+
+    .summary div {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+}
