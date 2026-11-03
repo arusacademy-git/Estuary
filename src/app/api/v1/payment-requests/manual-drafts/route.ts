@@ -27,6 +27,7 @@ export async function GET(request: Request) {
   const parsed = z
     .object({
       paymentType: paymentType.optional(),
+      id: z.string().min(1).optional(),
       organizationId: z.string().min(1),
       requesterId: z.string().min(1),
     })
@@ -53,6 +54,7 @@ export async function GET(request: Request) {
         parsed.data.paymentType,
         parsed.data.organizationId,
         parsed.data.requesterId,
+        parsed.data.id,
       ),
     );
   } catch (error) {
@@ -66,6 +68,7 @@ export async function POST(request: Request) {
       organizationId: z.string().min(1),
       requesterId: z.string().min(1),
       paymentType,
+      id: z.string().min(1).optional(),
       snapshot: z.unknown(),
     })
     .safeParse(await request.json().catch(() => null));
