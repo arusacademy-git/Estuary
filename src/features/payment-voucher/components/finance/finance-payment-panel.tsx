@@ -17,10 +17,7 @@ import {
   notifyStaffPvInactive,
   notifyStaffSignedPvReturned,
 } from "@/features/payment-voucher/notifications/payment-voucher-notifications";
-import {
-  downloadPaymentVoucherPdf,
-  previewPaymentVoucherPdf,
-} from "@/features/payment-voucher/pdf/download-payment-voucher-pdf";
+import { previewPaymentVoucherPdf } from "@/features/payment-voucher/pdf/download-payment-voucher-pdf";
 import { betaAccounts, type BetaAccount } from "@/lib/auth/beta-accounts";
 
 import styles from "./finance-payment.module.css";
@@ -69,6 +66,7 @@ export function FinanceProcessingPanel({
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [returnRemarks, setReturnRemarks] = useState("");
   const [signedPvPreviewed, setSignedPvPreviewed] = useState(false);
+  const [showSignedPvPreview, setShowSignedPvPreview] = useState(false);
 
   const isGenerationStage = [
     "APPROVED_FOR_PAYMENT",
@@ -264,6 +262,14 @@ export function FinanceProcessingPanel({
   }
 
   async function previewSignedPaymentVoucher() {
+    if (voucher.signedPvDataUrl) {
+      setSignedPvPreviewed(true);
+      setShowSignedPvPreview(true);
+      setMessage("Signed PV opened for Finance verification.");
+      setError("");
+      return;
+    }
+
     setProcessing(true);
     setMessage("");
     setError("");
@@ -283,29 +289,17 @@ export function FinanceProcessingPanel({
     }
   }
 
-  async function downloadSignedPaymentVoucher() {
-    setProcessing(true);
-    setMessage("");
-    setError("");
-
-    try {
-      if (voucher.signedPvDataUrl) {
-        const link = document.createElement("a");
-        link.href = voucher.signedPvDataUrl;
-        link.download = voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`;
-        link.click();
-      } else {
-        await downloadPaymentVoucherPdf(voucher);
-      }
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "The signed Payment Voucher could not be downloaded.",
-      );
-    } finally {
-      setProcessing(false);
+  function downloadSignedPaymentVoucher() {
+    if (!voucher.signedPvDataUrl) {
+      void previewSignedPaymentVoucher();
+      return;
     }
+
+    const link = document.createElement("a");
+    link.href = voucher.signedPvDataUrl;
+    link.download =
+      voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`;
+    link.click();
   }
 
   return (
@@ -451,25 +445,33 @@ export function FinanceProcessingPanel({
               <div>
                 <dt>Signed PV</dt>
                 <dd>
-                  <button
-                    className={styles.signedPvLink}
-                    disabled={processing}
-                    onClick={previewSignedPaymentVoucher}
-                    type="button"
-                  >
-                    {voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`}
-                  </button>
+                  <span className={styles.signedPvActions}>
+                    <button
+                      className={styles.signedPvLink}
+                      disabled={processing}
+                      onClick={downloadSignedPaymentVoucher}
+                      type="button"
+                    >
+                      {voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`}
+                    </button>
+                    <button
+                      className={styles.previewSignedPvButton}
+                      disabled={processing}
+                      onClick={previewSignedPaymentVoucher}
+                      type="button"
+                    >
+                      Preview
+                    </button>
+                  </span>
                 </dd>
               </div>
               <div><dt>Payment reference</dt><dd>{voucher.voucherNumber}</dd></div>
             </dl>
 
-            <button className={styles.downloadButton} disabled={processing} onClick={downloadSignedPaymentVoucher} type="button">
-              Download signed PV
-            </button>
-
-            <label>
-              <span>Payment transaction proof *</span>
+            <label className={styles.transactionProofUpload}>
+              <span>
+                Payment transaction proof <b>*</b>
+              </span>
               <input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => selectTransactionProof(event.target.files?.[0])} type="file" />
               <small>{transactionProof?.name || "PDF, JPG or PNG · maximum 10 MB"}</small>
             </label>
@@ -552,13 +554,48 @@ export function FinanceProcessingPanel({
           </strong>
           <p>
             {isFinalVerification
-              ? "Download and verify the signed PV, upload the transaction proof, then archive and lock the completed record in Payment Records."
+              ? "Open and verify the signed PV, upload the transaction proof, then archive and lock the completed record in Payment Records."
               : isWaitingForSignature
                 ? "The requester sends the PV to the recipient. After the recipient signs it, the requester confirms the signed PV and sends it back to Finance."
                 : "Record the payment and generate the Payment Voucher for requester delivery and recipient signing."}
           </p>
         </section>
       </aside>
+      {showSignedPvPreview && voucher.signedPvDataUrl && (
+        <div
+          className={styles.signedPvPreviewBackdrop}
+          onClick={() => setShowSignedPvPreview(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="signed-pv-preview-title"
+            aria-modal="true"
+            className={styles.signedPvPreviewModal}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <header>
+              <div>
+                <span>Signed Payment Voucher</span>
+                <h3 id="signed-pv-preview-title">
+                  {voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`}
+                </h3>
+              </div>
+              <button
+                aria-label="Close signed PV preview"
+                onClick={() => setShowSignedPvPreview(false)}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+            <iframe
+              src={voucher.signedPvDataUrl}
+              title={`Signed Payment Voucher ${voucher.voucherNumber}`}
+            />
+          </section>
+        </div>
+      )}
     </div>
   );
 }

@@ -110,12 +110,17 @@ export function PaymentVoucherCreateFlow({
 
       if (!isAmendment) {
         try {
-          const savedDraft = await fetchManualFormDraft(
-            "PAYMENT_VOUCHER",
-            submittedVoucher.organizationId,
-            submittedVoucher.submitterId,
-            new URLSearchParams(window.location.search).get("draftId") || undefined,
-          );
+          const requestedDraftId = new URLSearchParams(
+            window.location.search,
+          ).get("draftId");
+          const savedDraft = requestedDraftId
+            ? await fetchManualFormDraft(
+                "PAYMENT_VOUCHER",
+                submittedVoucher.organizationId,
+                submittedVoucher.submitterId,
+                requestedDraftId,
+              )
+            : null;
           if (savedDraft) {
             await deleteManualFormDraft(
               savedDraft.id,

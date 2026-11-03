@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useEffect,
   useState,
 } from 'react';
 
@@ -23,6 +24,11 @@ import {
   createPaymentVoucher,
   submitDraftPaymentVoucher,
 } from '@/data/payment-vouchers/payment-voucher-api';
+import {
+  deleteManualFormDraft,
+  fetchManualFormDraft,
+  saveManualFormDraft,
+} from '@/data/payment-requests/manual-drafts/api';
 
 import {
   convertBulkRowToCreatePaymentVoucherInput,
@@ -60,38 +66,12 @@ type BulkStep =
   | 'preview'
   | 'success';
 
-const BULK_REQUEST_SIZE = 4;
-
-type BatchProgress = {
-  completed: number;
-  total: number;
+type BulkPaymentVoucherDraftSnapshot = {
+  creationMode: 'multiple';
+  entryMode: BulkEntryMode;
+  manualRows?: BulkPaymentVoucherRow[];
+  rows?: BulkPaymentVoucherRow[];
 };
-
-async function settleInBatches<TItem, TResult>(
-  items: TItem[],
-  worker: (item: TItem) => Promise<TResult>,
-  onProgress: (completed: number) => void,
-) {
-  const succeeded: TResult[] = [];
-  const failed: TItem[] = [];
-
-  for (let index = 0; index < items.length; index += BULK_REQUEST_SIZE) {
-    const batch = items.slice(index, index + BULK_REQUEST_SIZE);
-    const results = await Promise.allSettled(batch.map(worker));
-
-    results.forEach((result, resultIndex) => {
-      if (result.status === 'fulfilled') {
-        succeeded.push(result.value);
-      } else {
-        failed.push(batch[resultIndex]);
-      }
-    });
-
-    onProgress(Math.min(index + batch.length, items.length));
-  }
-
-  return { failed, succeeded };
-}
 
 function formatCurrency(
   amount: number,
@@ -107,6 +87,30 @@ function formatCurrency(
 
 export function BulkPaymentVoucherCreateFlow() {
   const router = useRouter();
+  const [account] = useState(() => readBetaSession());
+
+  useEffect(() => {
+    if (!account) return;
+    const parameters = new URLSearchParams(window.location.search);
+    if (parameters.get('draft') !== '1') return;
+    let cancelled = false;
+    fetchManualFormDraft<BulkPaymentVoucherDraftSnapshot>(
+      'PAYMENT_VOUCHER',
+      'beta-arus-org',
+      account.id,
+    ).then((savedDraft) => {
+      if (cancelled || !savedDraft) return;
+      const savedRows = savedDraft.snapshot.manualRows ?? savedDraft.snapshot.rows;
+      if (savedRows?.length) setManualRows(savedRows.map((row) => ({ ...row })));
+      setEntryMode(savedDraft.snapshot.entryMode ?? 'manual');
+      setCurrentStep('entry');
+    }).catch(() => {
+      // The entry form remains available when a saved draft cannot be restored.
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [account]);
 
   const [
     entryMode,
@@ -163,26 +167,6 @@ export function BulkPaymentVoucherCreateFlow() {
   ] = useState(false);
 
   const [
-    isCreatingDrafts,
-    setIsCreatingDrafts,
-  ] = useState(false);
-
-  const [
-    creationProgress,
-    setCreationProgress,
-  ] = useState<BatchProgress | null>(null);
-
-  const [
-    submissionProgress,
-    setSubmissionProgress,
-  ] = useState<BatchProgress | null>(null);
-
-  const [
-    failedCreationRows,
-    setFailedCreationRows,
-  ] = useState<BulkPaymentVoucherRow[]>([]);
-
-  const [
     submissionMessage,
     setSubmissionMessage,
   ] = useState('');
@@ -218,11 +202,7 @@ export function BulkPaymentVoucherCreateFlow() {
   async function handleCreateDrafts(
     selectedRows:
       BulkPaymentVoucherRow[],
-    appendToExisting = false,
   ) {
-    const account =
-      readBetaSession();
-
     if (
       !account ||
       !['staff', 'manager', 'finance'].includes(account.role)
@@ -244,75 +224,114 @@ export function BulkPaymentVoucherCreateFlow() {
      * Validate and convert all selected rows
      * before saving anything.
      */
-    const creationJobs = selectedRows.map((row) => ({
-      input: convertBulkRowToCreatePaymentVoucherInput(row, account.id),
-      row,
-    }));
-
-    setIsCreatingDrafts(true);
-    setCreationProgress({ completed: 0, total: creationJobs.length });
-    setSubmissionMessage('');
-    setSubmissionError('');
-
-    try {
-      const { failed, succeeded } = await settleInBatches(
-        creationJobs,
-        async ({ input }) => createPaymentVoucher(input, false),
-        (completed) => setCreationProgress({ completed, total: creationJobs.length }),
+    const voucherInputs =
+      selectedRows.map((row) =>
+        convertBulkRowToCreatePaymentVoucherInput(
+          row,
+          account.id,
+        ),
       );
 
-      const failedRows = failed.map(({ row }) => row);
-      setFailedCreationRows(failedRows);
+    const newVouchers:
+      PaymentVoucherRecord[] = [];
 
-      if (!succeeded.length && !appendToExisting) {
-        throw new Error('None of the draft Payment Vouchers could be created. Please retry.');
+    for (
+      const voucherInput
+      of voucherInputs
+    ) {
+      /*
+       * Bulk preview confirmation is a real submission.
+       * Draft batches are stored separately in PaymentRequestDraft.
+       */
+      const createdVoucher =
+        await createPaymentVoucher(
+          voucherInput,
+          true,
+        );
+
+      newVouchers.push(
+        createdVoucher,
+      );
+
+      try {
+        createLocalNotification({
+          recipientId: createdVoucher.directorId,
+          actorId: account.id,
+          type: 'PAYMENT_VOUCHER_SUBMITTED',
+          entityType: 'PAYMENT_VOUCHER',
+          entityId: createdVoucher.id,
+          referenceNumber: createdVoucher.voucherNumber,
+          title: 'Payment Voucher requires approval',
+          message: `${createdVoucher.voucherNumber} was submitted by ${account.name} and requires your approval.`,
+          href: `/beta/payment-vouchers/${createdVoucher.id}`,
+        });
+      } catch (notificationError) {
+        console.error(
+          'The Payment Voucher was submitted, but the Director notification could not be created.',
+          notificationError,
+        );
       }
+    }
 
-      setCreatedVouchers((current) => appendToExisting
-        ? [...current, ...succeeded]
-        : succeeded);
+    try {
+      const savedDraft = await fetchManualFormDraft(
+        'PAYMENT_VOUCHER',
+        'beta-arus-org',
+        account.id,
+      );
+      if (savedDraft) {
+        await deleteManualFormDraft(
+          savedDraft.id,
+          'beta-arus-org',
+          account.id,
+        );
+        window.dispatchEvent(new Event('estuary:action-counts-changed'));
+      }
+    } catch (draftCleanupError) {
+      console.error(
+        'The vouchers were submitted, but the saved batch draft could not be removed.',
+        draftCleanupError,
+      );
+    }
+
+    setCreatedVouchers(
+      newVouchers,
+    );
 
     /*
-     * Select all newly created drafts by
-     * default for convenient bulk submission.
+     * Submitted vouchers are no longer represented as drafts.
      */
-      setSelectedDraftIds((current) => appendToExisting
-        ? [...current, ...succeeded.map((voucher) => voucher.id)]
-        : succeeded.map((voucher) => voucher.id));
+    setSelectedDraftIds(
+      [],
+    );
 
-      if (succeeded.length) {
-        setSubmissionMessage(
-          `${succeeded.length} draft ${succeeded.length === 1 ? 'was' : 'were'} created${failedRows.length ? `; ${failedRows.length} ${failedRows.length === 1 ? 'row needs' : 'rows need'} retrying.` : '.'}`,
-        );
-      }
+    setSubmissionMessage('');
+    setSubmissionError('');
+    setCurrentStep('success');
 
-      if (failedRows.length) {
-        setSubmissionError(
-          `${failedRows.length} ${failedRows.length === 1 ? 'draft could' : 'drafts could'} not be created. Retry only those rows below.`,
-        );
-      }
-
-      setCurrentStep('success');
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } finally {
-      setIsCreatingDrafts(false);
-      setCreationProgress(null);
-    }
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
   }
 
-  async function retryFailedDraftCreation() {
-    if (!failedCreationRows.length || isCreatingDrafts) return;
-
-    try {
-      await handleCreateDrafts(failedCreationRows, true);
-    } catch (error) {
-      setSubmissionError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to retry the failed Payment Vouchers.',
-      );
+  async function handleSaveBatchDraft(selectedRows: BulkPaymentVoucherRow[]) {
+    if (!account || !['staff', 'manager', 'finance'].includes(account.role)) {
+      throw new Error('Only Staff, Manager and Finance accounts can save Payment Voucher drafts.');
     }
+    await saveManualFormDraft({
+      organizationId: 'beta-arus-org',
+      requesterId: account.id,
+      paymentType: 'PAYMENT_VOUCHER',
+      snapshot: {
+        creationMode: 'multiple',
+        entryMode: previewSource,
+        manualRows: selectedRows.map((row) => ({ ...row })),
+        rows: selectedRows.map((row) => ({ ...row })),
+      },
+    });
+    window.dispatchEvent(new Event('estuary:action-counts-changed'));
+    router.push('/beta/payment-vouchers?scope=mine');
   }
 
   function toggleDraftSelection(
@@ -384,7 +403,7 @@ export function BulkPaymentVoucherCreateFlow() {
       createdVouchers.filter(
         (voucher) =>
           voucher.status ===
-          'DRAFT' &&
+            'DRAFT' &&
           selectedDraftIds.includes(
             voucher.id,
           ),
@@ -402,12 +421,14 @@ export function BulkPaymentVoucherCreateFlow() {
 
     const confirmed =
       window.confirm(
-        `Submit ${selectedVouchers.length} ${selectedVouchers.length === 1
-          ? 'Payment Voucher'
-          : 'Payment Vouchers'
-        } to the assigned ${selectedVouchers.length === 1
-          ? 'Director'
-          : 'Directors'
+        `Submit ${selectedVouchers.length} ${
+          selectedVouchers.length === 1
+            ? 'Payment Voucher'
+            : 'Payment Vouchers'
+        } to the assigned ${
+          selectedVouchers.length === 1
+            ? 'Director'
+            : 'Directors'
         }?`,
       );
 
@@ -420,19 +441,26 @@ export function BulkPaymentVoucherCreateFlow() {
     setSubmissionError('');
 
     try {
-      setSubmissionProgress({ completed: 0, total: selectedVouchers.length });
+      const submittedById =
+        new Map<
+          string,
+          PaymentVoucherRecord
+        >();
 
-      const { failed, succeeded } = await settleInBatches(
-        selectedVouchers,
-        async (voucher) => submitDraftPaymentVoucher(voucher.id, account.id),
-        (completed) => setSubmissionProgress({ completed, total: selectedVouchers.length }),
-      );
+      for (
+        const voucher
+        of selectedVouchers
+      ) {
+        const submittedVoucher =
+          await submitDraftPaymentVoucher(
+            voucher.id,
+            account.id,
+          );
 
-      const submittedById = new Map(
-        succeeded.map((voucher) => [voucher.id, voucher]),
-      );
-
-      for (const submittedVoucher of succeeded) {
+        submittedById.set(
+          submittedVoucher.id,
+          submittedVoucher,
+        );
 
         /*
          * Notify each assigned Director.
@@ -468,7 +496,7 @@ export function BulkPaymentVoucherCreateFlow() {
               `/beta/payment-vouchers/${submittedVoucher.id}`,
           });
         } catch (
-        notificationError
+          notificationError
         ) {
           console.error(
             'The Payment Voucher was submitted, but the Director notification could not be created.',
@@ -487,25 +515,19 @@ export function BulkPaymentVoucherCreateFlow() {
           ),
       );
 
-      setSelectedDraftIds(failed.map((voucher) => voucher.id));
+      setSelectedDraftIds([]);
 
-      if (succeeded.length) {
-        setSubmissionMessage(
-          `${succeeded.length} ${succeeded.length === 1
-          ? 'Payment Voucher was'
-          : 'Payment Vouchers were'
-        } submitted to the assigned ${succeeded.length === 1
-          ? 'Director'
-          : 'Directors'
+      setSubmissionMessage(
+        `${selectedVouchers.length} ${
+          selectedVouchers.length === 1
+            ? 'Payment Voucher was'
+            : 'Payment Vouchers were'
+        } submitted to the assigned ${
+          selectedVouchers.length === 1
+            ? 'Director'
+            : 'Directors'
         }.`,
-        );
-      }
-
-      if (failed.length) {
-        setSubmissionError(
-          `${failed.length} ${failed.length === 1 ? 'voucher was' : 'vouchers were'} not submitted. Only the failed records remain selected for retry.`,
-        );
-      }
+      );
     } catch (error) {
       setSubmissionError(
         error instanceof Error
@@ -513,7 +535,6 @@ export function BulkPaymentVoucherCreateFlow() {
           : 'Unable to submit the selected Payment Vouchers.',
       );
     } finally {
-      setSubmissionProgress(null);
       setIsSubmittingDrafts(
         false,
       );
@@ -529,9 +550,6 @@ export function BulkPaymentVoucherCreateFlow() {
 
     setCreatedVouchers([]);
     setSelectedDraftIds([]);
-    setFailedCreationRows([]);
-    setCreationProgress(null);
-    setSubmissionProgress(null);
 
     setSubmissionMessage('');
     setSubmissionError('');
@@ -560,11 +578,7 @@ export function BulkPaymentVoucherCreateFlow() {
           onConfirm={
             handleCreateDrafts
           }
-          progressLabel={
-            creationProgress
-              ? `Creating ${creationProgress.completed} of ${creationProgress.total} drafts…`
-              : undefined
-          }
+          onSaveDraft={handleSaveBatchDraft}
         />
       </div>
     );
@@ -637,24 +651,6 @@ export function BulkPaymentVoucherCreateFlow() {
             role="alert"
           >
             {submissionError}
-          </div>
-        )}
-
-        {failedCreationRows.length > 0 && (
-          <div className={styles.retryBar}>
-            <span>
-              {failedCreationRows.length} creation {failedCreationRows.length === 1 ? 'failure' : 'failures'} can be retried without duplicating successful drafts.
-            </span>
-            <button
-              className={styles.secondaryButton}
-              disabled={isCreatingDrafts}
-              onClick={retryFailedDraftCreation}
-              type="button"
-            >
-              {isCreatingDrafts && creationProgress
-                ? `Retrying ${creationProgress.completed} of ${creationProgress.total}…`
-                : `Retry failed (${failedCreationRows.length})`}
-            </button>
           </div>
         )}
 
@@ -917,7 +913,7 @@ export function BulkPaymentVoucherCreateFlow() {
               }
               disabled={
                 selectedDraftIds.length ===
-                0 ||
+                  0 ||
                 isSubmittingDrafts
               }
               onClick={
@@ -926,11 +922,9 @@ export function BulkPaymentVoucherCreateFlow() {
               type="button"
             >
               {isSubmittingDrafts
-                ? submissionProgress
-                  ? `Submitting ${submissionProgress.completed} of ${submissionProgress.total}…`
-                  : 'Submitting…'
+                ? 'Submitting…'
                 : remainingDrafts.length ===
-                  0
+                    0
                   ? 'All vouchers submitted'
                   : `Submit selected (${selectedDraftIds.length})`}
             </button>
