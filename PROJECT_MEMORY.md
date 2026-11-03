@@ -1,39 +1,153 @@
 ﻿# PROJECT_MEMORY.md
 
-## Durable Lessons
-- 2026-09-30: The Estuary server is the Penang Dell desktop converted to Ubuntu 24.04, reached from the project PC through NetBird with the `estuary-db` SSH alias as user `arusacademy`; administrative and Docker commands use `sudo`. PostgreSQL runs as the healthy `estuary-postgres` Docker container from `/opt/estuary-db`, on external network `estuary-db_default`, with persistent volume `estuary_postgres_data`. Do not substitute Lightsail assumptions when this local server is the deployment target.
-- 2026-08-16: Amount-in-words is derived financial data, not user input. Generate it from integer sen to avoid floating-point/decimal-string errors, keep the field read-only, and recalculate at persistence and PDF boundaries so a crafted API payload cannot create a numeric/text mismatch. Preserve Afiq's established Malay vocabulary, including `LIMABELAS`, `SATU RIBU`, and the full `RINGGIT MALAYSIA ... DAN SEN ... SAHAJA` wrapper.
-- 2026-08-16: A normal Payment Voucher represents one payment to one payee. Voucher lines separate purposes, occasions, GL codes, or projects; they do not represent different recipients. Optimize the composer for reimbursement by exposing Description + Amount, defaulting quantity to 1, and keeping quantity/unit-price/tax calculations optional. Receipt detail remains the supporting evidence rather than something users must re-enter line by line.
-- 2026-08-12: Before linking an established local repository to an existing GitHub repository, verify both ancestry (`git merge-base`) and tree layout. GitHub had an unrelated upload history with the project nested under `Work - Estuary/`, so a normal PR was impossible. The safe recovery is a one-time branch from GitHub `main` that moves the project to root and overlays the verified local tree; after merge, all new work should branch from the normalized remote `main`.
-- 2026-08-12: Local lock files do not coordinate contributors on different computers. For Estuary, use GitHub issues/assignees for scope ownership, separate branches for parallel work, and pull requests into protected `main` for integration. Keep `PROJECT_LOCK.md` non-blocking and compatibility-only.
-- 2026-08-12: A registered project path must resolve to the directory containing both `.git` and the canonical project-control documents. Registering a wrapper folder while the repository is nested one level deeper creates split lock truth: Ground Control reads the wrapper lock while code sessions read the repository lock. Verify both roots during registration and keep only one canonical `PROJECT_LOCK.md`.
-- 2026-03-28: Shared project-lock workspace template applied. Always read the control repo and `PROJECT_LOCK.md` before editing code.
-- 2026-04-14: During the doc-first phase, generate `prisma/schema.prisma` directly from `docs/SCHEMA.md` instead of retyping the schema by hand. This keeps implementation aligned with reviewed schema revisions and avoids silent drift.
-- 2026-04-14: If Playwright browsers are needed in this workspace, set `PLAYWRIGHT_BROWSERS_PATH=0` so browser downloads stay inside the project directory instead of writing to global cache paths.
-- 2026-04-15: Treat workflow copy, email wording, and even theme direction as configuration surfaces. David explicitly does not want hardcoded product copy or rigid visual constants that make later change expensive.
-- 2026-04-15: When David says "POC," verify whether he means a true browsable product surface. For Estuary, a single workbench screen was not enough; the prototype had to feel like a real routed app opened in the browser.
-- 2026-04-15: In this Dropbox-backed workspace, Next dev can hit transient `EPERM` rename failures inside `.estuary-next/dev/` during Playwright web-server startup even when the test ultimately passes. Treat it as a local file-lock quirk before assuming app-level breakage.
-- 2026-04-15: When real auth, SMTP, and storage are still absent, a local finance MVP can still prove the workflow by persisting state into project-local JSON, queuing email payloads into a local outbox folder, and exporting finished PDFs into a local runtime folder.
-- 2026-04-16: In multi-agent merges, write E2E integration tests for new route families with explicit skip conditions tied to route existence. This keeps CI truthful (module missing is visible) without breaking unrelated smoke while feature branches converge.
-- 2026-04-16: For this Dropbox-backed workspace, run Playwright against `pnpm build && pnpm start` instead of `next dev` when reliability matters; it avoids intermittent dev-manifest rename `EPERM` failures.
-- 2026-04-16: Payment-request create flow requires both `Title` and `Recipient name`; E2E tests must fill both required fields or navigation assertions will fail on client-side validation.
-- 2026-04-23: Historical rule: project close-out previously updated `PROJECT_LOCK.md`, `PROJECT_HISTORY.md`, and `AI_HANDOFF.md` together. Superseded for Estuary on 2026-08-12 by GitHub issue/branch/PR coordination; the lock is now compatibility-only.
-- 2026-07-06: Docker Desktop is not installed on this machine, but Prisma migrations can still be authored and truly verified without it: generate SQL offline with `prisma migrate diff --from-empty --to-schema-datamodel`, then run `prisma migrate deploy` against a throwaway instance from the `embedded-postgres` npm package in a scratch directory. No system install, no leftover state.
-- 2026-07-06: Multiple workspace projects compete for port 3000 (Layar's Next server commonly holds it). Estuary's Playwright config now reads `E2E_PORT`; run e2e with an off-default port instead of killing sibling servers.
+- 2026-10-21: Role action-queue Month and Exact date filters use the request submission/updated date consistently across Invoice Payment, Cash Advance, Travel Allowance, Claims and Petty Cash; they do not switch semantics to travel, claim or payment dates.
 
-## Known Failure Modes
-- Dropbox or other sync/file-lock activity may interfere with Next dev temp-file renames during automated browser runs.
+- Public Google Sheet imports can preserve clickable file smart-chip URLs without requiring an API key by combining CSV data with the sheet's public HTML and Visualization HTML representations. This requires “Anyone with the link can view”; an API key is only an optional metadata fallback and does not bypass private-file permissions.
+
+## Shared request UI patterns
+
+- Returned Staff edits for Invoice Payment, Travel Allowance, Claims, Cash
+  Advance and Petty Cash use the shared `CorrectionEditLayout`: form content on
+  the left, a red Action Required remarks card on the right, and a stacked
+  mobile fallback. New-request forms do not render the correction rail.
+- Page-level payment loading and unavailable states use `PaymentPageState` so
+  headings, explanatory copy and back navigation remain consistent across
+  payment types, including Payment Voucher.
+- Correction back links always return to the exact request detail route, not
+  the payment-type list, and remain visually un-underlined in all link states.
+
+## Durable Lessons
+
+- None recorded yet.
 
 ## Reusable Patterns
-- Use a seeded bootstrap vertical slice to prove `web` / `api` / `domain` / `data` boundaries before real business workflows are ready.
-- For local POCs, use a dummy-auth operator workbench plus config repositories to prove policy and workflow shape before real auth and persistence are wired.
-- If the user wants a convincing prototype quickly, keep config-driven business state underneath but move the surface into real app navigation early: dashboard, queue views, detail pages, and a shared shell read as "product" much faster than one oversized settings surface.
+
+- Claim form preview/download links use the stable human-facing Claim number
+  with the registered Claim endpoint: `/claims/<claim-number>?form=1` for inline
+  preview and `&download=1` for attachment delivery. The server repository may
+  accept both the Claim number and internal UUID, but UI and batch-download
+  links should not expose or depend on the UUID. Do not depend on the nested
+  `/claims/[id]/form` route because it may be absent from the running manifest.
 
 ## Decision Log
-- 2026-08-12: Estuary retired exclusive project locking in favor of GitHub-first team collaboration.
-- 2026-03-28: This repo adopted the unified multi-agent project-lock workspace structure; superseded for Estuary collaboration on 2026-08-12.
+
+- 2026-11-01: Do not display a role-wide aggregate `Waiting for...` total in Manager, Director or Finance queue heroes, the combined pending sidebar item, or dashboard KPI summaries while those surfaces derive action scope differently. Retain scoped per-payment-type counts and requester-owned My Requests badges because they remain useful navigation signals. Reintroduce a grand total only after every surface consumes one authoritative server-side count definition.
+- 2026-10-30: Private Claim uploads must not be written beneath the deployed application directory because hosts may mount `/app` read-only. Resolve local-private Claim storage from `ESTUARY_PRIVATE_STORAGE_ROOT`; use a writable persistent mount in deployed environments. An operating-system temp-directory fallback may prevent a request crash, but it is ephemeral and must not be treated as durable document storage.
+- 2026-10-30: Dashboard Next Action routing is requester-first, not role-first. When the signed-in user owns a draft, rejected/returned correction, PV confirmation/signature handoff, or reconciliation task, link to that payment type's My Requests record even if the requester is a Manager, Director, or Finance user. Only assigned review/approval/processing work links to the role's combined pending queue, using both `type` and `request` query parameters so the exact record opens.
+- 2026-10-30: Sidebar role queues and dashboard `Need your action` use different scopes because the dashboard may combine assigned role work with requester-owned My Requests work. Do not present either value as one authoritative aggregate; use scoped per-payment-type counts and descriptive guidance instead.
+- 2026-08-17: Adopted a lightweight, manual persistent-documentation scaffold without automation or enforcement.
+- 2026-09-14: Payment-record references are assigned once at creation using
+  `<TYPE PREFIX>-<YEAR>-<SEQUENCE>`. Payment types keep separate annual
+  sequences, and the next number is based on the highest stored sequence rather
+  than record count so deleted records do not cause reuse.
+- 2026-09-14: Travel Allowance replaces the editable Google Sheet link with
+  structured Estuary rows and a generated official form. Its intended workflow
+  is Staff submission, Project Director approval, Finance verification/payment,
+  then Completed; it does not use recipient signing.
+- 2026-09-14: Payment Request domain types are organized by payment type under
+  `<payment-type>/types.ts`. For the current local prototypes, each module also
+  owns and exports its supporting-document type to keep imports self-contained;
+  do not rebuild a single large `payment-requests/types.ts` file.
+- 2026-10-07: Petty Cash uses manual entry only. Its Google Sheet importer,
+  generated PDF, PDF route, template, Payment Records ZIP entries and ledger
+  form links were retired. Keep the normal request details and receipt/proof
+  links available throughout review, Finance processing and the ledger.
+- 2026-10-07: Petty Cash Manager and Director stages are informational previews,
+  not approval gates. Every new request enters Finance processing immediately;
+  assigned previewers still receive notifications and action counts, and their
+  completion timestamps are tracked independently. A Finance requester selects
+  a different Finance user, Manager or Director as the independent previewer.
+- 2026-09-22: The Beta dashboard uses one normalized cross-payment record model
+  and derives `Need your action` from the signed-in role. A failure in one
+  payment API must not hide records loaded successfully from other modules.
+  Claims now use their dedicated Prisma-backed repository and API. Sidebar
+  action counts, dashboard aggregation and Claims Payment Records all use that
+  API rather than the prototype endpoint.
+- 2026-09-23: Dashboard and sidebar action totals count only work owned by the
+  signed-in role. Waiting for a Manager, Director, recipient or Finance must not
+  be presented to Staff as a Staff action. Sidebar payment-type bubbles reuse
+  those role-specific status rules.
+- 2026-10-04: Staff uses the `My Requests` sidebar action badge for work owned
+  by the original requester across every payment type. Count Drafts, returned
+  corrections, PV recipient handoff/signature steps and Cash Advance
+  reconciliation there; keep approval and Finance-processing counts in their
+  role queues to avoid duplicate responsibility.
+- 2026-10-01: The original role-gated Petty Cash routing decision was superseded
+  on 2026-10-07 by direct Finance processing with non-blocking informational
+  previews. A Finance requester must still never preview their own request.
+- 2026-09-23: The compact right-rail rejection card applies to Payment Voucher
+  only. Keep the existing returned-request layouts for Invoice Payment, Travel
+  Allowance, Cash Advance and Petty Cash.
+- 2026-10-01: Claims routing depends on the claimant role: Staff, Manager and
+  Finance claims follow Claimant → Manager review → Director preview → Finance
+  processing → Completed. Director claims follow Director claimant → Finance
+  processing → Completed. A Finance claimant receives the claim back for the
+  Finance-processing stage after Manager and Director review. The Director
+  stage is a preview/forward action, while Finance records payment and closes
+  the Claim.
+  For a Finance claimant, the first reviewer is their selected Finance Manager;
+  the Finance claimant cannot review their own Claim. After Director preview,
+  Finance processing is assigned back to that original Finance claimant.
+- 2026-09-23: A saved Claim Draft is a real Prisma `Submission` in `DRAFT`
+  state with a stable CL reference. It must remain unassigned, must not create
+  approval steps or consume Medical/Tech policy allowance, and must transition
+  the same record/reference into the role workflow when submitted.
+- 2026-10-01: After Finance records a Payment Voucher payment, responsibility
+  for sending the voucher to the external recipient and confirming the signed
+  voucher belongs to the original requester, regardless of whether that
+  requester is Staff, Manager or Finance. Use requester identity plus active
+  organization membership; do not restrict these actions to the Staff role.
+- 2026-10-02: Payment Voucher creation, draft submission and rejected-request
+  resubmission are available to active Staff, Manager and Finance members.
+  Director is excluded so Director approval remains independent.
+- 2026-10-02: Petty Cash is a continuing float by location. Each month's
+  closing balance becomes the next month's opening balance, then the new RM500
+  allocation is added. Never reset `current_balance` to the monthly allocation.
+- 2026-10-02: `My Requests` counts requester-owned actions only. Keep approval,
+  preview and Finance-processing actions under their role queues so sidebar
+  counts do not duplicate the same responsibility.
+- 2026-10-01: Cash Advance reconciliation belongs to the original requester,
+  regardless of whether the requester is Staff, Manager, Director or Finance.
+  Finance payment assigns reconciliation back to `submitted_by_id`; submission
+  authorization uses requester identity plus active organization membership.
+  The approval and Finance-completion stages remain unchanged.
+- 2026-10-03: Completed-expenditure analytics is an organization-wide management
+  view shared by every Director and Finance user. Broaden only the chart dataset;
+  keep dashboard records, assigned-action counts and workflow queues role-scoped.
+
+## Known Failure Modes
+
+- None recorded yet.
 
 ## Do Not Repeat
-- Record recurring mistakes and how to avoid them.
-- Do not let `AI_HANDOFF.md` and `PROJECT_ROADMAP.md` lag behind the current schema version; stale version markers create false blockers.
-- Do not close out a session with feature work sitting uncommitted. The April payment-request module (~3,900 lines) sat as untracked files for 2.5 months across a lock release and reacquisition; `git status` must be clean (or intentionally documented) before release.
+
+- Do not describe advisory ownership notes as enforced locks or manual logs as generated lifecycle records.
+
+# Payment request reference formats
+
+- Payment Voucher keeps its existing reference format.
+- New Invoice Payment references use `IVYY-MM-NN`.
+- New Cash Advance references use `CAYY-MM-NN`.
+- New Travel Allowance references use `TAYY-MM-NN`.
+- New Claim references use `CL-MM-NN`; because the year is intentionally not
+  displayed, its per-month sequence must not reset each year or references can
+  collide.
+- New Petty Cash references use `PC-YY-NN` and reset their sequence each year.
+
+## Database-backed incomplete request drafts
+
+- Manual request drafts must persist through Prisma/PostgreSQL, not browser
+  `localStorage`, so a requester can continue work across sessions and devices.
+- Keep incomplete draft snapshots in the dedicated `PaymentRequestDraft` model
+  rather than `Submission`; approval queues and type-specific mappers must only
+  receive structurally complete submitted requests.
+- Claims retain their established Claims-specific Prisma draft path. The generic
+  draft model covers Payment Voucher, Petty Cash, Invoice Payment, Travel
+  Allowance and Cash Advance.
+# Finance payment proof is a separate persisted step
+
+- Travel Allowance and Cash Advance Finance processing must not require transaction proof when Finance first records a payment.
+- The first action validates the payment date/reference plus Finance confirmation and persists `PAYMENT_PROCESSED` while retaining Finance ownership.
+- The transaction-proof upload appears only in that state. Travel Allowance completes after upload; Cash Advance proceeds to requester reconciliation.
+- Any combined Finance queue, dashboard action predicate, or sidebar count must include `PAYMENT_PROCESSED`, otherwise a record disappears between the two Finance actions.
+
