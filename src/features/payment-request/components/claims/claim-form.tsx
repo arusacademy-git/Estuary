@@ -32,7 +32,21 @@ import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
 
 import { ClaimConfirmation } from "./claim-confirmation";
 import { ClaimGoogleSheet, type ClaimSheetData } from "./claim-google-sheet";
+import { ManualDraftConfirmation } from "../shared/manual-draft-confirmation";
+import { ManualDraftStatus } from "../shared/manual-draft-status";
+import { useManualFormDraft } from "../shared/use-manual-form-draft";
 import styles from "./claims.module.css";
+
+type ClaimDraftSnapshot = {
+  claimType: ClaimType;
+  claimDate: string;
+  contact: string;
+  directorId: string;
+  techExtended: boolean;
+  lines: ClaimLine[];
+  entryMode: "MANUAL" | "GOOGLE_SHEET";
+  notes: string;
+};
 
 const today = () =>
   new Date(Date.now() - new Date().getTimezoneOffset() * 60_000)
@@ -62,7 +76,8 @@ const RECEIPT_MAX_SIZE = 10 * 1024 * 1024;
 
 export function ClaimForm({
   initialRecord,
-}: { initialRecord?: ClaimRecord } = {}) {
+  resumeDraft = false,
+}: { initialRecord?: ClaimRecord; resumeDraft?: boolean } = {}) {
   const [account] = useState<ReturnType<typeof readBetaSession>>(() =>
     readBetaSession(),
   );
@@ -95,7 +110,41 @@ export function ClaimForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState<ClaimRecord | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [stage, setStage] = useState<"FORM" | "REVIEW">("FORM");
+
+  const draft = useManualFormDraft<ClaimDraftSnapshot>({
+    paymentType: "CLAIM",
+    requesterId: account?.id,
+    disabled: Boolean(initialRecord),
+    restoreOnLoad: resumeDraft,
+    getSnapshot: () => ({
+      claimType,
+      claimDate,
+      contact,
+      directorId,
+      techExtended,
+      lines: lines.map((line) => ({ ...line })),
+      entryMode,
+      notes,
+    }),
+    restoreSnapshot: (snapshot) => {
+      setClaimType(snapshot.claimType ?? "EXPENSE");
+      setClaimDate(snapshot.claimDate ?? today());
+      setContact(snapshot.contact ?? "");
+      setDirectorId(snapshot.directorId ?? "");
+      setTechExtended(Boolean(snapshot.techExtended));
+      setLines(
+        snapshot.lines?.length
+          ? snapshot.lines.map((line) => ({ ...line }))
+          : [makeLine()],
+      );
+      setEntryMode(snapshot.entryMode ?? "MANUAL");
+      setNotes(snapshot.notes ?? "");
+      setReceiptFiles({});
+      setConfirmed(false);
+    },
+  });
 
   useEffect(() => {
     if (!account) return;
@@ -278,6 +327,7 @@ export function ClaimForm({
         ? await submitClaimDraft(initialRecord.id, input, receiptFiles)
         : await createClaimRequest(input, receiptFiles);
       notifyClaimSubmitted(record, account);
+      if (!initialRecord) await draft.clearDraft();
       setCreated(record);
     } catch (caught) {
       setError(
@@ -295,12 +345,17 @@ export function ClaimForm({
     setSaving(true);
     setError("");
     try {
-      const record = await saveClaimDraft(
-        buildInput(account),
-        receiptFiles,
-        initialRecord?.id,
-      );
-      setCreated(record);
+      if (initialRecord) {
+        const record = await saveClaimDraft(
+          buildInput(account),
+          receiptFiles,
+          initialRecord.id,
+        );
+        setCreated(record);
+      } else {
+        await draft.saveDraft();
+        setDraftSaved(true);
+      }
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -311,6 +366,15 @@ export function ClaimForm({
       setSaving(false);
     }
   }
+
+  if (draftSaved)
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-requests/claims/new"
+        paymentType="CLAIM"
+        recordsHref="/beta/payment-records/claims?scope=mine"
+      />
+    );
 
   if (created)
     return (
@@ -400,12 +464,14 @@ export function ClaimForm({
     <div className={styles.page}>
       <header className={styles.hero}>
         <div>
-          <h1>New claim request</h1>
+          <h1>{resumeDraft ? "Continue Claim draft" : "New claim request"}</h1>
           <p>
-            Submit claims and itemized expenses with automatic policy checks.
+            {resumeDraft
+              ? "Review and complete your saved information before submitting it into the approval workflow."
+              : "Submit claims and itemized expenses with automatic policy checks."}
           </p>
         </div>
-        <span className={styles.heroPill}>Draft</span>
+        <span className={styles.heroPill}>{resumeDraft ? "Saved draft" : "Draft"}</span>
       </header>
       <nav className={styles.entryModeTabs} aria-label="Claim entry method">
         <button
@@ -730,6 +796,9 @@ export function ClaimForm({
             </section>
 
             <footer className={styles.submitSection}>
+              {!initialRecord && (
+                <ManualDraftStatus message={draft.draftMessage} />
+              )}
               <label className={styles.declaration}>
                 <input
                   checked={confirmed}
@@ -745,11 +814,11 @@ export function ClaimForm({
               <div className={styles.actions}>
                 <button
                   className={styles.draftButton}
-                  disabled={saving}
+                  disabled={saving || draft.isSavingDraft}
                   onClick={saveDraft}
                   type="button"
                 >
-                  {saving
+                  {saving || draft.isSavingDraft
                     ? "Saving…"
                     : initialRecord
                       ? "Save draft changes"

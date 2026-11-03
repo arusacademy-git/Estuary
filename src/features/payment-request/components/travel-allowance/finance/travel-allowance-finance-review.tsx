@@ -12,15 +12,12 @@ import {
   notifyTravelAllowanceCompleted,
   notifyTravelAllowanceReturned,
 } from "@/features/payment-request/notifications/travel-allowance-notifications";
-import {
-  TRAVEL_MEAL_RATES,
-  travelLineTotal,
-} from "@/domain/payment-requests/travel-allowance/types";
 import type { PaymentRequestDocument, TravelAllowanceRecord } from "@/domain/payment-requests/travel-allowance/types";
 import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
 
 import styles from "../travel-allowance-workflow.module.css";
+import { TravelAllowanceGroupedTable } from "../travel-allowance-grouped-table";
 import { FinanceCurrentNextProcess } from "../../finance-pending-processing/finance-current-next-process";
 
 const baseHref = "/beta/finance/payment-requests/travel-allowances";
@@ -45,47 +42,6 @@ function readProof(file: File) {
     reader.readAsDataURL(file);
   });
 }
-function displayDateRange(dates: string[]) {
-  const ordered = [...new Set(dates)].sort();
-  if (!ordered.length) return "—";
-  if (ordered.length === 1) return displayDate(ordered[0]);
-  return `${displayDate(ordered[0])} – ${displayDate(ordered.at(-1) ?? ordered[0])}`;
-}
-function employeeSummaries(record: TravelAllowanceRecord) {
-  const grouped = new Map<
-    string,
-    {
-      employeeName: string;
-      dates: string[];
-      projects: Set<string>;
-      reasons: Set<string>;
-      meals: Set<string>;
-      entries: number;
-      total: number;
-    }
-  >();
-  record.lines.forEach((line) => {
-    const key = line.employeeId || line.employeeName;
-    const summary = grouped.get(key) ?? {
-      employeeName: line.employeeName,
-      dates: [],
-      projects: new Set<string>(),
-      reasons: new Set<string>(),
-      meals: new Set<string>(),
-      entries: 0,
-      total: 0,
-    };
-    summary.dates.push(line.travelDate);
-    summary.projects.add(line.projectName);
-    summary.reasons.add(line.reason);
-    line.meals.forEach((meal) => summary.meals.add(meal));
-    summary.entries += 1;
-    summary.total += travelLineTotal(line);
-    grouped.set(key, summary);
-  });
-  return [...grouped.values()];
-}
-
 export function TravelAllowanceFinanceReview({
   requestId,
   embedded = false,
@@ -105,8 +61,8 @@ export function TravelAllowanceFinanceReview({
   );
   const [paymentReference, setPaymentReference] = useState(
     initialRecord?.financePaymentReference?.trim() ||
-      initialRecord?.requestNumber ||
-      "",
+    initialRecord?.requestNumber ||
+    "",
   );
   const [paymentProcessed, setPaymentProcessed] = useState(false);
   const [transactionProof, setTransactionProof] = useState<File | null>(null);
@@ -130,7 +86,7 @@ export function TravelAllowanceFinanceReview({
       setPaymentDate(initialRecord.financePaymentDate ?? "");
       setPaymentReference(
         initialRecord.financePaymentReference?.trim() ||
-          initialRecord.requestNumber,
+        initialRecord.requestNumber,
       );
       setPaymentProcessed(false);
       setFinanceRemarks(initialRecord.financeRemarks ?? "");
@@ -160,7 +116,8 @@ export function TravelAllowanceFinanceReview({
   async function complete() {
     if (!record || !account) return;
     const isProofStage = record.status === "PAYMENT_PROCESSED";
-    if (!paymentDate || !paymentReference.trim() || (!isProofStage && !paymentProcessed)) {
+    const isCompletionStage = record.status === "TRANSACTION_PROOF_UPLOADED";
+    if (!paymentDate || !paymentReference.trim() || (!isProofStage && !isCompletionStage && !paymentProcessed)) {
       setError("Check the payment details and confirm that the payment has been processed.");
       return;
     }
@@ -186,10 +143,14 @@ export function TravelAllowanceFinanceReview({
       );
       if (updated.status === "COMPLETED") notifyTravelAllowanceCompleted(updated, account);
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
       setSuccess(
         updated.status === "COMPLETED"
-          ? "The transaction proof was uploaded and the Travel Allowance was completed."
-          : "The payment was recorded. Upload its transaction proof to complete the Travel Allowance.",
+          ? "The Travel Allowance is completed and available in Payment Records."
+          : updated.status === "TRANSACTION_PROOF_UPLOADED"
+            ? "The transaction proof was uploaded. Confirm completion to move this record to Payment Records."
+            : "The payment was recorded. You may close this window and upload its transaction proof later.",
       );
     } catch (caught) {
       setError(
@@ -214,6 +175,8 @@ export function TravelAllowanceFinanceReview({
       );
       notifyTravelAllowanceReturned(updated, account, "Finance");
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
       setSuccess("The Travel Allowance was returned for correction.");
     } catch (caught) {
       setError(
@@ -248,7 +211,7 @@ export function TravelAllowanceFinanceReview({
       />
     );
   if (
-    !["PENDING_FINANCE_VERIFICATION", "PAYMENT_PROCESSED", "COMPLETED"].includes(record.status) &&
+    !["PENDING_FINANCE_VERIFICATION", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED", "COMPLETED"].includes(record.status) &&
     !record.financeReturnedAt
   )
     return (
@@ -258,10 +221,10 @@ export function TravelAllowanceFinanceReview({
       />
     );
 
-  const canAct = ["PENDING_FINANCE_VERIFICATION", "PAYMENT_PROCESSED"].includes(record.status);
+  const canAct = ["PENDING_FINANCE_VERIFICATION", "PAYMENT_PROCESSED", "TRANSACTION_PROOF_UPLOADED"].includes(record.status);
   const isProofStage = record.status === "PAYMENT_PROCESSED";
+  const isCompletionStage = record.status === "TRANSACTION_PROOF_UPLOADED";
   const formHref = `/api/v1/payment-requests/travel-allowance/${encodeURIComponent(record.id)}/form`;
-  const employeeRows = employeeSummaries(record);
   return (
     <main className={styles.page}>
       {!embedded && (
@@ -343,48 +306,8 @@ export function TravelAllowanceFinanceReview({
               </div>
             </div>
           </InfoSection>
-          <InfoSection title="Allowance by Employee">
-            <div className={styles.tableWrapper}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Employee</th>
-                    <th>Travel period</th>
-                    <th>Entries</th>
-                    <th>Projects</th>
-                    <th>Reasons</th>
-                    <th>Meals included</th>
-                    <th>Overall total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employeeRows.map((employee, index) => (
-                    <tr key={employee.employeeName}>
-                      <td>{index + 1}</td>
-                      <td>{employee.employeeName}</td>
-                      <td>{displayDateRange(employee.dates)}</td>
-                      <td>{employee.entries}</td>
-                      <td>{[...employee.projects].join(", ")}</td>
-                      <td>{[...employee.reasons].join(", ")}</td>
-                      <td>
-                        {employee.meals.size
-                          ? [...employee.meals]
-                              .map(
-                                (meal) =>
-                                  `${meal[0]}${meal.slice(1).toLowerCase()} RM${TRAVEL_MEAL_RATES[meal as keyof typeof TRAVEL_MEAL_RATES]}`,
-                              )
-                              .join(", ")
-                          : "—"}
-                      </td>
-                      <td>
-                        <strong>{money(employee.total)}</strong>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <InfoSection title={`Allowance by employee · ${record.lines.length} entries`}>
+            <TravelAllowanceGroupedTable lines={record.lines} />
           </InfoSection>
         </section>
         <aside className={styles.rail}>
@@ -393,7 +316,7 @@ export function TravelAllowanceFinanceReview({
             <h2>{canAct ? "Verify payment" : "Payment completed"}</h2>
             {canAct ? (
               <>
-                <span>{isProofStage ? "The payment is recorded. Upload its transaction proof to complete this Travel Allowance." : "Check the payment details, then confirm that it has been processed."}</span>
+                <span>{isCompletionStage ? "The transaction proof is uploaded. Confirm completion to archive this request in Payment Records." : isProofStage ? "The payment is recorded. Upload its transaction proof now or close and return later." : "Check the payment details, then confirm that it has been processed."}</span>
                 <div className={styles.financeFields}>
                   <label>
                     <span>Payment date *</span>
@@ -408,7 +331,7 @@ export function TravelAllowanceFinanceReview({
                     <span>Payment reference *</span>
                     <input readOnly value={paymentReference} />
                   </label>
-                  {!isProofStage && <label>
+                  {!isProofStage && !isCompletionStage && <label>
                     <span>Finance remarks</span>
                     <textarea rows={3} value={financeRemarks} onChange={(event) => setFinanceRemarks(event.target.value)} />
                   </label>}
@@ -420,7 +343,7 @@ export function TravelAllowanceFinanceReview({
                     <input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" id={`travel-proof-${record.id}`} onChange={(event) => setTransactionProof(event.currentTarget.files?.[0] ?? null)} type="file" />
                     <small>PDF, JPG or PNG · maximum 2.5 MB</small>
                   </div>
-                ) : <label className={styles.financePaymentConfirmation}>
+                ) : !isCompletionStage ? <label className={styles.financePaymentConfirmation}>
                   <input
                     checked={paymentProcessed}
                     onChange={(event) =>
@@ -429,22 +352,22 @@ export function TravelAllowanceFinanceReview({
                     type="checkbox"
                   />
                   <span>I confirm that this payment has been processed.</span>
-                </label>}
+                </label> : null}
                 <button
                   className={styles.primary}
                   disabled={
                     isSaving ||
                     !paymentDate ||
                     !paymentReference.trim() ||
-                    (!isProofStage && !paymentProcessed) ||
+                    (!isProofStage && !isCompletionStage && !paymentProcessed) ||
                     (isProofStage && !transactionProof)
                   }
                   type="button"
                   onClick={complete}
                 >
-                  {isProofStage ? "Upload receipt and complete →" : "Record payment →"}
+                  {isCompletionStage ? "Complete and move to Payment Records →" : isProofStage ? "Upload transaction proof →" : "Record payment →"}
                 </button>
-                {!isProofStage && <>
+                {!isProofStage && !isCompletionStage && <>
                   <div className={styles.divider}>or return with notes</div>
                   <label>
                     <span>Reason for returning</span>
@@ -486,18 +409,18 @@ function Progress({ record }: { record: TravelAllowanceRecord }) {
   const steps =
     record.requesterRole === "manager"
       ? [
-          "Request Submitted by Manager",
-          "Director Review",
-          "Finance Verification",
-          "Completed",
-        ]
+        "Request Submitted by Manager",
+        "Director Review",
+        "Finance Verification",
+        "Completed",
+      ]
       : [
-          "Request Submitted",
-          "Manager Review",
-          "Director Review",
-          "Finance Verification",
-          "Completed",
-        ];
+        "Request Submitted",
+        "Manager Review",
+        "Director Review",
+        "Finance Verification",
+        "Completed",
+      ];
   const active =
     record.status === "PENDING_FINANCE_VERIFICATION"
       ? record.requesterRole === "manager"
@@ -519,7 +442,7 @@ function Progress({ record }: { record: TravelAllowanceRecord }) {
           const number = index + 1;
           const state =
             number < active ||
-            (record.status === "COMPLETED" && number === steps.length)
+              (record.status === "COMPLETED" && number === steps.length)
               ? "complete"
               : number === active
                 ? "active"

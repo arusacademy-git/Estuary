@@ -1,0 +1,91 @@
+.wrapper {
+    overflow: hidden;
+    border: 1px solid #d8e3ef;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.wrapper th,
+.wrapper td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #e3eaf2;
+    color: #102a4c;
+    font-size: 13px;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.wrapper th {
+    background: #f5f8fc;
+    color: #607594;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.wrapper th:first-child,
+.wrapper td:first-child {
+    width: 42px;
+}
+
+.wrapper th:nth-child(5),
+.wrapper td:nth-child(5),
+.wrapper th:last-child,
+.wrapper td:last-child {
+    width: 112px;
+    text-align: right;
+}
+
+.groupRow td {
+    background: #f2f6fb;
+    color: #24466c;
+    font-size: 12px;
+}
+
+.groupRow td:first-child {
+    text-align: left;
+}
+
+.groupRow td:first-child strong {
+    margin-right: 10px;
+}
+
+.groupRow td:first-child span {
+    color: #6b7f99;
+}
+
+.groupRow td:last-child {
+    text-align: right;
+}
+
+.groupRow td:last-child strong {
+    margin-left: 8px;
+    color: #102a4c;
+}
+
+.wrapper tfoot td {
+    border-bottom: 0;
+    background: #f7f9fc;
+}
+
+.wrapper tfoot td:last-child {
+    font-size: 16px;
+}
+
+@media (max-width: 760px) {
+    .wrapper {
+        overflow-x: auto;
+    }
+
+    .wrapper table {
+        min-width: 680px;
+    }
+}

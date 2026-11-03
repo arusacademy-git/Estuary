@@ -7,7 +7,9 @@ import {
   resubmitCashAdvance,
 } from "@/data/payment-requests/cash-advance/cash-advance-api";
 import { notifyCashAdvanceSubmitted } from "@/features/payment-request/notifications/cash-advance-notifications";
+import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
+import { ManualDraftStatus } from "@/features/payment-request/components/shared/manual-draft-status";
 import {
   cashAdvanceRequestedTotal,
   validateCashAdvanceRequest,
@@ -125,6 +127,7 @@ export function CashAdvanceForm({
     useState<CashAdvanceRecord | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const draft = useManualFormDraft({
     paymentType: "CASH_ADVANCE",
@@ -344,6 +347,15 @@ export function CashAdvanceForm({
       setSaving(false);
     }
   }
+
+  if (draftSaved)
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-requests/cash-advance/new"
+        paymentType="CASH_ADVANCE"
+        recordsHref="/beta/payment-records/cash-advances?scope=mine"
+      />
+    );
 
   if (stage === "CONFIRMATION" && submittedRecord)
     return <CashAdvanceConfirmation record={submittedRecord} />;
@@ -794,9 +806,13 @@ export function CashAdvanceForm({
                 </div>
               </div>
               <div className={styles.footerActions}>
-                <span className={styles.muted}>
-                  You will review and sign on the next step.
-                </span>
+                {draft.draftMessage ? (
+                  <ManualDraftStatus message={draft.draftMessage} />
+                ) : (
+                  <span className={styles.muted}>
+                    You will review and sign on the next step.
+                  </span>
+                )}
                 <div className={styles.draftActions}>
                   <button
                     className={styles.secondary}
@@ -805,6 +821,7 @@ export function CashAdvanceForm({
                     onClick={() =>
                       draft
                         .saveDraft()
+                        .then(() => setDraftSaved(true))
                         .catch((caught) =>
                           setError(
                             caught instanceof Error
@@ -820,11 +837,6 @@ export function CashAdvanceForm({
                     Continue to review →
                   </button>
                 </div>
-                {draft.draftMessage && (
-                  <small className={styles.draftMessage} role="status">
-                    {draft.draftMessage}
-                  </small>
-                )}
               </div>
             </section>
           </div>

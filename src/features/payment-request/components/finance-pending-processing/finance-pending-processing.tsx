@@ -22,6 +22,7 @@ import type { PettyCashRecord } from "@/domain/payment-requests/petty-cash/types
 import type { ClaimRecord } from "@/domain/payment-requests/claims/types";
 import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
+import { publishPendingQueueCount } from "@/app/beta/sidebar-action-counts";
 
 import styles from "../manager-pending-approvals/manager-pending-approvals.module.css";
 import filterStyles from "../manager-pending-approvals/manager-pending-approvals-filter.module.css";
@@ -79,6 +80,7 @@ const financeVoucherStatuses = [
 const financePettyStatuses = [
   "PENDING_FINANCE_REVIEW",
   "PENDING_FINANCE_PAYMENT",
+  "PAYMENT_PROCESSED",
   "FINANCE_VERIFIED",
   "PENDING_FINANCE_RECONCILIATION",
   "TRANSACTION_PROOF_UPLOADED",
@@ -154,22 +156,18 @@ export function FinancePendingProcessing() {
       fetchInvoicePayments({
         role: "finance",
         userId: account.id,
-        includeAll: true,
       }),
       fetchTravelAllowances({
         role: "finance",
         userId: account.id,
-        includeAll: true,
       }),
       fetchCashAdvances({
         role: "finance",
         userId: account.id,
-        includeAll: true,
       }),
       fetchPettyCashRequests({
         role: "finance",
         userId: account.id,
-        includeAll: true,
       }),
       fetchClaimRequests({ role: "finance", userId: account.id }),
     ])
@@ -207,7 +205,7 @@ export function FinancePendingProcessing() {
                 amount: item.totalAmount,
                 updatedAt: item.updatedAt,
                 status: item.status,
-                statusLabel: "Pending Finance Verification",
+                statusLabel: standardPaymentStatusLabel(item.status),
                 paymentReference: item.financePaymentReference,
                 proofRecorded: item.status === "TRANSACTION_PROOF_UPLOADED" || Boolean(item.financeTransactionProof),
                 href: `/beta/finance/payment-requests/travel-allowances/${item.id}`,
@@ -337,7 +335,10 @@ export function FinancePendingProcessing() {
     () => [...voucherRows, ...records],
     [records, voucherRows],
   );
-  const waitingCount = allRows.length;
+  useEffect(() => {
+    if (loading || vouchersLoading) return;
+    publishPendingQueueCount("finance", allRows.length);
+  }, [allRows.length, loading, vouchersLoading]);
 
   async function uploadVoucherProof(row: Row, file: File) {
     if (!account || !row.voucher) return;
@@ -439,6 +440,12 @@ export function FinancePendingProcessing() {
     [allRows, selected],
   );
   const openRow = openIndex === null ? undefined : selectedRows[openIndex];
+  const closeReview = () => {
+    setOpenIndex(null);
+    setSelected([]);
+    setRefreshVersion((current) => current + 1);
+    void refreshVouchers();
+  };
 
   if (!account || account.role !== "finance")
     return (
@@ -464,10 +471,6 @@ export function FinancePendingProcessing() {
             Finance processing, verification, reconciliation and transaction
             proofs in one queue.
           </span>
-        </div>
-        <div>
-          <small>Waiting for Finance</small>
-          <strong>{loading || vouchersLoading ? "—" : waitingCount}</strong>
         </div>
       </header>
       <nav className={styles.tabs} aria-label="Payment type filters">
@@ -749,7 +752,7 @@ export function FinancePendingProcessing() {
               </div>
               <button
                 aria-label="Close"
-                onClick={() => setOpenIndex(null)}
+                onClick={closeReview}
                 type="button"
               >
                 ×
@@ -824,7 +827,7 @@ export function FinancePendingProcessing() {
               >
                 Next
               </button>
-              <button onClick={() => setOpenIndex(null)} type="button">
+              <button onClick={closeReview} type="button">
                 Close
               </button>
             </footer>

@@ -365,6 +365,42 @@
     border-top: 4px solid #f59e0b;
 }
 
+.compactRequestHeader {
+    padding: 25px 28px 21px;
+    border-bottom: 1px solid #e4eaf1;
+}
+
+.compactRequestHeader p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    color: #58708f;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.compactRequestHeader p b {
+    padding: 3px 6px;
+    border-radius: 5px;
+    color: #fff;
+    background: #f29221;
+    font-size: 9px;
+    letter-spacing: 0;
+}
+
+.compactRequestHeader h1 {
+    margin: 0 0 4px;
+    font-size: 27px;
+}
+
+.compactRequestHeader span {
+    color: #71839a;
+    font-size: 12px;
+}
+
 .hero {
     display: flex;
     justify-content: space-between;

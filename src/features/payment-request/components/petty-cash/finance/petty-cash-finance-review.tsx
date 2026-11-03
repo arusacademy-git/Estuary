@@ -43,10 +43,10 @@ function date(value?: string) {
   return Number.isNaN(parsed.getTime())
     ? value
     : new Intl.DateTimeFormat("en-MY", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }).format(parsed);
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(parsed);
 }
 function readReceipt(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -79,8 +79,8 @@ export function PettyCashFinanceReview({
   );
   const [paymentReference, setPaymentReference] = useState(
     initialRecord?.paymentReference?.trim() ||
-      initialRecord?.requestNumber ||
-      "",
+    initialRecord?.requestNumber ||
+    "",
   );
   const [paymentProcessed, setPaymentProcessed] = useState(false);
   const [balanceReceived, setBalanceReceived] = useState(false);
@@ -131,15 +131,13 @@ export function PettyCashFinanceReview({
 
   async function verify() {
     if (!account || !record) return;
-    if (
-      !paymentDate ||
-      !paymentReference.trim() ||
-      !paymentProofLink.trim() ||
-      !paymentProcessed
-    ) {
-      setError(
-        "Attach the payment receipt and confirm that the payment has been processed.",
-      );
+    const uploadingProof = record.status === "PAYMENT_PROCESSED";
+    if (!paymentDate || !paymentReference.trim() || !paymentProcessed) {
+      setError("Confirm the payment date and reference before continuing.");
+      return;
+    }
+    if (uploadingProof && !paymentProofLink.trim()) {
+      setError("Upload the Finance payment transaction proof before continuing.");
       return;
     }
     setSaving(true);
@@ -155,9 +153,11 @@ export function PettyCashFinanceReview({
       });
       notifyPettyCashFinanceVerified(updated, account);
       setRecord(updated);
-      setSuccess(
-        "Payment information was verified. Review it once more before marking the request as paid.",
-      );
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
+      setSuccess(uploadingProof
+        ? "Transaction proof uploaded. The request remains in Finance until it is released for requester reconciliation."
+        : "Payment recorded. Upload the transaction proof now or return to it later from the Finance queue.");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -178,6 +178,8 @@ export function PettyCashFinanceReview({
       const updated = await reviewPettyCashByFinancePeer(record.id, account.id);
       notifyPettyCashFinancePeerReviewed(updated, account);
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
       setSuccess(
         "Your informational preview was recorded. Finance processing continues independently.",
       );
@@ -301,10 +303,10 @@ export function PettyCashFinanceReview({
         kind === "verify"
           ? await verifyPettyCashReconciliation(record.id, account.id)
           : await returnPettyCashReconciliation(
-              record.id,
-              account.id,
-              remarks.trim(),
-            );
+            record.id,
+            account.id,
+            remarks.trim(),
+          );
       setRecord(updated);
       setSuccess(
         kind === "verify"
@@ -345,7 +347,8 @@ export function PettyCashFinanceReview({
     );
 
   const canVerify = record.status === "PENDING_FINANCE_PAYMENT";
-  const canComplete = record.status === "FINANCE_VERIFIED";
+  const canUploadProof = record.status === "PAYMENT_PROCESSED";
+  const canComplete = record.status === "TRANSACTION_PROOF_UPLOADED";
   const canReconcile = record.status === "PENDING_FINANCE_RECONCILIATION";
   const canPeerReview =
     record.requesterRole === "finance" &&
@@ -580,11 +583,12 @@ export function PettyCashFinanceReview({
                 </button>
               </>
             )}
-            {canVerify && (
+            {(canVerify || canUploadProof) && (
               <>
                 <span>
-                  Record the payment information and upload the receipt before
-                  completing the Petty Cash payment.
+                  {canVerify
+                    ? "Record the payment date and reference. You may upload the transaction proof later from this Finance queue."
+                    : "Upload the Finance payment transaction proof. The request remains listed until Finance releases it for reconciliation."}
                 </span>
                 <label>
                   <span>Payment date</span>
@@ -598,40 +602,42 @@ export function PettyCashFinanceReview({
                   <span>Payment reference</span>
                   <input readOnly value={paymentReference} />
                 </label>
-                <label>
-                  <span>Upload payment receipt</span>
-                  <div className={styles.financeReceiptUpload}>
-                    <input
-                      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                      type="file"
-                      onChange={selectReceipt}
-                    />
-                    <small>PDF, JPG or PNG · maximum 2.5 MB</small>
-                    {paymentProofLink && (
-                      <div>
-                        <strong>
-                          {paymentProofName || "Payment receipt attached"}
-                        </strong>
-                        <a
-                          href={paymentProofLink}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Preview
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPaymentProofLink("");
-                            setPaymentProofName("");
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </label>
+                {canUploadProof && (
+                  <label>
+                    <span>Upload payment transaction proof</span>
+                    <div className={styles.financeReceiptUpload}>
+                      <input
+                        accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                        type="file"
+                        onChange={selectReceipt}
+                      />
+                      <small>PDF, JPG or PNG · maximum 2.5 MB</small>
+                      {paymentProofLink && (
+                        <div>
+                          <strong>
+                            {paymentProofName || "Payment receipt attached"}
+                          </strong>
+                          <a
+                            href={paymentProofLink}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Preview
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaymentProofLink("");
+                              setPaymentProofName("");
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                )}
                 <label>
                   <span>Finance notes</span>
                   <textarea
@@ -657,21 +663,22 @@ export function PettyCashFinanceReview({
                     saving ||
                     !paymentDate ||
                     !paymentReference.trim() ||
-                    !paymentProofLink.trim() ||
+                    (canUploadProof && !paymentProofLink.trim()) ||
                     !paymentProcessed
                   }
                   onClick={verify}
                   type="button"
                 >
-                  Verify payment information <b aria-hidden="true">→</b>
+                  {canVerify ? "Record payment" : "Upload transaction proof"} <b aria-hidden="true">→</b>
                 </button>
               </>
             )}
             {canComplete && (
               <>
                 <span>
-                  Release the funds to Staff. This creates the Money Out
-                  transaction and starts Staff reconciliation.
+                  The payment and its transaction proof are stored. Release the
+                  funds to Staff to create the Money Out transaction and start
+                  requester reconciliation.
                 </span>
                 <div className={styles.managerPaymentSummary}>
                   <span>Reference</span>
@@ -767,7 +774,7 @@ export function PettyCashFinanceReview({
                 </div>
               </>
             )}
-            {!canPeerReview && (canVerify || canComplete) && (
+            {!canPeerReview && (canVerify || canUploadProof || canComplete) && (
               <>
                 <div className={styles.managerActionDivider}>
                   <span>or return with notes</span>
@@ -854,7 +861,7 @@ function WorkflowProgress({ record }: { record: PettyCashRecord }) {
   const finance = {
     title: "Finance Processing",
     copy:
-      record.status === "FINANCE_VERIFIED"
+      record.status === "TRANSACTION_PROOF_UPLOADED"
         ? "Payment information verified"
         : "Finance verification and payment",
     state:
@@ -870,7 +877,7 @@ function WorkflowProgress({ record }: { record: PettyCashRecord }) {
     state:
       record.status === "PAID"
         ? "complete"
-        : record.status === "FINANCE_VERIFIED"
+        : record.status === "TRANSACTION_PROOF_UPLOADED"
           ? "active"
           : "pending",
   };
@@ -886,11 +893,11 @@ function WorkflowProgress({ record }: { record: PettyCashRecord }) {
     record.status === "PAID"
       ? steps.length
       : Math.max(
-          1,
-          steps.findIndex(
-            (step) => step.state === "active" || step.state === "returned",
-          ) + 1,
-        );
+        1,
+        steps.findIndex(
+          (step) => step.state === "active" || step.state === "returned",
+        ) + 1,
+      );
   return (
     <aside className={styles.progressPanel}>
       <header>

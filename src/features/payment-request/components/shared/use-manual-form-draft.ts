@@ -14,6 +14,7 @@ export function useManualFormDraft<T>({
   requesterId,
   organizationId = "beta-arus-org",
   disabled = false,
+  restoreOnLoad = false,
   getSnapshot,
   restoreSnapshot,
 }: {
@@ -21,6 +22,7 @@ export function useManualFormDraft<T>({
   requesterId?: string;
   organizationId?: string;
   disabled?: boolean;
+  restoreOnLoad?: boolean;
   getSnapshot: () => T;
   restoreSnapshot: (snapshot: T) => void;
 }) {
@@ -34,12 +36,24 @@ export function useManualFormDraft<T>({
 
   useEffect(() => {
     if (!requesterId || disabled) return;
-    const params = new URLSearchParams(window.location.search);
-    const requestedDraftId = params.get("draftId") || undefined;
-    const shouldRestore = params.get("draft") === "1" || Boolean(requestedDraftId);
+    const shouldRestore =
+      restoreOnLoad ||
+      new URLSearchParams(window.location.search).get("draft") === "1";
     if (!shouldRestore) return;
+    const requestedDraftId = new URLSearchParams(window.location.search).get(
+      "draftId",
+    );
+    if (!requestedDraftId) {
+      setDraftMessage("Select a saved draft from My Requests to continue it.");
+      return;
+    }
     let cancelled = false;
-    fetchManualFormDraft<T>(paymentType, organizationId, requesterId, requestedDraftId)
+    fetchManualFormDraft<T>(
+      paymentType,
+      organizationId,
+      requesterId,
+      requestedDraftId,
+    )
       .then((draft) => {
         if (cancelled) return;
         if (!draft) {
@@ -49,7 +63,7 @@ export function useManualFormDraft<T>({
         setDraftId(draft.id);
         restoreSnapshotRef.current(draft.snapshot);
         setDraftMessage(
-          `Draft restored from ${new Date(draft.updatedAt).toLocaleString("en-MY")}.`,
+          `Draft restored from ${new Date(draft.updatedAt).toLocaleString("en-MY")}`,
         );
       })
       .catch(() => {
@@ -59,7 +73,7 @@ export function useManualFormDraft<T>({
     return () => {
       cancelled = true;
     };
-  }, [disabled, organizationId, paymentType, requesterId]);
+  }, [disabled, organizationId, paymentType, requesterId, restoreOnLoad]);
 
   async function saveDraft() {
     if (!requesterId) throw new Error("Sign in before saving a draft.");
@@ -74,11 +88,7 @@ export function useManualFormDraft<T>({
         snapshot: getSnapshotRef.current(),
       });
       setDraftId(draft.id);
-      const url = new URL(window.location.href);
-      url.searchParams.set("draft", "1");
-      url.searchParams.set("draftId", draft.id);
-      window.history.replaceState(window.history.state, "", url);
-      setDraftMessage("Draft saved. You can safely continue it later.");
+      setDraftMessage("Draft saved just now");
       window.dispatchEvent(new Event("estuary:action-counts-changed"));
       return draft;
     } finally {

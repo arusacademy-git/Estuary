@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  completeClaimByFinance,
   fetchClaimRequest,
   processClaimByFinance,
   returnClaimByFinance,
@@ -91,6 +92,8 @@ export function ClaimFinanceReview({
       });
       notifyClaimPaid(updated, account);
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
       setSuccess("Finance processing completed. The Claim is now marked Paid.");
     } catch (caught) {
       setError(
@@ -109,6 +112,9 @@ export function ClaimFinanceReview({
     try {
       const updated = await verifyClaimByFinance(record.id, account.id);
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:director-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
       setSuccess(
         "Finance verification completed. The Claim is now awaiting the assigned Director's decision.",
       );
@@ -133,7 +139,9 @@ export function ClaimFinanceReview({
         paymentProof,
       );
       setRecord(updated);
-      setSuccess("Transaction proof uploaded. The Claim workflow is complete.");
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
+      setSuccess("Transaction proof uploaded. Confirm completion to move this Claim to Payment Records.");
       setPaymentProof(null);
     } catch (caught) {
       setError(
@@ -141,6 +149,22 @@ export function ClaimFinanceReview({
           ? caught.message
           : "Transaction proof could not be uploaded.",
       );
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function completeClaim() {
+    if (!account || !record) return;
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await completeClaimByFinance(record.id, account.id);
+      setRecord(updated);
+      setSuccess("Claim completed successfully and stored in Payment Records.");
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The Claim could not be completed.");
     } finally {
       setSaving(false);
     }
@@ -159,6 +183,8 @@ export function ClaimFinanceReview({
       );
       notifyClaimReturned(updated, account, "Finance");
       setRecord(updated);
+      window.dispatchEvent(new Event("estuary:finance-queue-changed"));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -190,6 +216,7 @@ export function ClaimFinanceReview({
   const verifying = record.status === "PENDING_FINANCE_VERIFICATION";
   const readyForPayment = record.status === "APPROVED_FOR_PAYMENT";
   const awaitingProof = record.status === "PAYMENT_PROCESSED";
+  const proofUploaded = record.status === "TRANSACTION_PROOF_UPLOADED";
   const actionable = verifying || readyForPayment;
   return (
     <main className={styles.page}>
@@ -226,8 +253,10 @@ export function ClaimFinanceReview({
                 ? verifying
                   ? "Verify Claim"
                   : "Process approved payment"
-                : record.status === "PAYMENT_PROCESSED"
+                : awaitingProof
                   ? "Upload transaction proof"
+                  : proofUploaded
+                    ? "Complete Claim"
                   : "No Finance action"}
             </h2>
             {verifying ? (
@@ -341,6 +370,13 @@ export function ClaimFinanceReview({
                   Upload proof and complete →
                 </button>
               </>
+            ) : proofUploaded ? (
+              <>
+                <span>The payment transaction proof has been uploaded. Confirm completion to archive this Claim in Payment Records.</span>
+                <button className={styles.primary} disabled={saving} onClick={completeClaim} type="button">
+                  Complete and move to Payment Records →
+                </button>
+              </>
             ) : (
               <>
                 <span>
@@ -365,6 +401,8 @@ export function ClaimFinanceReview({
                     ? "Record the approved payment, then upload its transaction proof."
                     : awaitingProof
                       ? "Upload the payment transaction proof to complete the Claim."
+                      : proofUploaded
+                        ? "Confirm completion and move this Claim to Payment Records."
                       : "No Finance action is currently required."
               }
             />

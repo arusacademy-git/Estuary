@@ -16,6 +16,8 @@ import { INVOICE_PAYMENT_PROJECTS } from "@/domain/payment-requests/invoice-paym
 import { readBetaSession } from "@/lib/auth/beta-accounts";
 import { amountToMalayWords } from "@/lib/currency/amount-words";
 import { notifyManagerInvoicePaymentSubmitted } from "@/features/payment-request/notifications/invoice-payment-notifications";
+import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
+import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 
 import { InvoicePaymentReview } from "./invoice-payment-review";
@@ -126,6 +128,7 @@ export function InvoicePaymentForm({
   const [isReviewing, setIsReviewing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [draftSaved, setDraftSaved] = useState(false);
   const [createdRequest, setCreatedRequest] =
     useState<InvoicePaymentRequestRecord | null>(null);
 
@@ -360,6 +363,16 @@ export function InvoicePaymentForm({
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (draftSaved) {
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-requests/invoice-payment/new"
+        paymentType="INVOICE_PAYMENT"
+        recordsHref="/beta/payment-records/invoice-payments?scope=mine"
+      />
+    );
   }
 
   if (createdRequest) {
@@ -744,6 +757,7 @@ export function InvoicePaymentForm({
               onClick={() =>
                 draft
                   .saveDraft()
+                  .then(() => setDraftSaved(true))
                   .catch((caught) =>
                     setError(
                       caught instanceof Error
@@ -763,7 +777,7 @@ export function InvoicePaymentForm({
               Continue to review <span aria-hidden="true">→</span>
             </button>
           </div>
-          {draft.draftMessage && <p role="status">{draft.draftMessage}</p>}
+          <ManualDraftStatus message={draft.draftMessage} />
         </footer>
       </form>
     </main>

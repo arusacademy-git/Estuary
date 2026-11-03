@@ -1,9 +1,38 @@
+import { useState } from 'react';
 import type { CashAdvanceRequestLine } from '@/domain/payment-requests/cash-advance/types';
-import { useAdminAccountingOptions } from '@/features/administration/admin-settings';
-import { PaymentAmountInput } from '@/shared/payment-amount-input';
 import styles from '../cash-advance.module.css';
 
 const money = (value: number) => new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(value);
+
+function AmountInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (amount: number) => void;
+}) {
+  const [text, setText] = useState(value ? value.toFixed(2) : '');
+
+  return (
+    <input
+      aria-label={label}
+      inputMode="decimal"
+      placeholder="0.00"
+      type="text"
+      value={text}
+      onChange={(event) => {
+        const next = event.target.value.replace(/[^\d.]/g, '');
+        // only digits, one dot, max 2 decimals
+        if (!/^\d*\.?\d{0,2}$/.test(next)) return;
+        setText(next);
+        onChange(next === '' || next === '.' ? 0 : Number(next));
+      }}
+      onBlur={() => setText(value ? value.toFixed(2) : '')}
+    />
+  );
+}
 
 export function CashAdvanceRequestLines({
   lines,
@@ -18,7 +47,6 @@ export function CashAdvanceRequestLines({
   onChange: (id: string, patch: Partial<CashAdvanceRequestLine>) => void;
   onRemove: (id: string) => void;
 }) {
-  const accountingOptions = useAdminAccountingOptions();
   return (
     <section className={styles.receiptSection}>
       <div className={styles.sectionHeading}>
@@ -27,26 +55,33 @@ export function CashAdvanceRequestLines({
       </div>
       <div className={styles.tableShell}>
         <table className={styles.lineTable}>
-          <thead><tr><th>#</th><th>Account</th><th>Description</th><th>Purpose</th><th>Amount (RM)</th><th /></tr></thead>
+          <thead><tr><th>#</th><th>Description</th><th>Purpose</th><th>Amount (RM)</th><th /></tr></thead>
           <tbody>{lines.map((line, index) => (
             <tr key={line.id}>
               <td>{index + 1}</td>
-              <td>
-                <select aria-label={`Expense ${index + 1} account`} required value={line.accountType ?? ''} onChange={(event) => onChange(line.id, { accountType: event.target.value })}>
-                  <option value="">Choose account</option>
-                  {line.accountType && !accountingOptions.some((option) => option.value === line.accountType) && <option value={line.accountType}>{line.accountType} (saved value)</option>}
-                  {accountingOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
-              </td>
               <td><input aria-label={`Expense ${index + 1} description`} placeholder="e.g. Workshop materials" value={line.description} onChange={(event) => onChange(line.id, { description: event.target.value })} /></td>
               <td><input aria-label={`Expense ${index + 1} purpose`} placeholder="Why this expense is needed" value={line.purpose} onChange={(event) => onChange(line.id, { purpose: event.target.value })} /></td>
-              <td><PaymentAmountInput aria-label={`Expense ${index + 1} amount`} value={line.amount} onValueChange={(amount) => onChange(line.id, { amount })} /></td>
+              <td>
+                <AmountInput
+                  label={`Expense ${index + 1} amount`}
+                  value={line.amount}
+                  onChange={(amount) => onChange(line.id, { amount })}
+                />
+              </td>
               <td><button aria-label={`Remove expense ${index + 1}`} className={styles.iconButton} disabled={lines.length === 1} onClick={() => onRemove(line.id)} type="button">×</button></td>
             </tr>
           ))}</tbody>
         </table>
       </div>
-      <div className={styles.total}><span>Total amount requested</span><span>{money(total)}</span></div>
+           <div
+        className={`${styles.total} ${total < 300 ? styles.totalBelowMinimum : ''}`}
+      >
+        <div className={styles.totalLabel}>
+          <span>Total amount requested</span>
+          <small className={styles.minimumNote}>Minimum request: RM 300.00</small>
+        </div>
+        <span>{money(total)}</span>
+      </div>
     </section>
   );
 }

@@ -4,10 +4,7 @@ import type { UserSignatureRecord } from '@/domain/signatures/types';
 import styles from '../cash-advance.module.css';
 
 const money = (value: number) =>
-  new Intl.NumberFormat('en-MY', {
-    style: 'currency',
-    currency: 'MYR',
-  }).format(value);
+  new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(value);
 
 type Props = {
   requesterName: string;
@@ -51,7 +48,6 @@ export function CashAdvanceReview(p: Props) {
   return (
     <main className={styles.cashReviewPage}>
       {p.error && <div className={styles.error}>{p.error}</div>}
-
       <section className={styles.cashReviewCard}>
         <div className={styles.cashReviewMain}>
           <header className={styles.cashReviewTitle}>
@@ -59,9 +55,7 @@ export function CashAdvanceReview(p: Props) {
               <span>CA</span>Cash Advance Request
             </p>
             <h1>Review and sign your request</h1>
-            <small>
-              Confirm the entries before forwarding the request to the Manager.
-            </small>
+            <small>Confirm the entries before forwarding the request to the Manager.</small>
           </header>
 
           <section className={styles.cashReviewSection}>
@@ -139,8 +133,7 @@ export function CashAdvanceReview(p: Props) {
             <small>Total amount requested</small>
             <strong>{money(p.total)}</strong>
             <p>
-              {p.lines.length} expense{' '}
-              {p.lines.length === 1 ? 'entry' : 'entries'}
+              {p.lines.length} expense {p.lines.length === 1 ? 'entry' : 'entries'}
             </p>
           </div>
 
@@ -162,21 +155,23 @@ export function CashAdvanceReview(p: Props) {
                 />
               </div>
             ) : (
-              <div className={styles.error}>
-                No active signature found.{' '}
-                <a href="/beta/settings/signature">Upload it in Settings</a>.
+              <div className={styles.cashReviewSignatureRequired}>
+                <span className={styles.cashReviewActionLabel}>
+                  <i aria-hidden="true" /> Action required
+                </span>
+                <strong>Upload your signature</strong>
+                <p>No active signature found. Add one in Settings before you can sign and submit this request.</p>
+                <a href="/beta/settings/signature">Go to Settings</a>
               </div>
             )}
-            <label className={styles.cashReviewConfirm}>
+            <label className={styles.cashReviewConfirm} data-disabled={!p.signature || undefined}>
               <input
                 checked={p.confirmed}
+                disabled={!p.signature}
                 onChange={(e) => p.onConfirmedChange(e.target.checked)}
                 type="checkbox"
               />
-              <span>
-                I confirm this request is for approved work-related expenses and
-                all information is accurate.
-              </span>
+              <span>I confirm this request is for approved work-related expenses and all information is accurate.</span>
             </label>
           </section>
 
@@ -187,12 +182,9 @@ export function CashAdvanceReview(p: Props) {
               onClick={p.onSubmit}
               type="button"
             >
-              {p.saving
-                ? 'Submitting…'
-                : p.amendment
-                  ? 'Sign and resubmit'
-                  : 'Sign and submit to Manager →'}
+              {p.saving ? 'Submitting…' : p.amendment ? 'Sign and resubmit' : 'Sign and submit to Manager →'}
             </button>
+            {!p.signature && <small className={styles.cashReviewSubmitHint}>Upload your signature to enable submitting</small>}
             <button className={styles.secondary} onClick={p.onBack} type="button">
               Back to edit
             </button>

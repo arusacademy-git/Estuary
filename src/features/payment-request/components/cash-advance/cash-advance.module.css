@@ -196,6 +196,13 @@
   opacity: 0.55;
 }
 
+.minimumNote {
+  margin: 8px 0 0;
+  color: #8a98ab;
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .financePaymentConfirmation {
   display: grid;
   grid-template-columns: 17px minmax(0, 1fr);
@@ -271,6 +278,15 @@
   background: #eef5ff;
   font-size: 17px;
   font-weight: 750;
+}
+
+.totalLabel {
+  display: grid;
+  gap: 4px;
+}
+
+.totalBelowMinimum span:last-child {
+  color: #dc2626;
 }
 
 .notice,
@@ -1571,6 +1587,10 @@
 .formReceipt .total span:last-child {
   color: #061b36;
   font-size: 21px;
+}
+
+.formReceipt .totalBelowMinimum span:last-child {
+  color: #dc2626;
 }
 
 .formReceipt .footerActions {
@@ -4066,4 +4086,84 @@
   .queueReceipt .queueCardDetails {
     grid-template-columns: 1fr;
   }
+}
+
+.cashReviewSignatureRequired {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid #f4d58d;
+  border-radius: 10px;
+  color: #9a4f00;
+  background: #fff8e7;
+}
+
+.cashReviewActionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #a25b00;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cashReviewActionLabel i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e38900;
+}
+
+.cashReviewSignatureRequired>strong {
+  color: #9a4f00;
+  font-size: 12px;
+}
+
+.cashReviewSignatureRequired>p {
+  margin: 0;
+  color: #a15c13;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.cashReviewSignatureRequired>a {
+  display: grid;
+  min-height: 34px;
+  margin-top: 3px;
+  place-items: center;
+  border: 1px solid #c75a00;
+  border-radius: 7px;
+  color: #fff;
+  background: #c75a00;
+  font-size: 10px;
+  font-weight: 750;
+  text-decoration: none;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.cashReviewSignatureRequired>a:hover {
+  color: #a84400;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(154 79 0 / 14%);
+  transform: translateY(-1px);
+}
+
+.cashReviewSignatureRequired>a:focus-visible {
+  outline: 3px solid rgb(245 158 11 / 28%);
+  outline-offset: 2px;
+}
+
+.cashReviewConfirm[data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.cashReviewSubmitHint {
+  display: block;
+  color: #8a9aae;
+  font-size: 8px;
+  text-align: center;
 }

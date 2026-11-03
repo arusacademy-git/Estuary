@@ -560,7 +560,7 @@
 }
 
 .confirmationPage {
-    width: min(820px, 100%);
+    width: min(520px, 100%);
     margin: 0 auto;
     padding: 20px 0 40px;
     color: #172b4d;
@@ -569,7 +569,7 @@
 .confirmationCard {
     display: grid;
     justify-items: center;
-    padding: 42px;
+    padding: 34px 32px;
     border: 1px solid #dbe3ee;
     border-radius: 16px;
     background: #fff;
@@ -594,7 +594,7 @@
 .confirmationCard h1 {
     margin: 5px 0 8px;
     color: #081b34;
-    font-size: 30px;
+    font-size: 27px;
 }
 
 .confirmationCard>p:not(.eyebrow) {
@@ -641,6 +641,98 @@
     color: #6b7280;
     background: #f8fafc;
     font-size: 10px;
+}
+
+.draftConfirmationSummary {
+    display: grid !important;
+    width: 100%;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+    box-sizing: border-box;
+    margin: 24px 0 16px !important;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #dbe6f2;
+    border-radius: 11px;
+    background: #f7faff;
+    text-align: left;
+}
+
+.draftConfirmationSummary>div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.draftConfirmationSummary>div+div {
+    border-top: 1px solid #e3ebf4 !important;
+}
+
+.draftConfirmationSummary dt,
+.draftConfirmationSummary dd {
+    margin: 0;
+    font-size: 11px;
+}
+
+.draftConfirmationSummary dd {
+    color: #153a66;
+    font-weight: 800;
+}
+
+.draftConfirmationSummary dd span {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 5px 9px;
+    color: #526987;
+    background: #e9eef5;
+    font-size: 10px;
+}
+
+.draftConfirmationActions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.draftConfirmationActions a,
+.draftConfirmationActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    box-sizing: border-box;
+    border: 1px solid #173f70;
+    border-radius: 8px;
+    padding: 9px 17px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.draftConfirmationActions a {
+    color: #173f70;
+    background: #fff;
+}
+
+.draftConfirmationActions button {
+    color: #fff;
+    background: #173f70;
+}
+
+.draftConfirmationActions a:hover {
+    background: #f4f8fd;
+}
+
+.draftConfirmationActions button:hover {
+    background: #0f315d;
 }
 
 @media (max-width: 900px) {
@@ -1148,6 +1240,12 @@
     display: grid;
     gap: 18px;
     padding: 26px 36px;
+}
+
+.draftMessage {
+    margin: 0;
+    color: #526987;
+    font-size: 0.875rem;
 }
 
 .declaration {

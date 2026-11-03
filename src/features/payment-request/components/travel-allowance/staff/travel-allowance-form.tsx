@@ -7,6 +7,8 @@ import {
   resubmitTravelAllowance,
 } from "@/data/payment-requests/travel-allowance/api";
 import { notifyTravelAllowanceSubmitted } from "@/features/payment-request/notifications/travel-allowance-notifications";
+import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
+import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import type {
   PaymentRequestDocument,
@@ -30,6 +32,7 @@ import {
   TravelAllowanceGoogleSheet,
   type TravelAllowanceSheetData,
 } from "./travel-allowance-google-sheet";
+import { TravelAllowanceGroupedTable } from "../travel-allowance-grouped-table";
 import styles from "./travel-allowance.module.css";
 
 const MAX_LINES = 100;
@@ -131,6 +134,7 @@ export function TravelAllowanceForm({
   const [stage, setStage] = useState<"FORM" | "REVIEW" | "CONFIRMATION">(
     "FORM",
   );
+  const [draftSaved, setDraftSaved] = useState(false);
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -442,6 +446,16 @@ export function TravelAllowanceForm({
     }
   }
 
+  if (draftSaved) {
+    return (
+      <ManualDraftConfirmation
+        createHref="/beta/payment-requests/travel-allowance/new"
+        paymentType="TRAVEL_ALLOWANCE"
+        recordsHref="/beta/payment-records/travel-allowances?scope=mine"
+      />
+    );
+  }
+
   if (stage === "CONFIRMATION" && record) {
     return (
       <TravelAllowanceConfirmation
@@ -541,7 +555,7 @@ export function TravelAllowanceForm({
           completionFields={
             <>
               <label>
-                <span>Request date *</span>
+                <span>Request date <em>*</em></span>
                 <input
                   type="date"
                   value={requestDate}
@@ -549,7 +563,7 @@ export function TravelAllowanceForm({
                 />
               </label>
               <label>
-                <span>Contact *</span>
+                <span>Contact <em>*</em></span>
                 <input
                   value={contact}
                   onChange={(event) => setContact(event.target.value)}
@@ -557,7 +571,7 @@ export function TravelAllowanceForm({
                 />
               </label>
               <label>
-                <span>Manager reviewer *</span>
+                <span>Manager reviewer <em>*</em></span>
                 {requestMode === "manager" ? (
                   <input disabled value={account?.name ?? "Loading…"} />
                 ) : (
@@ -577,7 +591,7 @@ export function TravelAllowanceForm({
                 )}
               </label>
               <label>
-                <span>Project Director *</span>
+                <span>Project Director <em>*</em></span>
                 <select
                   value={projectDirectorId}
                   onChange={(event) => setProjectDirectorId(event.target.value)}
@@ -623,7 +637,7 @@ export function TravelAllowanceForm({
             </div>
             <div className={styles.fields}>
               <label>
-                <span>Request date *</span>
+                <span>Request date <em>*</em></span>
                 <input
                   type="date"
                   value={requestDate}
@@ -643,7 +657,7 @@ export function TravelAllowanceForm({
                 <input disabled value={account?.position ?? "Loading…"} />
               </label>
               <label>
-                <span>Contact *</span>
+                <span>Contact <em>*</em></span>
                 <input
                   placeholder="Phone number or extension"
                   value={contact}
@@ -651,7 +665,7 @@ export function TravelAllowanceForm({
                 />
               </label>
               <label>
-                <span>Manager reviewer *</span>
+                <span>Manager reviewer <em>*</em></span>
                 {requestMode === "manager" ? (
                   <input disabled value={account?.name ?? "Loading…"} />
                 ) : (
@@ -671,7 +685,7 @@ export function TravelAllowanceForm({
                 )}
               </label>
               <label>
-                <span>Project Director in charge *</span>
+                <span>Project Director in charge <em>*</em></span>
                 <select
                   value={projectDirectorId}
                   onChange={(event) => setProjectDirectorId(event.target.value)}
@@ -1030,6 +1044,7 @@ export function TravelAllowanceForm({
               onClick={() =>
                 draft
                   .saveDraft()
+                  .then(() => setDraftSaved(true))
                   .catch((caught) =>
                     setError(
                       caught instanceof Error
@@ -1042,11 +1057,7 @@ export function TravelAllowanceForm({
               {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
             </button>
             <button type="submit">Continue to review →</button>
-            {draft.draftMessage && (
-              <p className={styles.draftMessage} role="status">
-                {draft.draftMessage}
-              </p>
-            )}
+            <ManualDraftStatus message={draft.draftMessage} />
           </footer>
         </form>
       )}
@@ -1107,6 +1118,19 @@ function TravelAllowanceReview({
   onBack: () => void;
   onSubmit: () => void;
 }) {
+  const dateTotals = lines.reduce<Array<{ date: string; total: number }>>(
+    (current, line) => {
+      const existing = current.find((item) => item.date === line.travelDate);
+      if (existing) existing.total += travelLineTotal(line);
+      else
+        current.push({
+          date: line.travelDate,
+          total: travelLineTotal(line),
+        });
+      return current;
+    },
+    [],
+  );
   return (
     <main className={styles.page}>
       <header className={styles.pageHeader}>
@@ -1119,88 +1143,42 @@ function TravelAllowanceReview({
         </div>
         <strong>Ready for review</strong>
       </header>
-      <section className={styles.reviewCard}>
-        <div className={styles.reviewHero}>
-          <div>
-            <span>Travel Allowance request</span>
-            <h2>{accountName}</h2>
-            <p>
-              {lines.length} travel {lines.length === 1 ? "entry" : "entries"}{" "}
-              requested on{" "}
-              {new Date(`${requestDate}T12:00:00`).toLocaleDateString("en-MY")}
-            </p>
+      <section className={`${styles.reviewCard} ${styles.compactReviewCard}`}>
+        <div className={styles.reviewMainColumn}>
+          <div className={styles.reviewTitle}>
+            <span><b>TA</b> Travel Allowance request</span>
+            <h2>Review Travel Allowance</h2>
+            <p>{lines.length} travel entries requested on {new Date(`${requestDate}T12:00:00`).toLocaleDateString("en-MY")}</p>
           </div>
-          <div>
-            <span>Total requested</span>
-            <strong>{money(total)}</strong>
-          </div>
+          <section className={styles.reviewSection}>
+            <h3>Request details</h3>
+            <dl className={styles.compactReviewMeta}>
+              <div><dt>Submitted by</dt><dd>{accountName}</dd></div>
+              <div><dt>Contact</dt><dd>{contact}</dd></div>
+              <div><dt>Project Director</dt><dd>{directorName}</dd></div>
+              <div><dt>Currency</dt><dd>MYR</dd></div>
+              <div><dt>Remarks</dt><dd>{remarks || "None"}</dd></div>
+            </dl>
+          </section>
+          <section className={styles.reviewSection}>
+            <h3>Travel entries <small>{lines.length} entries · {dateTotals.length} travel dates</small></h3>
+            <TravelAllowanceGroupedTable lines={lines} />
+          </section>
         </div>
-        <dl className={styles.reviewMeta}>
-          <div>
-            <dt>Submitted by</dt>
-            <dd>{accountName}</dd>
+        <aside className={styles.reviewSideColumn}>
+          <span>Total requested</span>
+          <strong>{money(total)}</strong>
+          <small>{lines.length} entries · {dateTotals.length} travel dates</small>
+          <div className={styles.dateTotals}>
+            {dateTotals.map((item) => <div key={item.date}><span>{new Date(`${item.date}T12:00:00`).toLocaleDateString("en-MY")}</span><b>{money(item.total)}</b></div>)}
           </div>
-          <div>
-            <dt>Contact</dt>
-            <dd>{contact}</dd>
-          </div>
-          <div>
-            <dt>Project Director</dt>
-            <dd>{directorName}</dd>
-          </div>
-          <div>
-            <dt>Currency</dt>
-            <dd>MYR</dd>
-          </div>
-          <div>
-            <dt>Remarks</dt>
-            <dd>{remarks || "None"}</dd>
-          </div>
-        </dl>
-        <div className={styles.reviewTable}>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Employee</th>
-                <th>Travel date</th>
-                <th>Project Name</th>
-                <th>Reason</th>
-                <th>Meals</th>
-                <th>Special</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((line, index) => (
-                <tr key={line.id}>
-                  <td>{index + 1}</td>
-                  <td>{line.employeeName}</td>
-                  <td>{line.travelDate}</td>
-                  <td>{line.projectName}</td>
-                  <td>{line.reason}</td>
-                  <td>
-                    {line.meals
-                      .map((meal) => meal[0] + meal.slice(1).toLowerCase())
-                      .join(", ") || "-"}
-                  </td>
-                  <td>{money(line.specialAllowance)}</td>
-                  <td>
-                    <strong>{money(travelLineTotal(line))}</strong>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <footer className={styles.reviewActions}>
-          <button className={styles.secondary} type="button" onClick={onBack}>
-            Back to edit
-          </button>
-          <button disabled={isSaving} type="button" onClick={onSubmit}>
-            {isSaving ? "Submitting…" : "Submit Travel Allowance →"}
-          </button>
-        </footer>
+          <h3>What happens next</h3>
+          <p>After you submit, the request goes to Director approval and Finance processing.</p>
+          <footer className={styles.reviewActions}>
+            <button disabled={isSaving} type="button" onClick={onSubmit}>{isSaving ? "Submitting…" : "Submit Travel Allowance"}</button>
+            <button className={styles.secondary} type="button" onClick={onBack}>Back to edit</button>
+          </footer>
+        </aside>
       </section>
     </main>
   );
