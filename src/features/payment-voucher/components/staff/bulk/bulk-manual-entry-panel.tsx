@@ -460,6 +460,7 @@ function VoucherEditor({
         >
           <span>
             Supporting documents
+            <em className={styles.optionalBadge}>Optional</em>
           </span>
 
           <input

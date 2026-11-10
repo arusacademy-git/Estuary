@@ -255,8 +255,9 @@
 
 .inactiveForm p {
   margin: 0;
-  color: #991b1b;
-  font-size: 11px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 500;
   line-height: 1.45;
 }
 
