@@ -11,7 +11,7 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/add-payment-request-drafts
+- Current Branch: agent/restore-bulk-payment-styles (issue #124)
 - Last Updated: 2026-11-10
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
@@ -33,6 +33,12 @@
 - API-first: every action addressable as REST `/api/v1/`.
 
 ## Current Session Log — 2026-11-10
+
+### Penang deployment build repair
+
+- Pulled GitHub `main` through `f8cd6b8` into the local and Penang source checkouts. No new Prisma migrations or deployment configuration changes were present since Penang's previous release.
+- The local production build failed because four bulk payment components still import `payment-voucher-bulk.module.css`, which commit `04333fb` deleted. Restored the last deployed stylesheet on issue #124's branch for build verification before rebuilding Penang.
+- With the stylesheet restored, the production Next.js build and TypeScript checks passed. All CSS class names referenced by the four importing components are present.
 
 ### Dashboard KPI card interaction and color treatment
 
