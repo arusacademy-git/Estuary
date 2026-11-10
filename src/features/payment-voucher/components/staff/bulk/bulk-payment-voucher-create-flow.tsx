@@ -112,7 +112,10 @@ export function BulkPaymentVoucherCreateFlow() {
         setSpreadsheetRows(restoredRows);
       }
       setSpreadsheetSourceUrl(savedDraft.snapshot.sourceUrl ?? '');
-      setEntryMode(savedDraft.snapshot.entryMode ?? 'manual');
+      // A Google Sheets draft already contains the parsed voucher rows in
+      // PaymentRequestDraft. Continue it in the editable multiple-entry form
+      // instead of asking the requester to retrieve the same sheet again.
+      setEntryMode('manual');
       setCurrentStep('entry');
     }).catch(() => {
       // The entry form remains available when a saved draft cannot be restored.
