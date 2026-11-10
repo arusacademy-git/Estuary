@@ -34,6 +34,43 @@
 
 ## Current Session Log — 2026-11-10
 
+### Dashboard KPI card interaction and color treatment
+
+- Enhanced the role KPI row to match the supplied prototype with blue received/visible-records, amber in-workflow, green completed and navy reconciliation treatments.
+- Added icon tiles, a circular reconciliation indicator, elevated hover feedback and a whole-card click target through the existing accessible `View list` link.
+- The first three KPI cards now use supplied PNG assets; the percentage KPI remains a live SVG ring.
+- Updated files: `generated/src/app/beta/dashboard/page.tsx` and `generated/src/app/beta/dashboard/dashboard.module.css`.
+- Replaced the first three KPI placeholder characters with configurable PNG paths using `next/image`; percentage KPIs retain a live SVG progress ring whose arc follows the actual percentage value.
+- Expected scaffold PNG destinations are `generated/public/assets/icons/payments-received.png`, `in-workflow.png` and `payments-completed.png`; in the live Next.js project, copy them to `public/assets/icons/`.
+- Replaced the sidebar's main CSS character placeholders with the supplied `*-light.png` assets for Dashboard, Payment Request, Pending Approvals, Pending Processing, Petty Cash, SQL Entry Tracker, Administration, My Requests and Payment Records. These assets must also live under the live project's `public/assets/icons/` directory. Nested payment types intentionally retain their ARUS-colored dots.
+- Removed the decorative up/down caret characters from every sidebar group heading and expandable navigation branch. The full branch row remains the accessible expand/collapse control through `aria-expanded`.
+
+### Prototype sidebar hierarchy and icon placeholders
+
+- Consolidated Payment Voucher, Invoice Payment, Travel Allowance where authorised, Cash Advance, Petty Cash and Claims beneath the expandable `Payment Request` branch instead of rendering Payment Voucher as a separate creation item.
+- Preserved role restrictions: Travel Allowance remains Manager-only and Director does not receive Payment Voucher creation.
+- Aligned the sidebar with the supplied prototype using a wider navy rail, collapsible group labels, a cyan active-route edge, compact hover movement, persistent user identity and colored payment-type dots.
+- Added CSS-only placeholder icons for Dashboard, Payment Request, My Requests and Payment Records. These require no image assets and can later be replaced with SVG/image components without changing the navigation URLs or hierarchy.
+- Updated files: `generated/src/app/beta/role-sidebar.tsx` and `generated/src/app/beta/beta.module.css`.
+
+### Role-aware dashboard and sidebar prototype alignment
+
+- Reworked the shared dashboard presentation for Staff, Manager, Director and Finance while preserving the existing expenditure analytics and latest-payment-record sections.
+- Added the prototype-style workspace hero, role KPI cards, action-required/all-caught-up panel and compact payment portfolio.
+- Added a role-aware **Make a payment** menu with payment-type colors and working creation routes. Travel Allowance remains Manager-only and Payment Voucher is hidden for Director.
+- Kept dashboard action links routed to the correct combined queue for Manager, Director and Finance, and to My Requests for Staff follow-up.
+- Updated the shared role sidebar with compact hover states, active-page semantics, prototype ordering for My Requests/Payment Records, and a persistent signed-in identity card.
+- Copy-ready files:
+  - `generated/src/app/beta/dashboard/page.tsx`
+  - `generated/src/app/beta/dashboard/dashboard.module.css`
+  - `generated/src/app/beta/role-sidebar.tsx`
+  - `generated/src/app/beta/beta.module.css`
+- Verification limitation: this repository remains a manual copy scaffold with no dependency manifest or runnable lint/typecheck command. Structural brace checks passed for all four edited source files; runtime behavior must be verified after copying into the live Next.js project.
+
+- Corrected Google Sheets Payment Voucher draft continuation. `Continue draft` still targets the exact `PaymentRequestDraft` row by `draftId`, but restored Sheet rows now populate and open the editable multiple-entry form instead of returning the requester to the Google Sheets retrieval tab. The original Sheet URL remains preserved in the saved snapshot metadata.
+- Fixed the Payment Voucher Google Sheets guidance overlap by grouping both helper descriptions into a dedicated stacked guidance container.
+- Added the `Optional` badge to Supporting documents in the multiple-entry Payment Voucher form, matching the single-entry PV form. Updated both the copy-ready root files and their mirrored live-project destination files.
+
 - Corrected the multiple/manual-entry and Google Sheets Payment Voucher completion state. Once every created voucher has been submitted, the result page now explicitly confirms that the vouchers were submitted to their assigned Directors instead of continuing to describe them as newly created drafts.
 - Restyled the single-entry Payment Voucher supporting-document control to match the established manual-entry upload treatment and added an explicit `Optional` badge beside the label.
 - Added the missing Finance Payment Voucher API route handlers for starting Finance processing, recording generated-PV state and marking a bank-rejected Payment Voucher inactive. These copy-ready routes match the URLs already called by `payment-voucher-api.ts` and remove the static route-level source of the Finance 404 responses.
