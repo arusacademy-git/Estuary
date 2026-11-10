@@ -34,10 +34,10 @@ export function PettyCashConfirmation({
   const independentReviewer = request.financeReviewerId ? getBetaAccount(request.financeReviewerId) : undefined;
   const location = request.location === 'PENANG' ? 'Penang' : 'Kuala Lumpur';
   const requesterRole = request.requesterRole ?? 'staff';
-  const nextReviewer = 'Finance';
-  const nextStage = 'Finance processing';
+  const nextReviewer = requesterRole === 'staff' ? manager?.name ?? 'Manager' : 'Finance';
+  const nextStage = requesterRole === 'staff' ? 'Pending Manager Approval' : 'Finance processing';
   const workflow = requesterRole === 'staff'
-    ? [['Manager Preview', `Informational preview assigned to ${manager?.name ?? 'Manager'}`], ['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
+    ? [['Manager Approval', `Mandatory review assigned to ${manager?.name ?? 'Manager'}`], ['Director Approval', `After Manager approval, assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available after Director approval'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
     : requesterRole === 'manager'
       ? [['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
       : requesterRole === 'director'
@@ -74,9 +74,9 @@ export function PettyCashConfirmation({
             </span>
             <span className={styles.confirmationStatus}><i />{nextStage}</span>
           </div>
-          <p>
-            Your request is available to Finance now. Assigned previews are informational and do not delay payment processing.
-          </p>
+          <p>{requesterRole === 'staff'
+            ? 'Your request was sent to the assigned Manager for mandatory approval. After Manager approval, it moves to the Director and then Finance.'
+            : 'Your request is available to Finance now. Assigned previews remain informational and do not delay payment processing.'}</p>
         </header>
 
         <section className={styles.confirmationSection}>
@@ -93,7 +93,7 @@ export function PettyCashConfirmation({
           <h2>Workflow progress</h2>
           <ol className={styles.confirmationWorkflow} style={{ '--stage-count': workflow.length + 1 } as CSSProperties}>
             <ConfirmationStep state="complete" number="✓" title="Request Submitted" copy={request.requesterName} />
-            {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={title === 'Finance Processing' ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
+            {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={requesterRole === 'staff' ? (index === 0 ? 'active' : 'pending') : title === 'Finance Processing' ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
           </ol>
         </section>
 
@@ -108,7 +108,7 @@ export function PettyCashConfirmation({
       </section>
 
       <p className={styles.confirmationNote}>
-        Need a correction? Contact Finance while the request is being processed.
+        {requesterRole === 'staff' ? 'Need a correction? Contact the assigned Manager before the request is approved.' : 'Need a correction? Contact Finance while the request is being processed.'}
       </p>
     </main>
   );

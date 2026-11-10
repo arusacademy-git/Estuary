@@ -6,43 +6,198 @@ import { normalizeSheetCell, parseSheetCsv, retrieveSheetCsv, sheetDate, sheetMo
 import styles from '../../cash-advance.module.css';
 
 function heading(value: string) {
-    const cell = normalizeSheetCell(value);
-    if (cell === 'no' || cell === 'no.') return 'number';
-    if (cell === 'date') return 'expenseDate';
-    if (cell.startsWith('supplier')) return 'supplier';
-    if (cell.includes('list of expenses')) return 'description';
-    if (cell.startsWith('type of account')) return 'accountType';
-    if (cell.startsWith('division')) return 'division';
-    if (cell.includes('link to e-invoice') || cell.includes('receipts')) return 'receiptLink';
-    if (cell.startsWith('amount')) return 'amount';
-    return '';
+  const cell = normalizeSheetCell(value);
+  if (cell === 'no' || cell === 'no.') return 'number';
+  if (cell === 'date') return 'expenseDate';
+  if (cell.startsWith('supplier')) return 'supplier';
+  if (cell.includes('list of expenses')) return 'description';
+  if (cell.startsWith('type of account')) return 'accountType';
+  if (cell.startsWith('division')) return 'division';
+  if (cell.includes('link to e-invoice') || cell.includes('receipts')) return 'receiptLink';
+  if (cell.startsWith('amount')) return 'amount';
+  return '';
 }
 
 function comparableReceiptLabel(value: string) {
-    return normalizeSheetCell(value.replace(/[–—]/g, '-'));
+  return normalizeSheetCell(value.replace(/[–—]/g, '-'));
 }
 
 export function parseSummary(csv: string, receiptUrls: Record<string, string> = {}) {
-    const rows = parseSheetCsv(csv);
-    const headerIndex = rows.findIndex((row) => { const fields = row.map(heading); return fields.includes('expenseDate') && fields.includes('supplier') && fields.includes('description') && fields.includes('amount'); });
-    if (headerIndex < 0) throw new Error('Summary of Cash Advance Spent headings could not be found. Open Appendix A before copying the link.');
-    const indexes = new Map<string, number>(); rows[headerIndex].forEach((cell, index) => { const field = heading(cell); if (field) indexes.set(field, index); });
-    const value = (row: string[], field: string) => String(row[indexes.get(field) ?? -1] ?? '').trim();
-    const expenses = rows.slice(headerIndex + 1).filter((row) => normalizeSheetCell(value(row, 'number')) !== 'e.g' && normalizeSheetCell(value(row, 'number')) !== 'eg' && (value(row, 'expenseDate') || value(row, 'supplier') || value(row, 'description') || value(row, 'amount'))).map((row, index) => {
-        const amount = sheetMoney(value(row, 'amount')); const receiptLabel = value(row, 'receiptLink'); const accountType = value(row, 'accountType');
-        if (!value(row, 'expenseDate') || !value(row, 'supplier') || !value(row, 'description') || !accountType || !Number.isFinite(amount) || amount <= 0) throw new Error(`Appendix A row ${index + 1} is incomplete.`);
-        if (!CASH_ADVANCE_ACCOUNT_TYPES.includes(accountType as (typeof CASH_ADVANCE_ACCOUNT_TYPES)[number])) throw new Error(`Appendix A row ${index + 1} has an unknown Type of Account: ${accountType}`);
-        const resolvedReceipt = Object.entries(receiptUrls).find(([label]) => comparableReceiptLabel(label) === comparableReceiptLabel(receiptLabel))?.[1];
-        const receiptLink = resolvedReceipt || receiptLabel;
-        if (resolvedReceipt || /^https?:\/\//i.test(receiptLink)) { try { const parsed = new URL(receiptLink); if (parsed.protocol !== 'https:') throw new Error(); } catch { throw new Error(`Appendix A row ${index + 1} has an invalid receipt link.`); } }
-        return { id: crypto.randomUUID(), expenseDate: sheetDate(value(row, 'expenseDate')), supplier: value(row, 'supplier'), description: value(row, 'description'), accountType, division: value(row, 'division'), receiptLink: receiptLink || undefined, receiptLabel: resolvedReceipt ? receiptLabel : undefined, amount } satisfies CashAdvanceExpense;
+  const rows = parseSheetCsv(csv);
+  const headerIndex = rows.findIndex((row) => {
+    const fields = row.map(heading);
+    return (
+      fields.includes('expenseDate') &&
+      fields.includes('supplier') &&
+      fields.includes('description') &&
+      fields.includes('amount')
+    );
+  });
+
+  if (headerIndex < 0) {
+    throw new Error('Summary of Cash Advance Spent headings could not be found. Open Appendix A before copying the link.');
+  }
+
+  const indexes = new Map<string, number>();
+  rows[headerIndex].forEach((cell, index) => {
+    const field = heading(cell);
+    if (field) indexes.set(field, index);
+  });
+
+  const value = (row: string[], field: string) => String(row[indexes.get(field) ?? -1] ?? '').trim();
+
+  const expenses = rows
+    .slice(headerIndex + 1)
+    .filter((row) => {
+      const num = normalizeSheetCell(value(row, 'number'));
+      return (
+        num !== 'e.g' &&
+        num !== 'eg' &&
+        (value(row, 'expenseDate') || value(row, 'supplier') || value(row, 'description') || value(row, 'amount'))
+      );
+    })
+    .map((row, index) => {
+      const amount = sheetMoney(value(row, 'amount'));
+      const receiptLabel = value(row, 'receiptLink');
+      const accountType = value(row, 'accountType');
+
+      if (
+        !value(row, 'expenseDate') ||
+        !value(row, 'supplier') ||
+        !value(row, 'description') ||
+        !accountType ||
+        !Number.isFinite(amount) ||
+        amount <= 0
+      ) {
+        throw new Error(`Appendix A row ${index + 1} is incomplete.`);
+      }
+
+      if (!CASH_ADVANCE_ACCOUNT_TYPES.includes(accountType as (typeof CASH_ADVANCE_ACCOUNT_TYPES)[number])) {
+        throw new Error(`Appendix A row ${index + 1} has an unknown Type of Account: ${accountType}`);
+      }
+
+      const resolvedReceipt = Object.entries(receiptUrls).find(
+        ([label]) => comparableReceiptLabel(label) === comparableReceiptLabel(receiptLabel)
+      )?.[1];
+      
+      const receiptLink = resolvedReceipt || receiptLabel;
+
+      if (resolvedReceipt || /^https?:\/\//i.test(receiptLink)) {
+        try {
+          const parsed = new URL(receiptLink);
+          if (parsed.protocol !== 'https:') throw new Error();
+        } catch {
+          throw new Error(`Appendix A row ${index + 1} has an invalid receipt link.`);
+        }
+      }
+
+      return {
+        id: crypto.randomUUID(),
+        expenseDate: sheetDate(value(row, 'expenseDate')),
+        supplier: value(row, 'supplier'),
+        description: value(row, 'description'),
+        accountType,
+        division: value(row, 'division'),
+        receiptLink: receiptLink || undefined,
+        receiptLabel: resolvedReceipt ? receiptLabel : undefined,
+        amount,
+      } satisfies CashAdvanceExpense;
     });
-    if (!expenses.length) throw new Error('No completed expenses were found in Appendix A.');
-    return expenses;
+
+  if (!expenses.length) {
+    throw new Error('No completed expenses were found in Appendix A.');
+  }
+
+  return expenses;
 }
 
-export function CashSpentGoogleSheet({ onApply }: { onApply: (expenses: CashAdvanceExpense[]) => void }) {
-    const [url, setUrl] = useState(''); const [expenses, setExpenses] = useState<CashAdvanceExpense[] | null>(null); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
-    async function load() { setLoading(true); setError(''); setExpenses(null); try { setExpenses(parseSummary(await retrieveSheetCsv(url))); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to read Appendix A.'); } finally { setLoading(false); } }
-    return <div className={styles.inlineSheet}><div><strong>Retrieve Appendix A from Google Sheets</strong><p>Open the “Summary of Cash Advance Spent” tab, then copy its link including the tab’s gid.</p></div>{error && <div className={styles.error}>{error}</div>}<div className={styles.sheetLinkRow}><label className={styles.field}><span>Appendix A Google Sheets link</span><input type="url" value={url} onChange={(event) => { setUrl(event.target.value); setExpenses(null); }} placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=..." /></label><button className={styles.secondary} disabled={loading || !url.trim()} onClick={load} type="button">{loading ? 'Retrieving…' : 'Retrieve summary'}</button></div>{expenses && <div className={styles.sheetApplyRow}><span>{expenses.length} expense {expenses.length === 1 ? 'row' : 'rows'} found</span><button className={styles.primary} onClick={() => onApply(expenses)} type="button">Use retrieved expenses</button></div>}</div>;
+interface CashSpentGoogleSheetProps {
+  onApply: (expenses: CashAdvanceExpense[]) => void;
+}
+
+export function CashSpentGoogleSheet({ onApply }: CashSpentGoogleSheetProps) {
+  const [url, setUrl] = useState('');
+  const [expenses, setExpenses] = useState<CashAdvanceExpense[] | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const templateUrl = process.env.NEXT_PUBLIC_CASH_ADVANCE_APPENDIX_A_TEMPLATE_SHEET_URL?.trim() ?? '';
+
+  async function handleLoad() {
+    setLoading(true);
+    setError('');
+    setExpenses(null);
+
+    try {
+      const csvData = await retrieveSheetCsv(url);
+      setExpenses(parseSummary(csvData));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to read Appendix A.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className={styles.inlineSheet}>
+      <div className={styles.inlineSheetHeader}>
+        <div>
+          <strong>Retrieve Appendix A from Google Sheets</strong>
+          <p>Open the “Summary of Cash Advance Spent” tab, then copy its link including the tab’s gid.</p>
+        </div>
+
+        {templateUrl ? (
+          <a className={styles.templateSheetButton} href={templateUrl} rel="noreferrer" target="_blank">
+            Open Cash Spent template ↗
+          </a>
+        ) : (
+          <button
+            className={styles.templateSheetButton}
+            disabled
+            title="Configure NEXT_PUBLIC_CASH_ADVANCE_APPENDIX_A_TEMPLATE_SHEET_URL"
+            type="button"
+          >
+            Open Cash Spent template ↗
+          </button>
+        )}
+      </div>
+
+      {error && <div className={styles.error}>{error}</div>}
+
+      <div className={styles.sheetLinkRow}>
+        <label className={styles.field}>
+          <span>Appendix A Google Sheets link</span>
+          <input
+            onChange={(event) => {
+              setUrl(event.target.value);
+              setExpenses(null);
+            }}
+            placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=..."
+            type="url"
+            value={url}
+          />
+        </label>
+
+        <button
+          className={styles.secondary}
+          disabled={loading || !url.trim()}
+          onClick={handleLoad}
+          type="button"
+        >
+          {loading ? 'Retrieving…' : 'Retrieve summary'}
+        </button>
+      </div>
+
+      {expenses && (
+        <div className={styles.sheetApplyRow}>
+          <span>
+            {expenses.length} expense {expenses.length === 1 ? 'row' : 'rows'} found
+          </span>
+          <button className={styles.primary} onClick={() => onApply(expenses)} type="button">
+            Use retrieved expenses
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
