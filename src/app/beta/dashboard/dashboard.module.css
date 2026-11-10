@@ -491,6 +491,12 @@
   --kpi-border: #bde7ce;
 }
 
+.roleKpis article[data-tone='red'] {
+  --kpi-color: #db224a;
+  --kpi-soft: #fee8ed;
+  --kpi-border: #f6b8c7;
+}
+
 .roleKpis article[data-tone='reconciliation'] {
   --kpi-color: #173f70;
   --kpi-soft: #f5f8fc;

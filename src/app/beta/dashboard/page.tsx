@@ -24,6 +24,7 @@ const dashboardKpiIcons = [
   "/assets/icons/submitted-doc-icon.png",
   "/assets/icons/in-progress-clock-icon.png",
   "/assets/icons/completed-check-icon.png",
+  "/assets/icons/reconciliation-sync-icon.png",
 ] as const;
 
 type DashboardType = DashboardSummaryPaymentType;
@@ -929,7 +930,9 @@ export default function BetaDashboardPage() {
                     ? "blue"
                     : index === 1
                       ? "amber"
-                      : "green"
+                      : index === 2
+                        ? "green"
+                        : "red"
               }
               key={kpi.label}
             >
