@@ -12,14 +12,14 @@
 - Cast ID:
 - Homunculus Memo Path:
 - Current Branch: agent/add-payment-request-drafts
-- Last Updated: 2026-11-03
+- Last Updated: 2026-11-10
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
 - Baseline: full verification chain re-run and passing on 2026-07-06 (see Verification)
 - Next Assignee Start Point: run `corepack pnpm install`, then `corepack pnpm lint`, `corepack pnpm test`, and `$env:E2E_PORT='3131'; $env:CI='1'; corepack pnpm test:e2e` before new feature work.
 - GitHub publishing setup: origin targets `arusacademy-git/Estuary`; GitHub CLI is installed and authenticated as `afiq-work`.
-- OQ-PettyCashConfirm: Petty Cash model not confirmed. Blocks Phase 5 only.
+- OQ-PettyCashConfirm: Resolved for requester routing. Staff Petty Cash requires Manager approval, then Director approval, then Finance; Manager, Director and Finance requester paths retain their existing behavior.
 - OQ-5: SQL Account CSV sample needed before Phase 6 export build. Blocks Phase 6 only.
 - Real Google OAuth / AWS creds are still absent, so auth and integration work remains local or stubbed for now.
 - OQ-LocalPostgres: Docker Desktop is not installed on this machine, so `compose.yaml` cannot supply the local Postgres. The initial migration is authored and verified (see changelog); applying it to a persistent local database needs Afiq's call on Docker Desktop vs a native/embedded dev Postgres.
@@ -32,7 +32,42 @@
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
 
-## Current Session Log — 2026-11-03
+## Current Session Log — 2026-11-10
+
+- Corrected the multiple/manual-entry and Google Sheets Payment Voucher completion state. Once every created voucher has been submitted, the result page now explicitly confirms that the vouchers were submitted to their assigned Directors instead of continuing to describe them as newly created drafts.
+- Restyled the single-entry Payment Voucher supporting-document control to match the established manual-entry upload treatment and added an explicit `Optional` badge beside the label.
+- Added the missing Finance Payment Voucher API route handlers for starting Finance processing, recording generated-PV state and marking a bank-rejected Payment Voucher inactive. These copy-ready routes match the URLs already called by `payment-voucher-api.ts` and remove the static route-level source of the Finance 404 responses.
+- Changed Finance bank-rejection guidance to subdued grey, smaller explanatory text. The Director action description already uses the same small grey treatment through the shared combined-approval action card.
+- Extended the Google Sheets PV importer to recognise `Import Status`, `Submission Status`, or `Estuary Status`. Rows marked `SUBMITTED`, `IMPORTED`, `COMPLETED`, or `YES` are excluded, so a maintained working sheet does not repeatedly offer completed rows.
+- Kept the public Google Sheets importer read-only. It cannot write the submitted flag back into the source sheet without authenticated Google Sheets write access; the sheet owner or an existing sheet process must currently maintain that status column.
+- Fixed Google Sheets and multiple-entry PV draft continuation through `PaymentRequestDraft`. The snapshot retains parsed rows, source URL and entry mode, `Continue draft` identifies the exact row through `draftId`, and a completed submission deletes only that selected draft rather than an unrelated latest PV draft.
+- Verification in this manual scaffold was limited to static source inspection and targeted path/API checks. This workspace still has no dependency manifest or executable lint, typecheck, test or browser runtime; the copied files require the live project's normal verification chain.
+
+### Previous session — 2026-11-04
+
+- Updated the Staff-requested Petty Cash workflow to the mandatory sequence `Manager approval -> Director approval -> Finance processing`. New Staff requests start in `PENDING_MANAGER_APPROVAL`, Manager approval advances them to `PENDING_DIRECTOR_APPROVAL`, and Director approval advances them to `PENDING_FINANCE_PAYMENT`.
+- Kept the existing Manager-, Director- and Finance-requested Petty Cash routing unchanged. Their informational preview/independent-review behavior continues to operate without adding a new Manager gate.
+- Updated the Petty Cash confirmation, Manager and Director action panels, combined pending queues, notifications, and requester/Finance progress displays so Staff requests consistently show mandatory Manager and Director approvals. Staff submissions notify the assigned Manager first; Manager approval notifies the assigned Director; Director approval notifies Finance.
+- Removed the premature Finance-user lookup from Staff Petty Cash creation. Finance is resolved only after Director approval, while non-Staff requester paths continue to resolve Finance at submission.
+- Verification for this manual scaffold was limited to static inspection and targeted source searches because this workspace has no dependency manifest or runnable lint/typecheck/test commands. The separate live Next.js project still requires its normal verification after these copy-ready files are copied.
+- Corrected the Director combined-queue `Row` shape after the Staff Petty Cash approval update. Rows now carry their underlying workflow `status` for every payment type, allowing Petty Cash to distinguish mandatory `PENDING_DIRECTOR_APPROVAL` actions from optional previews without TypeScript `TS2339` errors.
+
+- Fixed Cash Advance reconciliation amount entry so users can type and retain cents (up to two decimal places); the value is normalized to two decimals on blur without losing a trailing decimal during input.
+- Refined the Cash Advance reconciliation expense entry: Division now uses the shared `DIVISION_SELECT_OPTIONS` dropdown, the manual entry view explains that Appendix A can be retrieved instead, and the Appendix A retrieval panel once again exposes the Cash Spent template button using `NEXT_PUBLIC_CASH_ADVANCE_APPENDIX_A_TEMPLATE_SHEET_URL`.
+
+- Replaced the manual Cash Advance reconciliation receipt/Google Drive URL field with a required receipt-file picker. Each expense now accepts PDF, JPG or PNG files up to 2.5 MB, stores the existing `CashAdvanceDocument` payload, shows the selected filename, and participates in reconciliation validation and the summary checklist.
+- Corrected the receipt MIME validation to use a typed `Set<string>` lookup. This removes the live-project `file.type as any` workaround and satisfies the `@typescript-eslint/no-explicit-any` rule without weakening file-type validation.
+- Preserved backward compatibility for Appendix A imports and previously saved records: imported or legacy `receiptLink` values remain readable in review/detail screens, while newly entered manual expenses use the uploaded `receipt` document.
+- Updated reconciliation review wording from `Receipt link` to `Receipt`; uploaded documents display their filename, while legacy links continue to render through the existing document-reference chip.
+- Redesigned the Cash Advance reconciliation form to match the supplied compact prototype. The page now uses a clear reconciliation header, a two-column workspace with the editable reconciliation sections on the left and a sticky summary/checklist rail on the right.
+- Added an explicit manual-entry versus Appendix A retrieval switch. Manual expenses now render as responsive cards instead of a horizontally scrolling table, while the existing Google Sheet retrieval component remains available without duplicating either workflow.
+- Preserved the existing reconciliation calculations, draft handling, validation and submission behavior while reorganizing the presentation. Purchase receipts, optional participant allowance, conditional balance-return evidence and additional remarks remain part of the same reconciliation payload.
+- Changed the Cash Advance `Start reconciliation` action to the requested amber treatment with accessible hover and focus feedback.
+- Refined the `Start reconciliation` action to the darker burnt-orange `#c45500` treatment used by the established Action Required/Settings card, including a darker hover state and matching keyboard-focus ring. Removed the shared hover selector that previously overrode this action with navy.
+- Added a dedicated 10px gap above `Start reconciliation`, separating the action clearly from its explanatory copy without affecting unrelated buttons.
+- Static verification confirmed that the new TSX class references are backed by CSS declarations and that the Cash Advance stylesheet has balanced braces (`687/687`). Runtime lint, typecheck and browser verification remain pending in the separate live Next.js project because this scaffold has no dependency manifest or executable application.
+
+### Previous session — 2026-11-03
 
 - Promoted the compact draft restored/saved indicator into the shared `ManualDraftStatus` component and applied it across every manual request form: single Payment Voucher, multiple/manual Payment Voucher entry, Invoice Payment, Travel Allowance, Petty Cash, Cash Advance and Claims. Each form now uses the same clock pill for restored drafts and green-check pill for saved-in-place state while retaining its existing action buttons and full draft-saved confirmation behavior.
 - Static source inspection confirmed that all seven manual-form entry points import and render the shared component. Runtime lint, typecheck and browser verification remain pending in the separate live Next.js project because this scaffold has no dependency manifest or executable application.
