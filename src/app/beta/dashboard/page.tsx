@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -18,6 +19,12 @@ import {
 } from "@/lib/auth/beta-accounts";
 
 import styles from "./dashboard.module.css";
+
+const dashboardKpiIcons = [
+  "/assets/icons/submitted-doc-icon.png",
+  "/assets/icons/in-progress-clock-icon.png",
+  "/assets/icons/completed-check-icon.png",
+] as const;
 
 type DashboardType = DashboardSummaryPaymentType;
 type Tone = "blue" | "amber" | "green" | "red" | "gray";
@@ -40,6 +47,12 @@ type DashboardRecord = {
   currentAssigneeId?: string;
   approverIds: string[];
   recipientLinkIssued: boolean;
+};
+type CreatePaymentOption = {
+  type: DashboardType;
+  label: string;
+  description: string;
+  href: string;
 };
 const typeOrder: DashboardType[] = [
   "PAYMENT_VOUCHER",
@@ -108,6 +121,45 @@ const roleCopy: Record<BetaRole, { title: string; description: string }> = {
   },
 };
 
+const createPaymentOptions: CreatePaymentOption[] = [
+  {
+    type: "PAYMENT_VOUCHER",
+    label: "Payment Voucher",
+    description: "Pay a person or vendor",
+    href: "/beta/payment-vouchers/new",
+  },
+  {
+    type: "INVOICE_PAYMENT",
+    label: "Invoice Payment",
+    description: "Pay against a supplier invoice",
+    href: "/beta/payment-requests/invoice-payment/new",
+  },
+  {
+    type: "TRAVEL_ALLOWANCE",
+    label: "Travel Allowance",
+    description: "Get approval and allowance for travel",
+    href: "/beta/payment-requests/travel-allowance/new",
+  },
+  {
+    type: "CASH_ADVANCE",
+    label: "Cash Advance",
+    description: "Get money before an activity",
+    href: "/beta/payment-requests/cash-advance/new",
+  },
+  {
+    type: "PETTY_CASH",
+    label: "Petty Cash",
+    description: "Small day-to-day spending",
+    href: "/beta/payment-requests/petty-cash/new",
+  },
+  {
+    type: "EXPENSE_CLAIM",
+    label: "Claims",
+    description: "Get reimbursed for an expense",
+    href: "/beta/payment-requests/claims/new",
+  },
+];
+
 function titleCase(value: string) {
   return value
     .toLowerCase()
@@ -128,10 +180,10 @@ function date(value: string) {
   return Number.isNaN(parsed.getTime())
     ? value
     : parsed.toLocaleDateString("en-MY", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
 }
 
 function monthKey(value: Date) {
@@ -344,33 +396,33 @@ function needsRoleAction(record: DashboardRecord, role: BetaRole, userId: string
   if (role === "manager")
     return record.type === "PAYMENT_VOUCHER"
       ? record.status === "APPROVED_FOR_PAYMENT" &&
-      record.approverIds.includes(userId) &&
-      !record.managerViewed
+          record.approverIds.includes(userId) &&
+          !record.managerViewed
       : record.type === "EXPENSE_CLAIM"
         ? false
         : record.type === "PETTY_CASH"
           ? record.approverIds.includes(userId) &&
-          !record.claimManagerPreviewed &&
-          !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
+            !record.claimManagerPreviewed &&
+            !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
           : record.type === "CASH_ADVANCE"
             ? record.approverIds.includes(userId) &&
-            !record.managerViewed &&
-            !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
-            : ["PENDING_MANAGER_APPROVAL", "PENDING_MANAGER_REVIEW"].includes(
+              !record.managerViewed &&
+              !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
+          : ["PENDING_MANAGER_APPROVAL", "PENDING_MANAGER_REVIEW"].includes(
               record.status,
             ) && record.currentAssigneeId === userId;
   if (role === "director")
     return record.type === "EXPENSE_CLAIM"
       ? record.approverIds.includes(userId) &&
-      record.status === "PENDING_DIRECTOR_APPROVAL" &&
-      record.currentAssigneeId === userId
+          record.status === "PENDING_DIRECTOR_APPROVAL" &&
+          record.currentAssigneeId === userId
       : record.type === "PETTY_CASH"
         ? record.approverIds.includes(userId) &&
-        !record.claimDirectorPreviewed &&
-        !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
+          !record.claimDirectorPreviewed &&
+          !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
         : ["PENDING_DIRECTOR_APPROVAL", "PENDING_DIRECTOR_REVIEW"].includes(
-          record.status,
-        ) && record.currentAssigneeId === userId;
+            record.status,
+          ) && record.currentAssigneeId === userId;
   if (record.type === "PAYMENT_VOUCHER")
     return [
       "APPROVED_FOR_PAYMENT",
@@ -450,8 +502,8 @@ function normalizeSummary(
     statusLabel:
       record.paymentType === "PAYMENT_VOUCHER"
         ? getPaymentVoucherStatusLabel(
-          record.status as PaymentVoucherRecord["status"],
-        )
+            record.status as PaymentVoucherRecord["status"],
+          )
         : titleCase(record.status),
     amount: record.amount,
     updatedAt: record.updatedAt,
@@ -484,6 +536,7 @@ export default function BetaDashboardPage() {
     useState<AnalyticsRange>("LAST_6_MONTHS");
   const [selectedActionType, setSelectedActionType] =
     useState<DashboardType | null>(null);
+  const [makePaymentOpen, setMakePaymentOpen] = useState(false);
 
   useEffect(() => {
     if (!account) {
@@ -502,10 +555,10 @@ export default function BetaDashboardPage() {
       }),
       organizationAnalytics
         ? fetchDashboardSummary({
-          role: signedInAccount.role,
-          userId: signedInAccount.id,
-          view: "ORGANIZATION_COMPLETED",
-        })
+            role: signedInAccount.role,
+            userId: signedInAccount.id,
+            view: "ORGANIZATION_COMPLETED",
+          })
         : Promise.resolve([]),
     ])
       .then(([items, analyticsItems]) => {
@@ -628,12 +681,19 @@ export default function BetaDashboardPage() {
   );
   const reconciliationRate = reconciliations.length
     ? Math.round(
-      (reconciliations.filter((record) => record.status === "RECONCILED")
-        .length /
-        reconciliations.length) *
-      100,
-    )
+        (reconciliations.filter((record) => record.status === "RECONCILED")
+          .length /
+          reconciliations.length) *
+          100,
+      )
     : 0;
+  const pendingReconciliations = records.filter(
+    (record) =>
+      ["CASH_ADVANCE", "PETTY_CASH"].includes(record.type) &&
+      ["PENDING_RECONCILIATION", "PROCESSED_PENDING_RECONCILIATION"].includes(
+        record.status,
+      ),
+  ).length;
   const actionCopy: Record<BetaRole, { title: string; detail: string }> = {
     staff: {
       title: "Requester follow-up",
@@ -659,61 +719,43 @@ export default function BetaDashboardPage() {
   const kpis =
     account.role === "staff"
       ? [
-        {
-          label: "My requests submitted",
-          value: records.length,
-          note: "Across all payment types",
-        },
-        {
-          label: "My requests in progress",
-          value: summary.inProgress,
-          note: "Moving through the workflow",
-        },
-        {
-          label: "My requests completed",
-          value: summary.completed,
-          note: "Paid or fully closed",
-        },
-        {
-          label: "Completion rate",
-          value: `${completionRate}%`,
-          note: "Completed versus returned",
-        },
-      ]
-      : account.role === "manager"
-        ? [
           {
-            label: "Records visible to Manager",
+            label: "My requests submitted",
             value: records.length,
-            note: "Assigned and submitted records",
+            note: "Across all payment types",
           },
           {
-            label: "Beyond Manager review",
-            value: Math.max(0, summary.inProgress - summary.attention),
-            note: "Progressing to Director or Finance",
+            label: "My requests in progress",
+            value: summary.inProgress,
+            note: "Moving through the workflow",
           },
           {
-            label: "Completed payments",
+            label: "My requests completed",
             value: summary.completed,
             note: "Paid or fully closed",
           },
           {
-            label: "Advance reconciliation rate",
-            value: `${reconciliationRate}%`,
-            note: "Cash Advance and Petty Cash",
+            label: "Cash advance pending reconciliation",
+            value: pendingReconciliations,
+            note: "Advance waiting for your action",
+          },
+          {
+            label: "Completion rate",
+            value: `${completionRate}%`,
+            note: "Completed versus returned",
           },
         ]
-        : account.role === "director"
-          ? [
+      : account.role === "manager"
+        ? [
             {
-              label: "Records visible to Director",
+              label: "Records visible to Manager",
               value: records.length,
-              note: "Assigned and organization records",
+              note: "Assigned and submitted records",
             },
             {
-              label: "Forwarded beyond Director",
+              label: "Beyond Manager review",
               value: Math.max(0, summary.inProgress - summary.attention),
-              note: "Progressing through Finance",
+              note: "Progressing to Director or Finance",
             },
             {
               label: "Completed payments",
@@ -726,36 +768,137 @@ export default function BetaDashboardPage() {
               note: "Cash Advance and Petty Cash",
             },
           ]
+        : account.role === "director"
+          ? [
+              {
+                label: "Records visible to Director",
+                value: records.length,
+                note: "Assigned and organization records",
+              },
+              {
+                label: "Forwarded beyond Director",
+                value: Math.max(0, summary.inProgress - summary.attention),
+                note: "Progressing through Finance",
+              },
+              {
+                label: "Completed payments",
+                value: summary.completed,
+                note: "Paid or fully closed",
+              },
+              {
+                label: "Advance reconciliation rate",
+                value: `${reconciliationRate}%`,
+                note: "Cash Advance and Petty Cash",
+              },
+            ]
           : [
-            {
-              label: "Payments received by Finance",
-              value: records.length,
-              note: "Across all payment types",
-            },
-            {
-              label: "In Finance workflow",
-              value: Math.max(0, summary.inProgress - summary.attention),
-              note: "Already progressing",
-            },
-            {
-              label: "Payments completed",
-              value: summary.completed,
-              note: "Paid or fully closed",
-            },
-            {
-              label: "Advance reconciliation rate",
-              value: `${reconciliationRate}%`,
-              note: "Cash Advance and Petty Cash",
-            },
-          ];
+              {
+                label: "Payments received by Finance",
+                value: records.length,
+                note: "Across all payment types",
+              },
+              {
+                label: "In Finance workflow",
+                value: Math.max(0, summary.inProgress - summary.attention),
+                note: "Already progressing",
+              },
+              {
+                label: "Payments completed",
+                value: summary.completed,
+                note: "Paid or fully closed",
+              },
+              {
+                label: "Advance reconciliation rate",
+                value: `${reconciliationRate}%`,
+                note: "Cash Advance and Petty Cash",
+              },
+            ];
+  const visibleCreateOptions = createPaymentOptions.filter((option) => {
+    if (option.type === "TRAVEL_ALLOWANCE") return account.role === "manager";
+    if (option.type === "PAYMENT_VOUCHER") return account.role !== "director";
+    return true;
+  });
+  const greeting = new Intl.DateTimeFormat("en-MY", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date());
+  const recentCreateType = recent[0]?.type;
+  const recentCreateOption = visibleCreateOptions.find(
+    (option) => option.type === recentCreateType,
+  );
 
   return (
     <main className={styles.dashboard}>
       <section className={styles.hero}>
         <div>
-          <p>Dashboard · {account.position}</p>
+          <p>Good afternoon, {account.name.split(" ")[0]} · {greeting}</p>
           <h1>{copy.title}</h1>
           <span>{copy.description}</span>
+        </div>
+        <div className={styles.heroActions}>
+          <button
+            aria-expanded={makePaymentOpen}
+            className={styles.makePaymentButton}
+            onClick={() => setMakePaymentOpen((open) => !open)}
+            type="button"
+          >
+            <span aria-hidden="true">＋</span> Make a payment
+          </button>
+          <Link
+            className={styles.followUpLink}
+            data-empty={summary.attention === 0}
+            href={
+              summary.attention > 0
+                ? account.role === "staff"
+                  ? "/beta/payment-records?scope=mine"
+                  : account.role === "manager"
+                    ? "/beta/project-manager/pending-approvals"
+                    : account.role === "director"
+                      ? "/beta/director/pending-approvals"
+                      : "/beta/finance/pending-processing"
+                : "/beta/payment-records?scope=mine"
+            }
+          >
+            {summary.attention > 0
+              ? `${summary.attention} to follow up`
+              : "All caught up"}
+          </Link>
+          {makePaymentOpen && (
+            <div className={styles.makePaymentMenu}>
+              {recentCreateOption && (
+                <div className={styles.makePaymentGroup}>
+                  <span>Recent</span>
+                  <Link
+                    data-type={recentCreateOption.type}
+                    href={recentCreateOption.href}
+                    onClick={() => setMakePaymentOpen(false)}
+                  >
+                    <i />
+                    <b>{recentCreateOption.label}</b>
+                    <small>{recentCreateOption.description}</small>
+                    <em>Last used</em>
+                  </Link>
+                </div>
+              )}
+              <div className={styles.makePaymentGroup}>
+                <span>All payment types</span>
+                {visibleCreateOptions.map((option) => (
+                  <Link
+                    data-type={option.type}
+                    href={option.href}
+                    key={option.type}
+                    onClick={() => setMakePaymentOpen(false)}
+                  >
+                    <i />
+                    <b>{option.label}</b>
+                    <small>{option.description}</small>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -766,14 +909,76 @@ export default function BetaDashboardPage() {
       )}
 
       <section
+        className={styles.roleKpis}
+        data-count={kpis.length}
+        aria-label={`${account.position} dashboard metrics`}
+      >
+        {kpis.map((kpi, index) => {
+          const percentage =
+            typeof kpi.value === "string" && kpi.value.endsWith("%")
+              ? Math.min(100, Math.max(0, Number.parseFloat(kpi.value)))
+              : null;
+          const iconPath = dashboardKpiIcons[index];
+
+          return (
+            <article
+              data-tone={
+                percentage !== null
+                  ? "reconciliation"
+                  : index === 0
+                    ? "blue"
+                    : index === 1
+                      ? "amber"
+                      : "green"
+              }
+              key={kpi.label}
+            >
+              <span className={styles.kpiVisual} aria-hidden="true">
+                {percentage !== null ? (
+                  <svg
+                    className={styles.kpiRing}
+                    viewBox="0 0 36 36"
+                  >
+                    <circle className={styles.kpiRingTrack} cx="18" cy="18" r="15.5" />
+                    <circle
+                      className={styles.kpiRingValue}
+                      cx="18"
+                      cy="18"
+                      pathLength="100"
+                      r="15.5"
+                      strokeDasharray={`${percentage} 100`}
+                    />
+                  </svg>
+                ) : iconPath ? (
+                  <Image
+                    className={styles.kpiIcon}
+                    src={iconPath}
+                    alt=""
+                    width={16}
+                    height={16}
+                  />
+                ) : null}
+              </span>
+              <span>{kpi.label}</span>
+              <strong>{kpi.value}</strong>
+              <small>{kpi.note}</small>
+              <Link href={account.role === "staff" ? "/beta/payment-records?scope=mine" : "/beta/payment-records"}>View list</Link>
+            </article>
+          );
+        })}
+      </section>
+
+      <section
         className={styles.actionPanel}
         data-empty={summary.attention === 0}
         aria-label="Needs your action"
       >
         <header>
-          <span>● Action required</span>
+          <span>{summary.attention === 0 ? "✓ All caught up" : "● Action required"}</span>
           <h2>
-            Need your action <small>({actionCopy[account.role].title})</small>
+            {summary.attention === 0
+              ? "Nothing needs your action right now"
+              : `Need your action (${summary.attention} item${summary.attention === 1 ? "" : "s"} waiting)`}
           </h2>
           <p>{actionCopy[account.role].detail}</p>
         </header>
@@ -800,20 +1005,6 @@ export default function BetaDashboardPage() {
         </div>
       </section>
 
-      <section
-        className={styles.roleKpis}
-        data-count={kpis.length}
-        aria-label={`${account.position} dashboard metrics`}
-      >
-        {kpis.map((kpi) => (
-          <article key={kpi.label}>
-            <span>{kpi.label}</span>
-            <strong>{kpi.value}</strong>
-            <small>{kpi.note}</small>
-          </article>
-        ))}
-      </section>
-
       <section className={styles.section}>
         <div className={styles.sectionHeading}>
           <div>
@@ -828,14 +1019,12 @@ export default function BetaDashboardPage() {
             const attention = items.filter((record) =>
               needsAction(record, account.role, account.id),
             ).length;
-            const total = items.reduce((sum, record) => sum + record.amount, 0);
             return (
               <Link
                 className={styles.typeCard}
                 data-type={type}
                 href={typeHref(type, account.role)}
                 key={type}
-                prefetch={false}
               >
                 <div className={styles.typeCardTop}>
                   <i>{typeCodes[type]}</i>
@@ -852,12 +1041,8 @@ export default function BetaDashboardPage() {
                 <small>
                   {items.length} record{items.length === 1 ? "" : "s"} tracked
                 </small>
-                <div className={styles.volume}>
-                  <span>Total Requested</span>
-                  <strong>{money(total)}</strong>
-                </div>
                 <footer>
-                  <b>View category →</b>
+                  <b>View</b>
                 </footer>
               </Link>
             );
@@ -991,7 +1176,6 @@ export default function BetaDashboardPage() {
                 ? "/beta/payment-records?scope=mine"
                 : "/beta/payment-records"
             }
-            prefetch={false}
           >
             View all records
           </Link>
@@ -1036,7 +1220,7 @@ export default function BetaDashboardPage() {
                       </span>
                     </td>
                     <td>
-                      <Link href={record.href} prefetch={false}>Open</Link>
+                      <Link href={record.href}>Open</Link>
                     </td>
                   </tr>
                 ))}
@@ -1085,7 +1269,6 @@ export default function BetaDashboardPage() {
                 <Link
                   href={pendingRecordHref(record, account)}
                   key={`${record.type}-${record.id}`}
-                  prefetch={false}
                 >
                   <div>
                     <strong>{record.reference}</strong>
@@ -1102,7 +1285,7 @@ export default function BetaDashboardPage() {
               ))}
             </div>
             <footer>
-              <Link href={typeHref(selectedActionType, account.role)} prefetch={false}>
+              <Link href={typeHref(selectedActionType, account.role)}>
                 View all {selectedActions.length}{" "}
                 {typeLabels[selectedActionType]} →
               </Link>

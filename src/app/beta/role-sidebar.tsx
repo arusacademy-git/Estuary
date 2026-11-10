@@ -35,6 +35,7 @@ const roleLabels: Record<BetaRole, string> = {
 };
 
 const standardRequests: NavigationItem[] = [
+  { label: 'Payment Voucher', href: '/beta/payment-vouchers/new' },
   { label: 'Invoice Payment', href: '/beta/payment-requests/invoice-payment/new' },
   { label: 'Cash Advance', href: '/beta/payment-requests/cash-advance/new' },
 ];
@@ -42,19 +43,21 @@ const standardRequests: NavigationItem[] = [
 function paymentRequest(
   includePettyCash = false,
   travelAllowanceHref?: string,
+  includePaymentVoucher = true,
 ): NavigationItem {
   return {
     label: 'Payment Request',
     children: [
-      ...standardRequests.slice(0, 1),
+      ...(includePaymentVoucher ? standardRequests.slice(0, 1) : []),
+      ...standardRequests.slice(1, 2),
       ...(travelAllowanceHref
         ? [{ label: 'Travel Allowance', href: travelAllowanceHref }]
         : []),
-      ...standardRequests.slice(1),
-      { label: 'Claims', href: '/beta/payment-requests/claims/new' },
+      ...standardRequests.slice(2),
       ...(includePettyCash
         ? [{ label: 'Petty Cash', href: '/beta/payment-requests/petty-cash/new' }]
         : []),
+      { label: 'Claims', href: '/beta/payment-requests/claims/new' },
     ],
   };
 }
@@ -71,10 +74,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     { items: [{ label: 'Dashboard', href: '/beta/dashboard' }] },
     {
       label: 'Create payments',
-      items: [
-        { label: 'Payment Voucher', href: '/beta/payment-vouchers/new' },
-        paymentRequest(true),
-      ],
+      items: [paymentRequest(true)],
     },
     {
       label: 'Records',
@@ -86,7 +86,6 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     {
       label: 'Create payments',
       items: [
-        { label: 'Payment Voucher', href: '/beta/payment-vouchers/new' },
         paymentRequest(
           true,
           '/beta/payment-requests/travel-allowance/new',
@@ -100,8 +99,8 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     {
       label: 'Records',
       items: [
-        { label: 'Payment Records', href: '/beta/payment-records' },
         { label: 'My Requests', href: '/beta/payment-records?scope=mine', actionType: 'MY_REQUESTS' },
+        { label: 'Payment Records', href: '/beta/payment-records' },
       ],
     },
   ],
@@ -109,7 +108,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     { items: [{ label: 'Dashboard', href: '/beta/dashboard' }] },
     {
       label: 'Create payments',
-      items: [paymentRequest(true)],
+      items: [paymentRequest(true, undefined, false)],
     },
     {
       label: 'Approvals',
@@ -119,8 +118,8 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     {
       label: 'Records',
       items: [
-        { label: 'Payment Records', href: '/beta/payment-records' },
         { label: 'My Requests', href: '/beta/payment-records?scope=mine', actionType: 'MY_REQUESTS' },
+        { label: 'Payment Records', href: '/beta/payment-records' },
       ],
     },
     {
@@ -132,10 +131,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     { items: [{ label: 'Dashboard', href: '/beta/dashboard' }] },
     {
       label: 'Create payments',
-      items: [
-        { label: 'Payment Voucher', href: '/beta/payment-vouchers/new' },
-        paymentRequest(true),
-      ],
+      items: [paymentRequest(true)],
     },
     {
       label: 'Payment processing',
@@ -151,8 +147,8 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     {
       label: 'Records',
       items: [
-        { label: 'Payment Records', href: '/beta/payment-records' },
         { label: 'My Requests', href: '/beta/payment-records?scope=mine', actionType: 'MY_REQUESTS' },
+        { label: 'Payment Records', href: '/beta/payment-records' },
       ],
     },
   ],
@@ -257,8 +253,8 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
     if (item.children?.length) {
       const isOpen = Boolean(expanded[key] ?? expanded[item.label]);
       return <div className={styles.navigationBranch} key={key}>
-        <button className={`${styles.navigationBranchButton} ${isOpen ? styles.navigationBranchButtonExpanded : ''} ${depth ? styles.nestedNavigationItem : ''}`} type="button" aria-expanded={isOpen} onClick={() => setExpanded((current) => ({ ...current, [key]: !isOpen }))}>
-          {itemLabel(item)}<span className={countStyles.branchEnd}><span aria-hidden="true" className={`${styles.navigationChevron} ${isOpen ? styles.navigationChevronExpanded : ''}`}>⌄</span></span>
+        <button className={`${styles.navigationBranchButton} ${isOpen ? styles.navigationBranchButtonExpanded : ''} ${depth ? styles.nestedNavigationItem : ''}`} data-label={item.label} type="button" aria-expanded={isOpen} onClick={() => setExpanded((current) => ({ ...current, [key]: !isOpen }))}>
+          {itemLabel(item)}
         </button>
         <div className={styles.nestedNavigationItems} data-depth={depth + 1} hidden={!isOpen}>
           {item.children.map((child) => renderItem(child, depth + 1, key))}
@@ -266,7 +262,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
       </div>;
     }
 
-    return <Link className={`${item.href === activeHref ? styles.activeNavigationItem : styles.navigationItem} ${depth ? styles.nestedNavigationItem : ''}`} href={item.href ?? '/beta/dashboard'} key={key}>{itemLabel(item)}</Link>;
+    return <Link aria-current={item.href === activeHref ? 'page' : undefined} className={`${item.href === activeHref ? styles.activeNavigationItem : styles.navigationItem} ${depth ? styles.nestedNavigationItem : ''}`} data-label={item.label} href={item.href ?? '/beta/dashboard'} key={key}>{itemLabel(item)}</Link>;
   }
 
   return <aside className={styles.sidebar}>
@@ -280,6 +276,11 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
         <div className={styles.navigationItems}>{group.items.map((item) => renderItem(item))}</div>
       </section>)}
     </nav>
+    <div className={styles.sidebarProfile}>
+      <span>{account.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</span>
+      <div><strong>{account.name}</strong><small>{account.position}</small></div>
+      <i aria-hidden="true">‹</i>
+    </div>
   </aside>;
 }
 
