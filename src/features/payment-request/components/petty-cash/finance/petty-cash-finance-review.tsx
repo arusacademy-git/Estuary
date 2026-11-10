@@ -43,10 +43,10 @@ function date(value?: string) {
   return Number.isNaN(parsed.getTime())
     ? value
     : new Intl.DateTimeFormat("en-MY", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(parsed);
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(parsed);
 }
 function readReceipt(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -79,8 +79,8 @@ export function PettyCashFinanceReview({
   );
   const [paymentReference, setPaymentReference] = useState(
     initialRecord?.paymentReference?.trim() ||
-    initialRecord?.requestNumber ||
-    "",
+      initialRecord?.requestNumber ||
+      "",
   );
   const [paymentProcessed, setPaymentProcessed] = useState(false);
   const [balanceReceived, setBalanceReceived] = useState(false);
@@ -303,10 +303,10 @@ export function PettyCashFinanceReview({
         kind === "verify"
           ? await verifyPettyCashReconciliation(record.id, account.id)
           : await returnPettyCashReconciliation(
-            record.id,
-            account.id,
-            remarks.trim(),
-          );
+              record.id,
+              account.id,
+              remarks.trim(),
+            );
       setRecord(updated);
       setSuccess(
         kind === "verify"
@@ -606,35 +606,35 @@ export function PettyCashFinanceReview({
                   <label>
                     <span>Upload payment transaction proof</span>
                     <div className={styles.financeReceiptUpload}>
-                      <input
-                        accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                        type="file"
-                        onChange={selectReceipt}
-                      />
-                      <small>PDF, JPG or PNG · maximum 2.5 MB</small>
-                      {paymentProofLink && (
-                        <div>
-                          <strong>
-                            {paymentProofName || "Payment receipt attached"}
-                          </strong>
-                          <a
-                            href={paymentProofLink}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            Preview
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPaymentProofLink("");
-                              setPaymentProofName("");
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
+                    <input
+                      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                      type="file"
+                      onChange={selectReceipt}
+                    />
+                    <small>PDF, JPG or PNG · maximum 2.5 MB</small>
+                    {paymentProofLink && (
+                      <div>
+                        <strong>
+                          {paymentProofName || "Payment receipt attached"}
+                        </strong>
+                        <a
+                          href={paymentProofLink}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Preview
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentProofLink("");
+                            setPaymentProofName("");
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                     </div>
                   </label>
                 )}
@@ -838,18 +838,30 @@ function WorkflowProgress({ record }: { record: PettyCashRecord }) {
     state: "complete",
   };
   const manager = {
-    title: "Manager Preview",
+    title: requesterRole === "staff" ? "Manager Approval" : "Manager Preview",
     copy: record.managerApprovedAt
-      ? `Previewed ${date(record.managerApprovedAt)}`
-      : "Informational preview available",
-    state: record.managerApprovedAt ? "complete" : "pending",
+      ? `${requesterRole === "staff" ? "Approved" : "Previewed"} ${date(record.managerApprovedAt)}`
+      : requesterRole === "staff"
+        ? "Mandatory Manager approval"
+        : "Informational preview available",
+    state: record.managerApprovedAt
+      ? "complete"
+      : record.status === "PENDING_MANAGER_APPROVAL"
+        ? "active"
+        : "pending",
   };
   const director = {
-    title: "Director Preview",
+    title: requesterRole === "staff" ? "Director Approval" : "Director Preview",
     copy: record.directorApprovedAt
-      ? `Previewed ${date(record.directorApprovedAt)}`
-      : "Informational preview available",
-    state: record.directorApprovedAt ? "complete" : "pending",
+      ? `${requesterRole === "staff" ? "Approved" : "Previewed"} ${date(record.directorApprovedAt)}`
+      : requesterRole === "staff"
+        ? "Mandatory Director approval after Manager"
+        : "Informational preview available",
+    state: record.directorApprovedAt
+      ? "complete"
+      : record.status === "PENDING_DIRECTOR_APPROVAL"
+        ? "active"
+        : "pending",
   };
   const independent = {
     title: "Independent Preview",
@@ -893,11 +905,11 @@ function WorkflowProgress({ record }: { record: PettyCashRecord }) {
     record.status === "PAID"
       ? steps.length
       : Math.max(
-        1,
-        steps.findIndex(
-          (step) => step.state === "active" || step.state === "returned",
-        ) + 1,
-      );
+          1,
+          steps.findIndex(
+            (step) => step.state === "active" || step.state === "returned",
+          ) + 1,
+        );
   return (
     <aside className={styles.progressPanel}>
       <header>

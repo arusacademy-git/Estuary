@@ -249,7 +249,7 @@ export function ManagerPendingApprovals() {
               amount: record.totalAmount,
               submittedAt: record.requestDate,
               status: record.status,
-              stage: record.managerApprovedAt ? "Previewed" : "Needs preview",
+              stage: record.managerApprovedAt ? (record.requesterRole === "staff" ? "Approved" : "Previewed") : record.requesterRole === "staff" ? "Pending Manager Approval" : "Needs preview",
               actionable:
                 !record.managerApprovedAt &&
                 !["RETURNED_TO_STAFF", "RECONCILED", "PAID"].includes(
@@ -396,7 +396,9 @@ export function ManagerPendingApprovals() {
     const query = search.trim().toLowerCase();
     const matchesStatus = (row: ApprovalRow) => {
       if (statusFilter === "ALL_PENDING") return true;
-      const requiresApproval = row.type === "INV";
+      const requiresApproval =
+        row.type === "INV" ||
+        (row.type === "PC" && row.status === "PENDING_MANAGER_APPROVAL");
       return statusFilter === "APPROVAL_REQUIRED"
         ? requiresApproval
         : !requiresApproval;
@@ -1236,14 +1238,18 @@ export function ManagerPendingApprovals() {
                 <section className={filterStyles.directorActionCard}>
                   <p>Manager action</p>
                   <h3>
-                    {activeReview.type === "INV"
+                    {activeReview.type === "PC" && activeReview.status === "PENDING_MANAGER_APPROVAL"
+                      ? "Approve and forward"
+                      : activeReview.type === "INV"
                       ? "Review and forward"
                       : activeReview.type === "CA"
                         ? "Sign and forward"
                         : "Optional preview"}
                   </h3>
                   <span>
-                    {activeReview.type === "INV"
+                    {activeReview.type === "PC" && activeReview.status === "PENDING_MANAGER_APPROVAL"
+                      ? "This Staff Petty Cash request requires your approval before it can move to the Director."
+                      : activeReview.type === "INV"
                       ? "Review the request details and supporting documents before forwarding it to the next stage."
                       : activeReview.type === "CA"
                         ? "Review the request and attach your saved signature before forwarding it to the Director."
@@ -1264,6 +1270,8 @@ export function ManagerPendingApprovals() {
                       ? "Saving…"
                       : activeReview.reviewed || !activeReview.actionable
                         ? "Reviewed"
+                        : activeReview.type === "PC" && activeReview.status === "PENDING_MANAGER_APPROVAL"
+                          ? "Approve and forward"
                         : activeReview.type === "INV"
                           ? "Review and continue"
                           : activeReview.type === "CA"

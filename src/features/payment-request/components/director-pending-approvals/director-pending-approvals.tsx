@@ -55,6 +55,7 @@ type Row = {
   programme: string;
   amount: number;
   submittedAt: string;
+  status: string;
   details: Array<{ label: string; value: string }>;
   lines: Array<{ label: string; description: string; amount?: number }>;
   documents: Array<{ name: string; href: string; download?: string }>;
@@ -181,6 +182,7 @@ export function DirectorPendingApprovals() {
                 programme: r.projectName,
                 amount: r.totalAmount,
                 submittedAt: r.requestDate,
+                status: r.status,
                 details: [
                   { label: "Request title", value: r.title },
                   { label: "Vendor", value: r.vendorName },
@@ -223,6 +225,7 @@ export function DirectorPendingApprovals() {
                 programme: r.lines[0]?.projectName ?? "—",
                 amount: r.totalAmount,
                 submittedAt: r.requestDate,
+                status: r.status,
                 details: [
                   { label: "Requester role", value: r.requesterPosition },
                   { label: "Contact", value: r.contact },
@@ -266,6 +269,7 @@ export function DirectorPendingApprovals() {
                 programme: r.projectName,
                 amount: r.totalAmount,
                 submittedAt: r.requestDate,
+                status: r.status,
                 details: [
                   { label: "Position", value: r.requesterPosition },
                   { label: "Department", value: r.requesterDepartment },
@@ -304,6 +308,7 @@ export function DirectorPendingApprovals() {
                 programme: r.location === "PENANG" ? "Penang" : "Kuala Lumpur",
                 amount: r.totalAmount,
                 submittedAt: r.requestDate,
+                status: r.status,
                 details: [
                   { label: "Requester role", value: r.requesterRole },
                   { label: "Position", value: r.requesterPosition },
@@ -340,6 +345,7 @@ export function DirectorPendingApprovals() {
                 programme: r.lines[0]?.division ?? "—",
                 amount: r.totalAmount,
                 submittedAt: r.claimDate,
+                status: r.status,
                 claimType: r.claimType,
                 details: [
                   { label: "Claim type", value: r.claimType },
@@ -411,6 +417,7 @@ export function DirectorPendingApprovals() {
               programme: v.division,
               amount: v.amount,
               submittedAt: v.createdAt,
+              status: v.status,
               details: [
                 { label: "PV date", value: displayDate(v.pvDate) },
                 { label: "Purpose", value: v.purpose },
@@ -1321,20 +1328,20 @@ export function DirectorPendingApprovals() {
                 <section className={filterStyles.directorActionCard}>
                   <p>Director action</p>
                   <h3>
-                    {activeReview.type === "PC"
+                    {activeReview.type === "PC" && activeReview.status !== "PENDING_DIRECTOR_APPROVAL"
                       ? "Optional preview"
                       : activeReview.type === "CL"
                         ? "Final Claim decision"
                         : "Approve or reject"}
                   </h3>
                   <span>
-                    {activeReview.type === "PC"
+                    {activeReview.type === "PC" && activeReview.status !== "PENDING_DIRECTOR_APPROVAL"
                       ? "Review this request for visibility. Finance processing continues independently even if you do not preview it."
                       : activeReview.type === "CL"
                         ? "Finance has verified this Claim. Approve it for payment or reject it with a reason."
                         : "Review the complete request details before approving it or returning it with correction remarks."}
                   </span>
-                  {activeReview.type !== "PC" && (
+                  {(activeReview.type !== "PC" || activeReview.status === "PENDING_DIRECTOR_APPROVAL") && (
                     <button
                       className={filterStyles.rejectButton}
                       disabled={saving}
@@ -1359,7 +1366,7 @@ export function DirectorPendingApprovals() {
                   >
                     {saving
                       ? "Saving…"
-                      : activeReview.type === "PC"
+                      : activeReview.type === "PC" && activeReview.status !== "PENDING_DIRECTOR_APPROVAL"
                         ? "Mark as previewed"
                         : activeReview.type === "CL"
                           ? "Approve for payment"

@@ -196,13 +196,6 @@
   opacity: 0.55;
 }
 
-.minimumNote {
-  margin: 8px 0 0;
-  color: #8a98ab;
-  font-size: 11px;
-  font-weight: 500;
-}
-
 .financePaymentConfirmation {
   display: grid;
   grid-template-columns: 17px minmax(0, 1fr);
@@ -278,11 +271,6 @@
   background: #eef5ff;
   font-size: 17px;
   font-weight: 750;
-}
-
-.totalLabel {
-  display: grid;
-  gap: 4px;
 }
 
 .totalBelowMinimum span:last-child {
@@ -629,18 +617,62 @@
   border-top: 1px solid #e5ebf2;
 }
 
+.draftStatusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 1px solid #dbe5f0;
+  border-radius: 999px;
+  color: #526a88;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.draftStatusPill i {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #7890ad;
+  border-radius: 50%;
+  position: relative;
+}
+
+.draftStatusPill i::after {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 1px;
+  height: 4px;
+  border-radius: 1px;
+  background: #7890ad;
+  box-shadow: 2px 3px 0 -0.25px #7890ad;
+  content: "";
+}
+
+.draftStatusPill[data-saved="true"] i {
+  border: 0;
+}
+
+.draftStatusPill[data-saved="true"] i::after {
+  top: 1px;
+  left: 3px;
+  width: 7px;
+  height: 4px;
+  border: solid #0aa46e;
+  border-width: 0 0 1.5px 1.5px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: rotate(-45deg);
+}
+
 .draftActions {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.draftMessage {
-  display: block;
-  flex-basis: 100%;
-  color: #58708f;
-  font-size: 12px;
-  text-align: right;
 }
 
 .draftActions {
@@ -3767,11 +3799,28 @@
     border-color 0.18s ease;
 }
 
-.rail .reconciliationActionCard>.actionLink:hover,
+.rail .reconciliationActionCard>.actionLink {
+  margin-top: 10px;
+  border-color: #c45500;
+  color: #fff;
+  background: #c45500;
+}
+
+.rail .reconciliationActionCard>.actionLink:hover {
+  border-color: #a84400;
+  color: #fff;
+  background: #a84400;
+}
+
 .returnCorrectionButton:hover {
   border-color: #172b4d;
   color: #fff;
   background: #172b4d;
+}
+
+.rail .reconciliationActionCard>.actionLink:focus-visible {
+  outline: 3px solid rgb(196 85 0 / 24%);
+  outline-offset: 3px;
 }
 
 /* Dedicated reconciliation form shell, aligned with the other request forms. */
@@ -3971,6 +4020,381 @@
   transition:
     background-color 160ms ease,
     transform 160ms ease;
+}
+
+/* Compact Cash Advance reconciliation workspace. */
+.reconciliationPrototypeHeader {
+  margin-bottom: 18px;
+  padding: 22px 28px;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgb(15 23 42 / 4%);
+}
+
+.reconciliationPrototypeHeader p {
+  margin: 0 0 7px;
+  color: #60748d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reconciliationPrototypeHeader p span {
+  display: inline-grid;
+  min-width: 24px;
+  height: 18px;
+  margin-right: 7px;
+  place-items: center;
+  border-radius: 5px;
+  color: #fff;
+  background: #db224a;
+  font-size: 8px;
+}
+
+.reconciliationPrototypeHeader h1 {
+  margin: 0;
+  color: #0c2b50;
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -0.035em;
+}
+
+.reconciliationPrototypeHeader small {
+  display: block;
+  margin-top: 5px;
+  color: #6b7f98;
+  font-size: 11px;
+}
+
+.reconciliationWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.85fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.reconciliationMain {
+  overflow: hidden;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgb(15 23 42 / 4%);
+}
+
+.reconciliationEntrySection {
+  padding-top: 18px;
+}
+
+.reconciliationModeTabs {
+  display: inline-flex;
+  gap: 3px;
+  margin: 0 28px 14px;
+  padding: 3px;
+  border: 1px solid #dce5ef;
+  border-radius: 8px;
+  background: #f4f7fb;
+}
+
+.reconciliationModeTabs button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  color: #657991;
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.reconciliationModeTabs button[aria-selected="true"] {
+  color: #123861;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 9%);
+}
+
+.reconciliationExpenseList {
+  display: grid;
+  gap: 13px;
+}
+
+.appendixAHint {
+  margin: 14px 0 0;
+  color: #71839a;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.reconciliationExpenseCard {
+  padding: 15px;
+  border: 1px solid #dfe7f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.reconciliationExpenseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reconciliationExpenseHeader strong {
+  color: #15385f;
+  font-size: 11px;
+}
+
+.reconciliationExpenseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reconciliationExpenseGrid label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.reconciliationExpenseGrid label>span {
+  color: #63768f;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reconciliationExpenseGrid input,
+.reconciliationExpenseGrid select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #cfdbe8;
+  border-radius: 7px;
+  color: #173a64;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+}
+
+.reconciliationReceiptField {
+  grid-column: 1 / -1;
+}
+
+.reconciliationReceiptUpload {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.reconciliationReceiptUpload>span:first-child b {
+  color: #dc2626;
+}
+
+.reconciliationReceiptUpload>input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.reconciliationFileControl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 7px 10px;
+  border: 1px dashed #b9cce3;
+  border-radius: 9px;
+  background: #fbfdff;
+}
+
+.reconciliationFileControl strong {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border: 1px solid #c8d6e7;
+  border-radius: 7px;
+  color: #173a64;
+  background: #fff;
+  font-size: 10px;
+}
+
+.reconciliationFileControl small,
+.reconciliationReceiptUpload>em {
+  min-width: 0;
+  overflow: hidden;
+  color: #74869c;
+  font-size: 9px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reconciliationReceiptUpload:hover .reconciliationFileControl strong {
+  border-color: #173f6f;
+  color: #fff;
+  background: #173f6f;
+}
+
+.reconciliationReceiptUpload:focus-within .reconciliationFileControl {
+  outline: 3px solid rgb(37 99 235 / 18%);
+  outline-offset: 2px;
+}
+
+.reconciliationSummaryRail {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgb(15 23 42 / 5%);
+}
+
+.reconciliationSummaryRail>p,
+.reconciliationChecklist>p {
+  margin: 0;
+  color: #667a92;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reconciliationSummaryRail dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.reconciliationSummaryRail dl div,
+.reconciliationChecklist div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reconciliationSummaryRail dt,
+.reconciliationSummaryRail dd {
+  margin: 0;
+  color: #61758e;
+  font-size: 11px;
+}
+
+.reconciliationSummaryRail dd {
+  color: #102f55;
+  font-weight: 750;
+}
+
+.reconciliationBalance {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.reconciliationBalance span {
+  color: #61758e;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reconciliationBalance strong {
+  color: #0d2c51;
+  font-size: 27px;
+  line-height: 1.1;
+}
+
+.reconciliationChecklist {
+  display: grid;
+  gap: 9px;
+}
+
+.reconciliationChecklist div {
+  justify-content: flex-start;
+  color: #324d6c;
+  font-size: 10px;
+}
+
+.reconciliationChecklist div span {
+  margin-left: auto;
+  color: #8392a6;
+  font-size: 9px;
+}
+
+.reconciliationChecklist i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
+.reconciliationChecklist i[data-state="done"] {
+  background: #10b981;
+}
+
+.reconciliationChecklist i[data-state="optional"] {
+  background: #cbd5e1;
+}
+
+.reconciliationSummaryRail>.primary,
+.reconciliationSummaryRail>.reconciliationDraftButton {
+  width: 100%;
+  min-height: 40px;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.reconciliationSummaryRail>small {
+  color: #8a9aae;
+  font-size: 9px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .reconciliationWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .reconciliationSummaryRail {
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .reconciliationPrototypeHeader {
+    padding: 19px;
+  }
+
+  .reconciliationModeTabs {
+    display: grid;
+    margin-inline: 18px;
+  }
+
+  .reconciliationExpenseGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .reconciliationReceiptField {
+    grid-column: auto;
+  }
 }
 
 .bulkPreviewButton:hover {
