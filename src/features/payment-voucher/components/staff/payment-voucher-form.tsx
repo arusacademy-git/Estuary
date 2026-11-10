@@ -673,14 +673,19 @@ export function PaymentVoucherForm({
             </label>
 
             <label className={`${styles.field} ${styles.wide}`}>
-              <span>Supporting documents</span>
+              <span className={styles.uploadLabel}>
+                Supporting documents
+                <em className={styles.optionalBadge}>Optional</em>
+              </span>
 
-              <input
-                accept=".pdf,.png,.jpg,.jpeg"
-                multiple
-                name="supportingDocuments"
-                type="file"
-              />
+              <span className={styles.fileUploadControl}>
+                <input
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  multiple
+                  name="supportingDocuments"
+                  type="file"
+                />
+              </span>
 
               <small>
                 {isAmendment

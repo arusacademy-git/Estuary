@@ -717,6 +717,21 @@
  * Supporting documents
  */
 
+.optionalBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #64748b;
+  background: #eef2f7;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+}
+
 .field input[type="file"] {
   min-height: 52px;
   padding: 8px;
@@ -1429,6 +1444,23 @@
 
 .numberedSectionHeading .sectionHeading {
   margin: 0;
+}
+
+.sheetGuidance {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  gap: 5px;
+  justify-self: end;
+  max-width: 480px;
+  color: var(--bulk-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.sheetGuidance > span {
+  display: block;
 }
 
 .googleSheetForm {
@@ -2181,3 +2213,4 @@
   border-color: #ef4444;
   box-shadow: 0 0 0 1px #ef4444;
 }
+

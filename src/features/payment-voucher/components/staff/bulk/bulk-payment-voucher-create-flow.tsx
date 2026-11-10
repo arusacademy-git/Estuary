@@ -71,6 +71,7 @@ type BulkPaymentVoucherDraftSnapshot = {
   entryMode: BulkEntryMode;
   manualRows?: BulkPaymentVoucherRow[];
   rows?: BulkPaymentVoucherRow[];
+  sourceUrl?: string;
 };
 
 function formatCurrency(
@@ -88,20 +89,29 @@ function formatCurrency(
 export function BulkPaymentVoucherCreateFlow() {
   const router = useRouter();
   const [account] = useState(() => readBetaSession());
+  const [activeManualDraftId, setActiveManualDraftId] = useState<string>();
 
   useEffect(() => {
     if (!account) return;
     const parameters = new URLSearchParams(window.location.search);
     if (parameters.get('draft') !== '1') return;
+    const requestedDraftId = parameters.get('draftId') ?? undefined;
     let cancelled = false;
     fetchManualFormDraft<BulkPaymentVoucherDraftSnapshot>(
       'PAYMENT_VOUCHER',
       'beta-arus-org',
       account.id,
+      requestedDraftId,
     ).then((savedDraft) => {
       if (cancelled || !savedDraft) return;
+      setActiveManualDraftId(savedDraft.id);
       const savedRows = savedDraft.snapshot.manualRows ?? savedDraft.snapshot.rows;
-      if (savedRows?.length) setManualRows(savedRows.map((row) => ({ ...row })));
+      if (savedRows?.length) {
+        const restoredRows = savedRows.map((row) => ({ ...row }));
+        setManualRows(restoredRows);
+        setSpreadsheetRows(restoredRows);
+      }
+      setSpreadsheetSourceUrl(savedDraft.snapshot.sourceUrl ?? '');
       setEntryMode(savedDraft.snapshot.entryMode ?? 'manual');
       setCurrentStep('entry');
     }).catch(() => {
@@ -149,6 +159,9 @@ export function BulkPaymentVoucherCreateFlow() {
     'spreadsheet' | 'manual'
   >('manual');
 
+  const [spreadsheetRows, setSpreadsheetRows] = useState<BulkPaymentVoucherRow[]>([]);
+  const [spreadsheetSourceUrl, setSpreadsheetSourceUrl] = useState('');
+
   const [
     createdVouchers,
     setCreatedVouchers,
@@ -179,9 +192,14 @@ export function BulkPaymentVoucherCreateFlow() {
   function openPreview(
     rows: BulkPaymentVoucherRow[],
     source: 'spreadsheet' | 'manual',
+    sourceUrl = '',
   ) {
     setPreviewRows(rows);
     setPreviewSource(source);
+    if (source === 'spreadsheet') {
+      setSpreadsheetRows(rows.map((row) => ({ ...row })));
+      setSpreadsheetSourceUrl(sourceUrl);
+    }
     setCurrentStep('preview');
 
     window.scrollTo({
@@ -273,25 +291,21 @@ export function BulkPaymentVoucherCreateFlow() {
       }
     }
 
-    try {
-      const savedDraft = await fetchManualFormDraft(
-        'PAYMENT_VOUCHER',
-        'beta-arus-org',
-        account.id,
-      );
-      if (savedDraft) {
+    if (activeManualDraftId) {
+      try {
         await deleteManualFormDraft(
-          savedDraft.id,
+          activeManualDraftId,
           'beta-arus-org',
           account.id,
         );
+        setActiveManualDraftId(undefined);
         window.dispatchEvent(new Event('estuary:action-counts-changed'));
+      } catch (draftCleanupError) {
+        console.error(
+          'The vouchers were submitted, but the saved batch draft could not be removed.',
+          draftCleanupError,
+        );
       }
-    } catch (draftCleanupError) {
-      console.error(
-        'The vouchers were submitted, but the saved batch draft could not be removed.',
-        draftCleanupError,
-      );
     }
 
     setCreatedVouchers(
@@ -320,6 +334,7 @@ export function BulkPaymentVoucherCreateFlow() {
       throw new Error('Only Staff, Manager and Finance accounts can save Payment Voucher drafts.');
     }
     await saveManualFormDraft({
+      id: activeManualDraftId,
       organizationId: 'beta-arus-org',
       requesterId: account.id,
       paymentType: 'PAYMENT_VOUCHER',
@@ -328,6 +343,7 @@ export function BulkPaymentVoucherCreateFlow() {
         entryMode: previewSource,
         manualRows: selectedRows.map((row) => ({ ...row })),
         rows: selectedRows.map((row) => ({ ...row })),
+        sourceUrl: previewSource === 'spreadsheet' ? spreadsheetSourceUrl : undefined,
       },
     });
     window.dispatchEvent(new Event('estuary:action-counts-changed'));
@@ -557,6 +573,9 @@ export function BulkPaymentVoucherCreateFlow() {
     setManualRows([
       createEmptyBulkPaymentVoucherRow(),
     ]);
+    setSpreadsheetRows([]);
+    setSpreadsheetSourceUrl('');
+    setActiveManualDraftId(undefined);
 
     window.scrollTo({
       top: 0,
@@ -613,22 +632,21 @@ export function BulkPaymentVoucherCreateFlow() {
           <p
             className={styles.eyebrow}
           >
-            Bulk creation completed
+            {remainingDrafts.length === 0 && createdVouchers.length > 0
+              ? 'Bulk submission completed'
+              : 'Bulk creation completed'}
           </p>
 
           <h1>
-            {createdVouchers.length}{' '}
-            {createdVouchers.length === 1
-              ? 'voucher was created'
-              : 'vouchers were created'}
+            {remainingDrafts.length === 0 && createdVouchers.length > 0
+              ? `${createdVouchers.length} ${createdVouchers.length === 1 ? 'voucher was' : 'vouchers were'} submitted to ${createdVouchers.length === 1 ? 'Director' : 'Directors'}`
+              : `${createdVouchers.length} ${createdVouchers.length === 1 ? 'voucher was created' : 'vouchers were created'}`}
           </h1>
 
           <p>
-            Review the created drafts
-            below. When everything is
-            correct, select the drafts and
-            submit them to their assigned
-            Directors.
+            {remainingDrafts.length === 0 && createdVouchers.length > 0
+              ? 'All created Payment Vouchers have entered Director approval successfully.'
+              : 'Review the created drafts below. When everything is correct, select the drafts and submit them to their assigned Directors.'}
           </p>
         </section>
 
@@ -1042,10 +1060,13 @@ export function BulkPaymentVoucherCreateFlow() {
         role="tabpanel"
       >
         <BulkCsvUploadPanel
-          onContinue={(rows) =>
+          initialRows={spreadsheetRows}
+          initialSourceUrl={spreadsheetSourceUrl}
+          onContinue={(rows, sourceUrl) =>
             openPreview(
               rows,
               'spreadsheet',
+              sourceUrl,
             )
           }
         />

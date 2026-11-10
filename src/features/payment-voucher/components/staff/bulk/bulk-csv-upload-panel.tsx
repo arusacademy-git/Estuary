@@ -14,7 +14,9 @@ import type {
 import styles from "./bulk-payment-voucher.module.css";
 
 type Props = {
-  onContinue: (rows: BulkPaymentVoucherRow[]) => void;
+  initialRows?: BulkPaymentVoucherRow[];
+  initialSourceUrl?: string;
+  onContinue: (rows: BulkPaymentVoucherRow[], sourceUrl: string) => void;
 };
 
 const requiredFields: BulkPaymentVoucherField[] = [
@@ -127,17 +129,19 @@ function createRowsFromCsv(csvText: string) {
   }
 
   const importStatusIndex = headers.findIndex(
-    (header) => normalizeHeader(header) === "import status",
+    (header) =>
+      ["import status", "submission status", "estuary status"].includes(
+        normalizeHeader(header),
+      ),
   );
   const rows = dataRows
     .filter((values) => {
       if (!values.some((cell) => cell.trim())) return false;
-      return (
-        importStatusIndex < 0 ||
-        String(values[importStatusIndex] ?? "")
-          .trim()
-          .toUpperCase() !== "IMPORTED"
-      );
+      if (importStatusIndex < 0) return true;
+      const status = String(values[importStatusIndex] ?? "")
+        .trim()
+        .toUpperCase();
+      return !["IMPORTED", "SUBMITTED", "COMPLETED", "YES"].includes(status);
     })
     .map((values) => {
       const fields: Partial<Record<BulkPaymentVoucherField, unknown>> = {};
@@ -162,11 +166,15 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-export function BulkCsvUploadPanel({ onContinue }: Props) {
-  const [sheetUrl, setSheetUrl] = useState("");
-  const [parsedRows, setParsedRows] = useState<BulkPaymentVoucherRow[]>([]);
+export function BulkCsvUploadPanel({
+  initialRows = [],
+  initialSourceUrl = "",
+  onContinue,
+}: Props) {
+  const [sheetUrl, setSheetUrl] = useState(initialSourceUrl);
+  const [parsedRows, setParsedRows] = useState<BulkPaymentVoucherRow[]>(initialRows);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadedUrl, setLoadedUrl] = useState("");
+  const [loadedUrl, setLoadedUrl] = useState(initialSourceUrl);
   const [errorMessage, setErrorMessage] = useState("");
 
   const validations = useMemo(
@@ -272,10 +280,17 @@ export function BulkCsvUploadPanel({ onContinue }: Props) {
           <div className={styles.sectionHeading}>
             <p>Completed working copy</p>
             <h2>Attach your completed sheet link</h2>
-            <span>
-              Use a copy of the PV master sheet and share it as “Anyone with the
-              link can view”.
-            </span>
+            <div className={styles.sheetGuidance}>
+              <span>
+                Use a copy of the PV master sheet and share it as “Anyone with
+                the link can view”.
+              </span>
+              <span>
+                Keep an Import Status, Submission Status or Estuary Status
+                column. Rows marked  YES or NO are
+                excluded so a submitted PV is not imported twice.
+              </span>
+            </div>
           </div>
         </div>
         <div className={styles.googleSheetForm}>
@@ -401,7 +416,7 @@ export function BulkCsvUploadPanel({ onContinue }: Props) {
             className={styles.primary}
             disabled={isLoading}
             type="button"
-            onClick={() => onContinue(parsedRows)}
+            onClick={() => onContinue(parsedRows, loadedUrl)}
           >
             Continue to preview
           </button>
