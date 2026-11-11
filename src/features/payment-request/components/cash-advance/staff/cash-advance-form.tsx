@@ -1,4 +1,5 @@
 "use client";
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 
@@ -37,7 +38,7 @@ const today = () =>
     .toISOString()
     .slice(0, 10);
 const makeLine = (): CashAdvanceRequestLine => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   description: "",
   purpose: "",
   amount: 0,

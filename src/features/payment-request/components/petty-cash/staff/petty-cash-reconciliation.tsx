@@ -1,4 +1,5 @@
 'use client';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import { useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
@@ -21,7 +22,7 @@ function documentFromFile(file: File): Promise<PettyCashReconciliationReceipt> {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
     reader.onload = () => resolve({
-      id: crypto.randomUUID(),
+      id: createRuntimeId(),
       fileName: file.name,
       mimeType: file.type as PettyCashReconciliationReceipt['mimeType'],
       size: file.size,
