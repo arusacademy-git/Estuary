@@ -71,10 +71,12 @@ export function InvoicePaymentFinanceReview({
   requestId,
   embedded = false,
   initialRecord,
+  onUpdated,
 }: {
   requestId: string;
   embedded?: boolean;
   initialRecord?: InvoicePaymentRequestRecord;
+  onUpdated?: (record: InvoicePaymentRequestRecord) => void;
 }) {
   const [account, setAccount] = useState<BetaAccount | null>(null);
   const [record, setRecord] = useState<InvoicePaymentRequestRecord | null>(
@@ -122,6 +124,7 @@ export function InvoicePaymentFinanceReview({
     try {
       const updated = await processInvoicePaymentByFinance(record.id, account.id, paymentDate, paymentReference);
       setRecord(updated);
+      onUpdated?.(updated);
       setSuccess("Payment information verified. Upload the transaction proof next.");
       announceUpdate();
     } catch (actionError) {
@@ -144,6 +147,7 @@ export function InvoicePaymentFinanceReview({
       const proof = await readProof(transactionProof);
       const updated = await uploadInvoicePaymentProofByFinance(record.id, account.id, proof);
       setRecord(updated); setTransactionProof(null);
+      onUpdated?.(updated);
       setSuccess("Transaction proof uploaded. Review it and complete the record.");
       announceUpdate();
     } catch (actionError) {
@@ -157,6 +161,7 @@ export function InvoicePaymentFinanceReview({
       const updated = await completeInvoicePaymentByFinance(record.id, account.id);
       notifyStaffInvoicePaymentCompleted(updated, account);
       setRecord(updated);
+      onUpdated?.(updated);
       setSuccess("The Invoice Payment was marked as completed.");
       announceUpdate();
     } catch (actionError) {
@@ -175,6 +180,7 @@ export function InvoicePaymentFinanceReview({
       );
       notifyStaffInvoicePaymentReturned(updated, account, "Finance");
       setRecord(updated);
+      onUpdated?.(updated);
       setSuccess("The Invoice Payment was returned to Staff for correction.");
       announceUpdate();
     } catch (actionError) {

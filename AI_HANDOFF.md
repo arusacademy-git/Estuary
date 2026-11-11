@@ -11,8 +11,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/restore-bulk-payment-styles (issue #124)
-- Last Updated: 2026-11-10
+- Current Branch: agent/fix-penang-retest-workflows (issue #127)
+- Last Updated: 2026-11-11
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -32,7 +32,19 @@
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
 
-## Current Session Log — 2026-11-10
+## Current Session Log — 2026-11-11
+
+### Penang retest failures (issue #127)
+
+- Restored the Claim manual-draft route so Continue Draft loads the saved snapshot instead of redirecting to My Requests.
+- Open a fresh Claim or Petty Cash form from each Create Another confirmation; added a fresh Cash Advance creation link on its confirmation.
+- Added the missing Petty Cash Director return API route. Director returned Claims now go back to the claimant for correction; previously rejected Claim records can also be edited and resubmitted. The Claim record and My Requests attention count show the correction action.
+- Restricted the Manager Cash Advance approval queue to actual pending Manager approvals, preventing paid requests waiting for reconciliation from appearing there.
+- Finance bulk review now retains its selected records while the queue refreshes, shows the result after a return, and resets per-record UI state when moving to another selected record. The Invoice Payment review snapshot is updated after each Finance action.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm lint` (one existing warning), `corepack pnpm build`, and the new Petty Cash Director-return route test pass. `corepack pnpm test` reports 16 failures in unchanged manual-draft, Claim policy/Google Sheet, Cash Advance Appendix A import, and Petty Cash policy tests; these appear to predate this branch and need separate reconciliation with current product policy.
+- Live Penang workflow retest still requires merge and deployment. TA-01 Finance completion and CA-05/CA-07 reconciliation behavior could not be confirmed from local code alone.
+
+## Previous Session Log — 2026-11-10
 
 ### Penang deployment build repair
 

@@ -381,17 +381,7 @@ export function ClaimForm({
       <ClaimConfirmation
         record={created}
         onCreateAnother={() => {
-          if (initialRecord) {
-            window.location.assign("/beta/payment-requests/claims/new");
-            return;
-          }
-          setCreated(null);
-          setClaimType("EXPENSE");
-          setTechExtended(false);
-          setLines([makeLine()]);
-          setReceiptFiles({});
-          setNotes("");
-          setConfirmed(false);
+          window.location.assign("/beta/payment-requests/claims/new");
         }}
       />
     );

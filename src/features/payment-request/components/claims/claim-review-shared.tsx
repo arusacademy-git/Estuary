@@ -262,7 +262,8 @@ function currentStage(record: ClaimRecord): Stage {
     return "financePayment";
   if (record.status === "TRANSACTION_PROOF_UPLOADED") return "transactionProof";
   if (record.status === "COMPLETED") return "completed";
-  if (record.status === "RETURNED_TO_CLAIMANT") return "financeReview";
+  if (record.status === "RETURNED_TO_CLAIMANT")
+    return record.returnedFromStage === "DIRECTOR" ? "director" : "financeReview";
   if (record.status === "PAYMENT_REJECTED") return "director";
   return "submitted";
 }

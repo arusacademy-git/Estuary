@@ -225,10 +225,7 @@ export function PettyCashForm({
       <PettyCashConfirmation
         request={created}
         onCreateAnother={() => {
-          setCreated(null);
-          setLines([makeLine()]);
-          setNotes("");
-          setConfirmed(false);
+          window.location.assign("/beta/payment-requests/petty-cash/new");
         }}
       />
     );
