@@ -11,7 +11,7 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/fix-penang-retest-workflows (issue #127)
+- Current Branch: agent/fix-netbird-runtime-ids (issue #129)
 - Last Updated: 2026-11-11
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
@@ -34,6 +34,14 @@
 
 ## Current Session Log — 2026-11-11
 
+### Penang deployment, live retest, and NetBird HTTP fix (issue #129)
+
+- PR #128 merged as `05bcb14`; Penang source was fast-forwarded and Afiq rebuilt the app with Docker. The new Petty Cash Director-return route returns HTTP 400 for empty input, confirming the new container is live; `/api/v1/system/bootstrap` returns 200. No schema migration was needed.
+- Live Penang retest passed CL-03 (edited manual draft restored, submitted as CL26-11-02, saved draft removed), CL-05 (CL26-11-01 Director remarks visible, requester corrected and resubmitted same reference), CL-07/CL-20 (after submitting CL26-11-03, Create Another opened a blank form), and PC-04 (PC26-11-01 Director return with remarks, Staff correction and resubmission). Tracker rows and bug log were updated; Overview now shows 40 passed, 7 failed, 3 blocked, 1 not started, 7 N/A.
+- TA26-11-01 still shows Director approved and Finance step 3/5, and appears in Finance Pending Processing. Finance payment was not simulated. There are no Cash Advance records in the live database; Afiq and Nadia have no active signatures, so CA approval/reconciliation cannot be retested without an authorized requester signature.
+- NetBird plain-HTTP `/beta/payment-requests/petty-cash/new` rendered an error because browser `crypto.randomUUID` is unavailable outside a secure context. Replaced direct calls across Petty Cash, Cash Advance and Finance screens with the existing `createRuntimeId` helper. Typecheck, lint (one existing warning), production build, and helper tests pass. This fix is local until published and deployed.
+- Afiq requested that future Penang deployment work be given as commands for him to run; do not spend time running SSH deployment steps on his behalf.
+
 ### Penang retest failures (issue #127)
 
 - Restored the Claim manual-draft route so Continue Draft loads the saved snapshot instead of redirecting to My Requests.
@@ -42,7 +50,7 @@
 - Restricted the Manager Cash Advance approval queue to actual pending Manager approvals, preventing paid requests waiting for reconciliation from appearing there.
 - Finance bulk review now retains its selected records while the queue refreshes, shows the result after a return, and resets per-record UI state when moving to another selected record. The Invoice Payment review snapshot is updated after each Finance action.
 - Verification: `corepack pnpm typecheck`, `corepack pnpm lint` (one existing warning), `corepack pnpm build`, and the new Petty Cash Director-return route test pass. `corepack pnpm test` reports 16 failures in unchanged manual-draft, Claim policy/Google Sheet, Cash Advance Appendix A import, and Petty Cash policy tests; these appear to predate this branch and need separate reconciliation with current product policy.
-- Live Penang workflow retest still requires merge and deployment. TA-01 Finance completion and CA-05/CA-07 reconciliation behavior could not be confirmed from local code alone.
+- This issue merged and deployed as `05bcb14`. TA-01 Finance completion and CA-05/CA-07 reconciliation behavior remain unverified on Penang.
 
 ## Previous Session Log — 2026-11-10
 

@@ -1,4 +1,5 @@
 "use client";
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
@@ -33,7 +34,7 @@ const today = () =>
     .toISOString()
     .slice(0, 10);
 const makeLine = (): PettyCashRequestLine => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   expenseDate: today(),
   supplier: "",
   details: "",

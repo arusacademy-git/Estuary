@@ -1,4 +1,5 @@
 "use client";
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +29,7 @@ import { ReconciliationReview } from "./reconciliation-review";
 import styles from "../../cash-advance.module.css";
 
 const createNewExpense = (): CashAdvanceExpense => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   expenseDate: "",
   supplier: "",
   description: "",

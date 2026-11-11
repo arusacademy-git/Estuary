@@ -1,4 +1,5 @@
 "use client";
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -54,7 +55,7 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_00
 function readProof(file: File) {
   return new Promise<PaymentRequestDocument>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve({ id: crypto.randomUUID(), fileName: file.name, mimeType: file.type, size: file.size, dataUrl: String(reader.result) });
+    reader.onload = () => resolve({ id: createRuntimeId(), fileName: file.name, mimeType: file.type, size: file.size, dataUrl: String(reader.result) });
     reader.onerror = () => reject(new Error("The transaction proof could not be read."));
     reader.readAsDataURL(file);
   });

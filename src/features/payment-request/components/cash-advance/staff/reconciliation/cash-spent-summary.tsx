@@ -1,3 +1,4 @@
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 import { useState } from 'react';
 import { CASH_ADVANCE_ACCOUNT_TYPES, type CashAdvanceDocument, type CashAdvanceExpense } from '@/domain/payment-requests/cash-advance/types';
 import { DIVISION_SELECT_OPTIONS } from '@/shared/constants/payment-options';
@@ -17,7 +18,7 @@ function readReceipt(file: File): Promise<CashAdvanceDocument> {
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         resolve({
-          id: crypto.randomUUID(),
+          id: createRuntimeId(),
           fileName: file.name,
           mimeType: file.type,
           size: file.size,
@@ -34,7 +35,7 @@ function readReceipt(file: File): Promise<CashAdvanceDocument> {
 }
 
 const createNewExpense = (): CashAdvanceExpense => ({
-  id: crypto.randomUUID(),
+  id: createRuntimeId(),
   expenseDate: '',
   supplier: '',
   description: '',
