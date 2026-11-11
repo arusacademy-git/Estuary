@@ -70,6 +70,7 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
         <footer className={styles.confirmationActions}>
           <Link className={styles.secondary} href="/beta/payment-records">View Payment Records</Link>
           <Link className={styles.primary} href={`/beta/payment-requests/cash-advance/${encodeURIComponent(record.requestNumber)}`}>Track request</Link>
+          <Link className={styles.secondary} href="/beta/payment-requests/cash-advance/new">Create another Cash Advance</Link>
         </footer>
       </section>
       <p className={styles.confirmationNote}>Need a correction? Contact the current reviewer before the request moves to the next stage.</p>

@@ -19,7 +19,7 @@ export function ClaimDraftEditor({ requestId }: { requestId: string }) {
     fetchClaimRequest(requestId)
       .then((value) => {
         if (!account || value.requesterId !== account.id) throw new Error('Only the claimant who created this request can edit it.');
-        if (!['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(value.status)) throw new Error('Only a Draft or returned Claim can be opened in the Claim form.');
+        if (!['DRAFT', 'RETURNED_TO_CLAIMANT', 'PAYMENT_REJECTED'].includes(value.status)) throw new Error('Only a Draft or returned Claim can be opened in the Claim form.');
         setRecord(value);
       })
       .catch((caught) => setError(caught instanceof Error ? caught.message : 'The Claim could not be loaded.'))

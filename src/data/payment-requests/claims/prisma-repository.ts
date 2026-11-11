@@ -583,7 +583,7 @@ export async function updateClaimDraftInDatabase(
     return await prisma.$transaction(async (tx) => {
       const existing = await getStoredClaim(tx, id);
       if (
-        !["DRAFT", "RETURNED_TO_CLAIMANT"].includes(existing.current_state_code)
+        !["DRAFT", "RETURNED_TO_CLAIMANT", "PAYMENT_REJECTED"].includes(existing.current_state_code)
       )
         throw new Error(
           "Only a Draft or returned Claim can be updated from the form.",
@@ -1120,14 +1120,14 @@ export async function returnClaimByDirectorInDatabase(
       await tx.submission.update({
         where: { id: record.id },
         data: {
-          current_state_code: "PAYMENT_REJECTED",
+          current_state_code: "RETURNED_TO_CLAIMANT",
           current_state_group: StateGroup.REJECTED,
-          current_assignee_id: null,
-          closed_at: new Date(),
+          current_assignee_id: record.submitted_by_id,
+          closed_at: null,
           transitions: {
             create: {
               from_state_code: record.current_state_code,
-              to_state_code: "PAYMENT_REJECTED",
+              to_state_code: "RETURNED_TO_CLAIMANT",
               action_code: "RETURN_BY_DIRECTOR",
               actor_type: ActorType.INTERNAL_USER,
               actor_user_id: directorId,
