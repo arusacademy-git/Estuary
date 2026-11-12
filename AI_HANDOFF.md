@@ -11,8 +11,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/fix-netbird-runtime-ids (issue #129)
-- Last Updated: 2026-11-11
+- Current Branch: agent/persist-in-app-notifications (issue #131)
+- Last Updated: 2026-11-12
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -33,6 +33,14 @@
 - API-first: every action addressable as REST `/api/v1/`.
 
 ## Current Session Log — 2026-11-11
+
+### 2026-11-12 continuation — cross-browser notifications (issue #131)
+
+- Main `6edeaf6` was deployed by Afiq and the NetBird HTTP Petty Cash and Cash Advance new forms rendered successfully. PC-07 passed live: synthetic PC26-11-02 Create Another opened a blank form.
+- Retested INV-05 on synthetic IV26-11-05: Finance return success and the reason remained visible after the combined queue refreshed; Staff saw the reason on the correction form. Bulk per-record results remain unverified. The shared test sheet was updated accordingly.
+- TA-01 My Requests listed TA26-11-01 correctly, and the Finance queue displayed its merged employee row and payment controls. Finance payment/proof/completion were not exercised because the record explicitly says not to process payment. The shared test sheet remains partial.
+- Root cause for missing cross-browser notification: all payment types call `createLocalNotification`, which only wrote browser localStorage. Added a PostgreSQL in-app notification table, REST list/create/read/delete endpoints, and a shared notification refresh in the existing bell hook while retaining local notifications. The new migration must run before this branch's app image is deployed. Live cross-browser verification remains pending deployment.
+- Afiq prefers receiving Penang deployment commands and running them himself; do not SSH into Penang for deployment.
 
 ### Penang deployment, live retest, and NetBird HTTP fix (issue #129)
 

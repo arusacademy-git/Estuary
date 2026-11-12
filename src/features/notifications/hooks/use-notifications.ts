@@ -16,6 +16,7 @@ import {
   createLocalNotification,
   deleteNotification,
   getNotificationsForRecipient,
+  getSharedNotificationsForRecipient,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   subscribeToNotifications,
@@ -32,20 +33,27 @@ export function useNotifications(
   const [isLoading, setIsLoading] =
     useState(true);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (!recipientId) {
       setNotifications([]);
       setIsLoading(false);
       return;
     }
 
-    setNotifications(
-      getNotificationsForRecipient(
-        recipientId,
-      ),
-    );
-
-    setIsLoading(false);
+    const local = getNotificationsForRecipient(recipientId);
+    try {
+      const shared = await getSharedNotificationsForRecipient(recipientId);
+      const merged = new Map(local.map((item) => [item.id, item]));
+      for (const item of shared) merged.set(item.id, item);
+      setNotifications([...merged.values()].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ));
+    } catch (error) {
+      console.error('Shared notifications could not be loaded.', error);
+      setNotifications(local);
+    } finally {
+      setIsLoading(false);
+    }
   }, [recipientId]);
 
   useEffect(() => {
@@ -53,17 +61,23 @@ export function useNotifications(
 
     // Initial load runs inside a callback, not directly in the effect body
     Promise.resolve().then(() => {
-      if (!cancelled) refresh();
+      if (!cancelled) {
+        setNotifications(recipientId ? getNotificationsForRecipient(recipientId) : []);
+        setIsLoading(Boolean(recipientId));
+        void refresh();
+      }
     });
 
     // Later updates come from the store, which is also a callback
-    const unsubscribe = subscribeToNotifications(refresh);
+    const unsubscribe = subscribeToNotifications(() => { void refresh(); });
+    const interval = window.setInterval(() => { void refresh(); }, 15_000);
 
     return () => {
       cancelled = true;
       unsubscribe();
+      window.clearInterval(interval);
     };
-  }, [refresh]);
+  }, [recipientId, refresh]);
 
   const unreadCount = useMemo(() => {
     return notifications.filter(
@@ -88,6 +102,9 @@ export function useNotifications(
         notificationId,
         recipientId,
       );
+      setNotifications((items) => items.map((item) => item.id === notificationId
+        ? { ...item, readAt: item.readAt ?? new Date().toISOString() }
+        : item));
     },
     [recipientId],
   );
@@ -98,6 +115,8 @@ export function useNotifications(
     }
 
     markAllNotificationsAsRead(recipientId);
+    setNotifications((items) => items.map((item) => item.readAt
+      ? item : { ...item, readAt: new Date().toISOString() }));
   }, [recipientId]);
 
   const removeNotification = useCallback(
@@ -110,6 +129,7 @@ export function useNotifications(
         notificationId,
         recipientId,
       );
+      setNotifications((items) => items.filter((item) => item.id !== notificationId));
     },
     [recipientId],
   );

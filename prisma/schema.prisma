@@ -962,6 +962,25 @@ model NotificationDelivery {
   @@map("notification_deliveries")
 }
 
+// In-app messages use beta account IDs, which are not User table IDs yet.
+model InAppNotification {
+  id              String    @id
+  recipient_id    String
+  actor_id        String?
+  type            String
+  entity_type     String
+  entity_id       String
+  reference_number String
+  title           String
+  message         String
+  href            String
+  read_at         DateTime?
+  created_at      DateTime  @default(now())
+
+  @@index([recipient_id, created_at])
+  @@map("in_app_notifications")
+}
+
 // ─────────────────────────────────────────────
 // AUDIT EVENTS (business and control events only; append-only)
 //
