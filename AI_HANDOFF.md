@@ -1,5 +1,10 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — Travel Allowance proof in Payment Records
+
+- Penang beta after main `9a1671f`: synthetic TA26-11-04/05/06 are all Completed; their distinct proof IDs, payment references, proof-upload timestamps and completion timestamps now appear in the API. The pending TA26-11-01 record still displays Awaiting wording for unfinished stages.
+- The Completed Records detail page had no link to the uploaded proof even though the API returned it. Added a Payment transaction proof section with a download link for the stored file. This is issue #137's remaining UI work; the older local mapper patch was superseded by main PR #138.
+
 ## 2026-11-12 — PR #140 Travel Allowance merge resolution
 
 - Merged current `main` into the `payments` branch. The only conflict was `travel-allowance-record-detail.tsx` `Progress()`. Kept PR #140's shared `travelAllowanceProgress` and `stepDetail` structure, retained `main`'s conditional Awaiting wording, and used the dedicated `financeProofUploadedAt` and `completedAt` timestamps from the updated domain model.

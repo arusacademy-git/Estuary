@@ -277,6 +277,18 @@ export function TravelAllowanceRecordDetail({
               </dl>
             </Section>
           )}
+          {record.financeTransactionProof && (
+            <Section title="Payment transaction proof">
+              <div className={styles.documents}>
+                <a
+                  download={record.financeTransactionProof.fileName}
+                  href={record.financeTransactionProof.dataUrl}
+                >
+                  Download {record.financeTransactionProof.fileName}
+                </a>
+              </div>
+            </Section>
+          )}
           <Section title="Supporting Documents">
             <div className={styles.documents}>
               {record.supportingDocuments.length ? (
