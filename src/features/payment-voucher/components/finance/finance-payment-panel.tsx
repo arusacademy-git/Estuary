@@ -131,11 +131,11 @@ export function FinanceProcessingPanel({
     }
   }
 
-  async function markBankRejected() {
+  async function rejectAndLockPaymentVoucher() {
     const cleanedRemarks = inactiveRemarks.trim();
 
     if (!cleanedRemarks) {
-      setError("Enter the bank rejection or incorrect-payment reason.");
+      setError("Enter the Finance rejection reason.");
       return;
     }
 
@@ -155,7 +155,7 @@ export function FinanceProcessingPanel({
       setInactiveRemarks("");
       setShowInactiveForm(false);
       setMessage(
-        "The Payment Voucher was marked inactive. Staff has been notified to create a new PV.",
+        "The Payment Voucher was rejected and locked. The requester must create a new PV.",
       );
     } catch (caught) {
       setError(
@@ -418,7 +418,7 @@ export function FinanceProcessingPanel({
               </button>
               {canMarkInactive && voucher.status !== "INACTIVE" && (
                 <button className={styles.inactiveToggle} onClick={() => { setShowInactiveForm((current) => !current); setError(""); }} type="button">
-                  {showInactiveForm ? "Cancel rejection" : "Bank rejected"}
+                  {showInactiveForm ? "Cancel rejection" : "Reject PV"}
                 </button>
               )}
             </div>
@@ -516,26 +516,26 @@ export function FinanceProcessingPanel({
             <section className={styles.inactiveAction}>
               <div className={styles.inactiveForm}>
                 <label>
-                  <span>Bank rejection remarks</span>
+                  <span>Finance rejection remarks</span>
                   <textarea
                     maxLength={500}
                     onChange={(event) => setInactiveRemarks(event.target.value)}
-                    placeholder="Explain the bank rejection or incorrect payment information"
+                    placeholder="Explain why Finance cannot proceed with this Payment Voucher"
                     rows={4}
                     value={inactiveRemarks}
                   />
                 </label>
                 <p>
-                  This locks the original PV. Staff must create a new Payment
+                  This locks the original PV. The requester must create a new Payment
                   Voucher if another payment attempt is required.
                 </p>
                 <button
                   className={styles.inactiveButton}
                   disabled={processing || !inactiveRemarks.trim()}
-                  onClick={markBankRejected}
+                  onClick={rejectAndLockPaymentVoucher}
                   type="button"
                 >
-                  Mark PV as bank rejected
+                  Reject and lock PV
                 </button>
               </div>
             </section>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import type { FormEvent } from "react";
@@ -232,6 +233,11 @@ export function PaymentVoucherForm({
     return amountToMalayWords(totals.grandTotal);
   }, [totals.grandTotal]);
 
+  const assignedDirectorName = useMemo(() => {
+    if (!initialVoucher) return "";
+    return directors.find((director) => director.id === initialVoucher.directorId)?.name ?? initialVoucher.directorId;
+  }, [initialVoucher]);
+
   function updateVoucherLine(lineId: string, changes: Partial<VoucherLine>) {
     setVoucherLines((currentLines) =>
       currentLines.map((line) =>
@@ -399,7 +405,7 @@ export function PaymentVoucherForm({
   }
 
   return (
-    <section className={styles.panel}>
+    <section className={`${styles.panel} ${isAmendment ? styles.amendmentPanel : ""}`}>
       <div className={styles.pageHeading}>
         <div>
           <p className={styles.pageEyebrow}>
@@ -422,21 +428,31 @@ export function PaymentVoucherForm({
         </span>
       </div>
 
-      {isAmendment && initialVoucher?.rejectionRemarks && (
-        <div className={styles.notice} role="status">
-          <strong>Director requested amendments</strong>
-
-          <p>{initialVoucher.rejectionRemarks}</p>
-        </div>
-      )}
-
       {formError && (
         <div className={styles.notice} role="alert">
           {formError}
         </div>
       )}
 
-      <form ref={formRef} onSubmit={handleReview}>
+      <form className={isAmendment ? styles.amendmentForm : undefined} ref={formRef} onSubmit={handleReview}>
+        {isAmendment && initialVoucher && (
+          <aside className={styles.amendmentAside}>
+            <section className={styles.amendmentRequestCard} role="status">
+              <span>Director requested amendments</span>
+              <strong>“{initialVoucher.rejectionRemarks || "Please amend this voucher."}”</strong>
+              <small>From {assignedDirectorName} · Director</small>
+            </section>
+            <section className={styles.amendmentTotalCard}>
+              <span>Voucher total</span>
+              <strong>RM {totals.grandTotal.toFixed(2)}</strong>
+              <small>{amountInWords}</small>
+            </section>
+            <div className={styles.amendmentAsideActions}>
+              <button className={styles.amendmentContinueButton} type="submit">Continue to review amendment →</button>
+              <Link className={styles.amendmentCancelButton} href={`/beta/payment-vouchers/${initialVoucher.id}`}>Cancel amendment</Link>
+            </div>
+          </aside>
+        )}
         <section className={styles.formSection}>
           <div className={styles.sectionHeading}>
             <p>Payment information</p>
@@ -847,7 +863,7 @@ export function PaymentVoucherForm({
           </div>
         </section>
 
-        <footer className={styles.formActions}>
+        <footer className={`${styles.formActions} ${isAmendment ? styles.amendmentFooter : ""}`}>
           <ManualDraftStatus message={draft.draftMessage} />
           {!initialVoucher && (
             <button
@@ -871,11 +887,7 @@ export function PaymentVoucherForm({
               {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
             </button>
           )}
-          <button className={styles.primary} type="submit">
-            {isAmendment
-              ? "Continue to review amendment"
-              : "Continue to review"}
-          </button>
+          {!isAmendment && <button className={styles.primary} type="submit">Continue to review</button>}
         </footer>
       </form>
     </section>

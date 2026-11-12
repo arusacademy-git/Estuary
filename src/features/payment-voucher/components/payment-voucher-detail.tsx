@@ -370,6 +370,19 @@ export function PaymentVoucherDetail({
   const voucher: PaymentVoucherRecord =
     matchedVoucher;
 
+  /*
+   * The resubmission redirect includes `submitted=true`. The voucher query can
+   * briefly still contain the rejected snapshot while its refreshed record is
+   * being loaded, so do not keep presenting a completed amendment as rejected.
+   */
+  const displayedVoucher: PaymentVoucherRecord =
+    wasSubmitted && voucher.status === 'REJECTED'
+      ? {
+          ...voucher,
+          status: 'PENDING_DIRECTOR_APPROVAL',
+        }
+      : voucher;
+
   const directorName = getAccountName(
     voucher.directorId,
   );
@@ -384,7 +397,7 @@ export function PaymentVoucherDetail({
     );
 
   const nextAction = getNextAction(
-    voucher,
+    displayedVoucher,
     directorName,
   );
 
@@ -408,7 +421,8 @@ export function PaymentVoucherDetail({
 
   const canAmend =
     account?.id === voucher.submitterId &&
-    voucher.status === 'REJECTED';
+    voucher.status === 'REJECTED' &&
+    !wasSubmitted;
 
 
   const canCurrentDirectorApprove =
@@ -840,7 +854,7 @@ export function PaymentVoucherDetail({
                 </h1>
 
                 <PaymentVoucherStatusBadge
-                  status={voucher.status}
+                  status={displayedVoucher.status}
                 />
               </div>
 
@@ -848,7 +862,7 @@ export function PaymentVoucherDetail({
 
       </header>
 
-      {voucher.status !== 'REJECTED' && <section className={styles.pvNextAction}>
+      {displayedVoucher.status !== 'REJECTED' && <section className={styles.pvNextAction}>
             <span
               aria-hidden="true"
               className={
@@ -1603,7 +1617,7 @@ export function PaymentVoucherDetail({
           <PaymentVoucherCorrectionCard
             canAmend={canAmend}
             directorName={directorName}
-            voucher={voucher}
+            voucher={displayedVoucher}
           />
 
           {canCurrentDirectorApprove &&

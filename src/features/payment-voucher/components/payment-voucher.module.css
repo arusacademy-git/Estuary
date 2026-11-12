@@ -4968,28 +4968,186 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid #143b68;
+  border: 1px solid #c85500;
   border-radius: 7px;
   color: #ffffff;
-  background: #143b68;
+  background: #c85500;
   padding: 7px 12px;
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
-  box-shadow: 0 2px 5px rgb(20 59 104 / 20%);
+  box-shadow: 0 2px 5px rgb(200 85 0 / 20%);
 }
 
 .pvAmendmentButton:hover {
-  border-color: #0f3158;
-  background: #0f3158;
+  border-color: #a94600;
+  background: #a94600;
 }
 
 .pvAmendmentButton svg {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
+}
+
+/* Compact amendment workspace: fixed voucher lines on the left, review summary on the right. */
+.amendmentPanel {
+  width: min(1120px, 100%);
+}
+
+.amendmentPanel>.pageHeading {
+  margin-bottom: 16px;
+}
+
+.amendmentPanel>form.amendmentForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  align-items: start;
+  overflow: hidden;
+  border: 1px solid #d8e2ee;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgb(15 42 76 / 7%);
+}
+
+.amendmentForm>.formSection {
+  grid-column: 1;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid #e3eaf2;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.amendmentForm>.formSection:last-of-type {
+  border-bottom: 0;
+}
+
+.amendmentAside {
+  position: sticky;
+  top: 18px;
+  grid-column: 2;
+  grid-row: 1 / span 20;
+  display: grid;
+  min-height: 100%;
+  align-content: start;
+  gap: 14px;
+  padding: 24px;
+  border-left: 1px solid #dfe7f0;
+  background: #f5f8fc;
+}
+
+.amendmentRequestCard,
+.amendmentTotalCard {
+  display: grid;
+  gap: 7px;
+}
+
+.amendmentRequestCard {
+  padding: 14px;
+  border: 1px solid #f3d37b;
+  border-radius: 10px;
+  color: #713f12;
+  background: #fff8df;
+}
+
+.amendmentRequestCard>span,
+.amendmentTotalCard>span {
+  color: #9a5b00;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.amendmentRequestCard>strong {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.amendmentRequestCard>small,
+.amendmentTotalCard>small {
+  color: #718096;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.amendmentTotalCard {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #dce5ef;
+}
+
+.amendmentTotalCard>span {
+  color: #627590;
+}
+
+.amendmentTotalCard>strong {
+  color: #102f57;
+  font-size: 30px;
+  line-height: 1.05;
+}
+
+.amendmentAsideActions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.amendmentContinueButton,
+.amendmentCancelButton {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.amendmentContinueButton {
+  border: 1px solid #173c68;
+  color: #ffffff;
+  background: #173c68;
+}
+
+.amendmentContinueButton:hover {
+  background: #0f3158;
+}
+
+.amendmentCancelButton {
+  border: 1px solid #cad7e6;
+  color: #14365f;
+  background: #ffffff;
+}
+
+.amendmentCancelButton:hover {
+  border-color: #9fb3ca;
+  background: #f7faff;
+}
+
+.amendmentFooter {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .amendmentPanel>form.amendmentForm {
+    grid-template-columns: 1fr;
+  }
+
+  .amendmentAside {
+    position: static;
+    grid-column: 1;
+    grid-row: auto;
+    min-height: auto;
+    border-top: 1px solid #dfe7f0;
+    border-left: 0;
+  }
 }
 
 @media (max-width: 760px) {
