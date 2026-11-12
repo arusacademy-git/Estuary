@@ -99,10 +99,15 @@ function signatureFrom(record: StoredCashAdvance, action: string) {
 function mapCashAdvance(record: StoredCashAdvance): CashAdvanceRecord {
   if (!record.ca_detail) throw new Error(`Submission ${record.id} has no Cash Advance detail.`);
   const snapshot = readSnapshot(record);
-  const managerApproval = latestTransition(record, 'APPROVE_BY_MANAGER');
+  const managerPreview = latestTransition(record, 'PREVIEW_BY_MANAGER');
+  const legacyManagerApproval = [...record.transitions].reverse().find((item) =>
+    item.action_code === 'PREVIEW_BY_MANAGER' && item.to_state_code === 'PENDING_DIRECTOR_APPROVAL',
+  );
+  const managerApproval = latestTransition(record, 'APPROVE_BY_MANAGER') ?? legacyManagerApproval;
   const directorApproval = latestTransition(record, 'APPROVE_BY_DIRECTOR');
-  const financePayment = latestTransition(record, 'PAY_BY_FINANCE');
-  const financePaymentMetadata = isRecord(financePayment?.metadata_json) ? financePayment.metadata_json : undefined;
+  const financePayment = latestTransition(record, 'PAYMENT_PROCESSED') ?? latestTransition(record, 'PAY_BY_FINANCE');
+  const proofUpload = latestTransition(record, 'UPLOAD_TRANSACTION_PROOF');
+  const proofUploadMetadata = isRecord(proofUpload?.metadata_json) ? proofUpload.metadata_json : undefined;
   const completed = latestTransition(record, 'COMPLETE');
   const returned = [...record.transitions].reverse().find((item) =>
     ['RETURN_BY_MANAGER', 'RETURN_BY_DIRECTOR', 'RETURN_BY_FINANCE', 'RETURN_RECONCILIATION'].includes(item.action_code),
@@ -120,12 +125,13 @@ function mapCashAdvance(record: StoredCashAdvance): CashAdvanceRecord {
     staffSignedAt: record.created_at.toISOString(),
     managerSignatureKey: signatureFrom(record, 'APPROVE_BY_MANAGER'),
     managerApprovedAt: managerApproval?.created_at.toISOString(),
+    managerPreviewedAt: managerPreview?.created_at.toISOString(),
     directorSignatureKey: signatureFrom(record, 'APPROVE_BY_DIRECTOR'),
     directorApprovedAt: directorApproval?.created_at.toISOString(),
     financePaidAt: detail.paid_at?.toISOString(),
     financePaidById: financePayment?.actor_user_id ?? undefined,
     financePaymentReference: detail.paid_reference ?? undefined,
-    financeTransactionProof: isRecord(financePaymentMetadata?.transactionProof) ? financePaymentMetadata.transactionProof as unknown as CashAdvanceDocument : undefined,
+    financeTransactionProof: isRecord(proofUploadMetadata?.transactionProof) ? proofUploadMetadata.transactionProof as unknown as CashAdvanceDocument : undefined,
     reconciliationDueDate: detail.reconciliation_due_at?.toISOString().slice(0, 10),
     reconciliation: readReconciliation(record),
     returnRemarks: returned?.reason_text ?? undefined,
@@ -280,59 +286,25 @@ export async function previewCashAdvanceByManagerInDatabase(id: string, managerI
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
     if (record.current_state_code !== 'PENDING_MANAGER_APPROVAL') {
-      throw new Error('This Cash Advance is no longer awaiting Manager preview.');
+      throw new Error('This Cash Advance is no longer awaiting Manager approval.');
     }
     if (record.current_assignee_id !== managerId) {
       throw new Error('This Cash Advance is assigned to another Manager.');
     }
     const membership = await requireRole(tx, record.organization_id, managerId, 'MANAGER');
-    const active = record.approval_steps.find(
-      (step) => step.required_role === 'MANAGER' && step.status_code === 'ACTIVE',
-    );
-    if (active) {
-      await tx.approvalDecision.create({
-        data: {
-          approval_step_id: active.id,
-          decision_code: 'APPROVED',
-          decided_by_user_id: managerId,
-        },
-      });
-      await tx.approvalStep.update({
-        where: { id: active.id },
-        data: { status_code: 'COMPLETE' },
-      });
-    }
-    const directorId = record.ca_detail?.director_user_id;
-    if (!directorId) throw new Error('The Director approval step is incomplete.');
-    const directorStep = record.approval_steps.find(
-      (step) => step.required_role === 'DIRECTOR' && step.status_code === 'PENDING',
-    );
-    if (directorStep) {
-      await tx.approvalStep.update({
-        where: { id: directorStep.id },
-        data: { status_code: 'ACTIVE', assigned_user_id: directorId },
-      });
-    }
+    if (latestTransition(record, 'PREVIEW_BY_MANAGER')) return mapCashAdvance(record);
     await tx.submissionTransition.create({
       data: {
         submission_id: record.id,
         from_state_code: 'PENDING_MANAGER_APPROVAL',
         action_code: 'PREVIEW_BY_MANAGER',
-        to_state_code: 'PENDING_DIRECTOR_APPROVAL',
+        to_state_code: 'PENDING_MANAGER_APPROVAL',
         actor_type: ActorType.INTERNAL_USER,
         actor_user_id: managerId,
         actor_membership_id: membership.id,
       },
     });
-    return mapCashAdvance(await tx.submission.update({
-      where: { id: record.id },
-      data: {
-        current_state_code: 'PENDING_DIRECTOR_APPROVAL',
-        current_state_group: StateGroup.IN_REVIEW,
-        current_assignee_id: directorId,
-      },
-      include,
-    }));
+    return mapCashAdvance(await getStored(tx, record.id));
   });
 }
 
