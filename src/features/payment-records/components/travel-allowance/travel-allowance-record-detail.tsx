@@ -348,23 +348,28 @@ function Progress({
       },
       {
         title: "Finance Verification",
-        copy: `Allowance verified by ${record.financeVerifiedById
-          ? (getBetaAccount(record.financeVerifiedById)?.name ??
-            record.financeVerifiedById)
-          : "Finance"}`,
+        copy: record.financeVerifiedAt
+          ? `Allowance verified by ${record.financeVerifiedById
+              ? (getBetaAccount(record.financeVerifiedById)?.name ??
+                record.financeVerifiedById)
+              : "Finance"}`
+          : "Awaiting Finance verification",
         time: record.financeVerifiedAt,
       },
       {
         title: "Payment transaction proof uploaded",
-        copy: "Finance uploaded the payment transaction proof for the requester",
-        time: record.financeVerifiedAt,
+        copy: record.financeTransactionProof
+          ? "Finance uploaded the payment transaction proof for the requester"
+          : "Awaiting transaction proof upload",
       },
       {
         title: "Completed",
-        copy: record.financePaymentReference
-          ? `Payment completed · Ref ${record.financePaymentReference}`
-          : "Payment completed and request closed",
-        time: record.financeVerifiedAt,
+        copy: record.status === "COMPLETED"
+          ? record.financePaymentReference
+            ? `Payment completed · Ref ${record.financePaymentReference}`
+            : "Payment completed and request closed"
+          : "Awaiting completion",
+        time: record.status === "COMPLETED" ? record.updatedAt : undefined,
       },
     ]
     : [
@@ -380,23 +385,28 @@ function Progress({
       },
       {
         title: "Finance Verification",
-        copy: `Allowance verified by ${record.financeVerifiedById
-          ? (getBetaAccount(record.financeVerifiedById)?.name ??
-            record.financeVerifiedById)
-          : "Finance"}`,
+        copy: record.financeVerifiedAt
+          ? `Allowance verified by ${record.financeVerifiedById
+              ? (getBetaAccount(record.financeVerifiedById)?.name ??
+                record.financeVerifiedById)
+              : "Finance"}`
+          : "Awaiting Finance verification",
         time: record.financeVerifiedAt,
       },
       {
         title: "Payment transaction proof uploaded",
-        copy: "Finance uploaded the payment transaction proof for the requester",
-        time: record.financeVerifiedAt,
+        copy: record.financeTransactionProof
+          ? "Finance uploaded the payment transaction proof for the requester"
+          : "Awaiting transaction proof upload",
       },
       {
         title: "Completed",
-        copy: record.financePaymentReference
-          ? `Payment completed · Ref ${record.financePaymentReference}`
-          : "Payment completed and request closed",
-        time: record.financeVerifiedAt,
+        copy: record.status === "COMPLETED"
+          ? record.financePaymentReference
+            ? `Payment completed · Ref ${record.financePaymentReference}`
+            : "Payment completed and request closed"
+          : "Awaiting completion",
+        time: record.status === "COMPLETED" ? record.updatedAt : undefined,
       },
     ];
   const active =

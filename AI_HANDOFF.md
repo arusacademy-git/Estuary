@@ -11,7 +11,7 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/persist-in-app-notifications (issue #131)
+- Current Branch: agent/fix-travel-progress-wording (issue #133)
 - Last Updated: 2026-11-12
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
@@ -33,6 +33,14 @@
 - API-first: every action addressable as REST `/api/v1/`.
 
 ## Current Session Log — 2026-11-11
+
+### 2026-11-12 Penang notification and bulk return retest; TA copy repair (issue #133)
+
+- PR #132 merged as `d83a125`; Afiq ran the Penang migration and Docker rebuild. `/api/v1/system/bootstrap` and `/api/v1/notifications?recipientId=afiq-rahman` returned 200.
+- Synthetic IV26-11-05 was resubmitted, approved to Finance and returned. A fresh Staff browser with empty notification localStorage displayed one unread Invoice Payment return alert; server GET contained the notification. This verifies cross-browser delivery of issue #131.
+- Created synthetic IV26-11-06 and IV26-11-07, advanced them to Finance, selected both in Review selected, then returned each without recording payment. Each retained its own result while navigating Previous/Next, and both Staff notifications persisted. INV-B03 was closed; INV-05 is Blocked only for actual payment recording/proof, which was not simulated.
+- TA26-11-01 still appears in My Travel Allowance requests with Director approved and Finance pending. Its pending progress copy incorrectly said "Allowance verified by Finance" and described proof/completion as done. Issue #133 updates only the pending copy; payment workflow behavior is unchanged. Finance payment/proof/completion remain untested because the synthetic record says not to process payment.
+- The shared Estuary Testing sheet was updated with these observations. Afiq performs Penang deployment himself from commands we provide.
 
 ### 2026-11-12 continuation — cross-browser notifications (issue #131)
 
