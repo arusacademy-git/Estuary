@@ -197,8 +197,8 @@
 .navigationBranchButton[data-label='Petty Cash']::before,
 .navigationItem[data-label='SQL Entry Tracker']::before,
 .activeNavigationItem[data-label='SQL Entry Tracker']::before,
-.navigationItem[data-label='Administration']::before,
-.activeNavigationItem[data-label='Administration']::before,
+.navigationItem[data-label='Settings']::before,
+.activeNavigationItem[data-label='Settings']::before,
 .navigationItem[data-label='My Requests']::before,
 .activeNavigationItem[data-label='My Requests']::before,
 .navigationItem[data-label='Payment Records']::before,
@@ -241,8 +241,8 @@
   background-image: url('/assets/icons/sql-entry-tracker-light.png');
 }
 
-.navigationItem[data-label='Administration']::before,
-.activeNavigationItem[data-label='Administration']::before {
+.navigationItem[data-label='Settings']::before,
+.activeNavigationItem[data-label='Settings']::before {
   background-image: url('/assets/icons/administration-light.png');
 }
 
@@ -266,8 +266,8 @@
 .activeNavigationItem[data-label='Pending Processing']> :first-child,
 .navigationItem[data-label='SQL Entry Tracker']> :first-child,
 .activeNavigationItem[data-label='SQL Entry Tracker']> :first-child,
-.navigationItem[data-label='Administration']> :first-child,
-.activeNavigationItem[data-label='Administration']> :first-child,
+.navigationItem[data-label='Settings']> :first-child,
+.activeNavigationItem[data-label='Settings']> :first-child,
 .navigationItem[data-label='My Requests']> :first-child,
 .activeNavigationItem[data-label='My Requests']> :first-child,
 .navigationItem[data-label='Payment Records']> :first-child,

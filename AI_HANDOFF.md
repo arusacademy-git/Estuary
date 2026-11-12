@@ -1,5 +1,11 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — Daniel Lee beta administrator Settings
+
+- GitHub issue #144: Daniel Lee's existing Director dummy account now has a separate Administrator flag. The sidebar shows Settings at `/beta/settings` only for accounts with that flag; direct navigation to Settings or the old `/beta/administration` route shows an access-required page for other dummy accounts. Director approval navigation remains intact.
+- The existing Administration interface is reused as the beta Settings page. Its current edits still use browser local storage and are labeled as a preview; shared cross-organization settings and Google-authenticated server authorization remain future work.
+- TypeScript, focused ESLint, and the production build pass. A local browser check confirmed Daniel sees Settings and can open it, while Amir and Afiq see no Settings tab and are denied by the direct route.
+
 ## 2026-11-12 — Requester delete action for manual drafts
 
 - GitHub issue #142 adds a requester-visible Delete draft control to the shared manual-draft cards and table rows across payment types. The action shows an inline confirmation and error, reuses the existing requester-scoped DELETE API, and refreshes the draft lists and action counts after deletion. Submitted payment requests are outside this action.

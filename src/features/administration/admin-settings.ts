@@ -1,6 +1,6 @@
 import { DIVISION_OPTIONS, PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
 import { useEffect, useState } from 'react';
-import { betaAccounts } from '@/lib/auth/beta-accounts';
+import { betaAccounts, type BetaAccount } from '@/lib/auth/beta-accounts';
 
 export const ADMIN_SETTINGS_KEY = 'estuary-beta-admin-settings-v1';
 export const ADMIN_SETTINGS_EVENT = 'estuary:admin-settings-changed';
@@ -11,9 +11,8 @@ export type AdminEmployee = { id: string; name: string; email: string; role: 'st
 export type AdminClaimPolicy = { medicalAnnualLimit: number; pdAnnualLimit: number; prorateByEmploymentDate: boolean };
 export type AdminSettings = { programmes: AdminProgramme[]; accountingCodes: AdminAccountingCode[]; employees: AdminEmployee[]; claimPolicy: AdminClaimPolicy };
 
-export function canAccessAdministration(role: string | undefined) {
-  // Replace this temporary role fallback with ADMIN_ACCESS when Admin and IT identities are introduced.
-  return role === 'director';
+export function canAccessAdministration(account: BetaAccount | null | undefined) {
+  return account?.isAdministrator === true;
 }
 
 export function createDefaultAdminSettings(): AdminSettings {

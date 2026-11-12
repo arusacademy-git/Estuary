@@ -7,6 +7,7 @@ export type BetaAccount = {
   position: string;
   department: string;
   role: BetaRole;
+  isAdministrator?: boolean;
 };
 
 export const BETA_SESSION_KEY = 'estuary-beta-account';
@@ -67,6 +68,7 @@ export const betaAccounts: BetaAccount[] = [
     position: 'Director',
     department: 'Management',
     role: 'director',
+    isAdministrator: true,
   },
 ];
 
