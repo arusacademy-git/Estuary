@@ -74,11 +74,22 @@ function mapTravelAllowance(record: StoredTravelAllowance): TravelAllowanceRecor
   const financeReturn = [...record.transitions].reverse().find(
     (transition) => transition.action_code === 'RETURN_BY_FINANCE',
   );
-  const financeComplete = record.transitions.find(
-    (transition) => transition.action_code === 'COMPLETE',
-  );
-  const financeMetadata = isRecord(financeComplete?.metadata_json)
-    ? financeComplete.metadata_json
+  // Finance moves a request through three separate transitions:
+  // PAYMENT_PROCESSED (verified + payment recorded, holds remarks),
+  // UPLOAD_TRANSACTION_PROOF (holds the proof) and COMPLETE.
+  // Read each one so the tracker and Finance screens get the right data.
+  const latestTransition = (actionCode: string) =>
+    [...record.transitions]
+      .reverse()
+      .find((transition) => transition.action_code === actionCode);
+  const financePayment = latestTransition('PAYMENT_PROCESSED');
+  const financeProof = latestTransition('UPLOAD_TRANSACTION_PROOF');
+  const financeComplete = latestTransition('COMPLETE');
+  const paymentMetadata = isRecord(financePayment?.metadata_json)
+    ? financePayment.metadata_json
+    : undefined;
+  const proofMetadata = isRecord(financeProof?.metadata_json)
+    ? financeProof.metadata_json
     : undefined;
   const earliestTravelDate = [...snapshot.lines]
     .map((line) => line.travelDate)
@@ -102,17 +113,19 @@ function mapTravelAllowance(record: StoredTravelAllowance): TravelAllowanceRecor
     directorReturnedAt: directorReturn?.created_at.toISOString(),
     directorReturnedById: directorReturn?.actor_user_id ?? undefined,
     directorReturnRemarks: directorReturn?.reason_text ?? undefined,
-    financeVerifiedAt: financeComplete?.created_at.toISOString(),
-    financeVerifiedById: financeComplete?.actor_user_id ?? undefined,
+    financeVerifiedAt: (financePayment ?? financeComplete)?.created_at.toISOString(),
+    financeVerifiedById: (financePayment ?? financeComplete)?.actor_user_id ?? undefined,
+    financeProofUploadedAt: financeProof?.created_at.toISOString(),
+    completedAt: financeComplete?.created_at.toISOString(),
     financeReturnedAt: financeReturn?.created_at.toISOString(),
     financeReturnedById: financeReturn?.actor_user_id ?? undefined,
     financeReturnRemarks: financeReturn?.reason_text ?? undefined,
     financePaymentDate: record.travel_detail?.paid_at?.toISOString().slice(0, 10),
     financePaymentReference: record.travel_detail?.paid_reference ?? undefined,
-    financeTransactionProof: isRecord(financeMetadata?.transactionProof) ? financeMetadata.transactionProof as unknown as PaymentRequestDocument : undefined,
+    financeTransactionProof: isRecord(proofMetadata?.transactionProof) ? proofMetadata.transactionProof as unknown as PaymentRequestDocument : undefined,
     financeRemarks:
-      typeof financeMetadata?.financeRemarks === 'string'
-        ? financeMetadata.financeRemarks
+      typeof paymentMetadata?.financeRemarks === 'string'
+        ? paymentMetadata.financeRemarks
         : undefined,
     createdAt: record.created_at.toISOString(),
     updatedAt: record.updated_at.toISOString(),
@@ -177,6 +190,8 @@ export async function listTravelAllowancesFromDatabase(scope?: {
       if (scope.includeAll) return true;
       const visibleToFinance =
         record.status === 'PENDING_FINANCE_VERIFICATION' ||
+        record.status === 'PAYMENT_PROCESSED' ||
+        record.status === 'TRANSACTION_PROOF_UPLOADED' ||
         record.status === 'COMPLETED' ||
         Boolean(record.financeReturnedAt);
       const matchesMonth = !scope.month || record.lines.some(
