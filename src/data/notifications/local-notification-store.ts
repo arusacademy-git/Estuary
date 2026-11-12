@@ -14,6 +14,29 @@ const NOTIFICATION_STORAGE_KEY =
 const NOTIFICATION_CHANGE_EVENT =
   'estuary:notifications-changed';
 
+async function sendNotificationChange(url: string, method: string, body: object) {
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  } catch (error) {
+    console.error('The in-app notification could not sync across browsers.', error);
+  }
+}
+
+export async function getSharedNotificationsForRecipient(recipientId: string): Promise<NotificationRecord[]> {
+  const response = await fetch(`/api/v1/notifications?recipientId=${encodeURIComponent(recipientId)}`, {
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Notifications could not be loaded (HTTP ${response.status}).`);
+  const result = await response.json() as { data?: NotificationRecord[] };
+  return result.data ?? [];
+}
+
 function canUseLocalStorage() {
   return (
     typeof window !== 'undefined' &&
@@ -137,6 +160,8 @@ export function createLocalNotification(
     ...notifications,
   ]);
 
+  void sendNotificationChange('/api/v1/notifications', 'POST', createdNotification);
+
   return createdNotification;
 }
 
@@ -177,6 +202,8 @@ export function markNotificationAsRead(
 
   saveNotifications(updatedNotifications);
 
+  void sendNotificationChange(`/api/v1/notifications/${encodeURIComponent(notificationId)}`, 'PATCH', { recipientId });
+
   return updatedNotification;
 }
 
@@ -204,6 +231,8 @@ export function markAllNotificationsAsRead(
     });
 
   saveNotifications(updatedNotifications);
+
+  void sendNotificationChange('/api/v1/notifications', 'PATCH', { recipientId });
 }
 
 export function deleteNotification(
@@ -223,6 +252,8 @@ export function deleteNotification(
     );
 
   saveNotifications(updatedNotifications);
+
+  void sendNotificationChange(`/api/v1/notifications/${encodeURIComponent(notificationId)}`, 'DELETE', { recipientId });
 }
 
 export function clearNotificationsForRecipient(

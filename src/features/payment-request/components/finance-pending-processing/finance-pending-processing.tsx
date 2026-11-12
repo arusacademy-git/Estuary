@@ -131,6 +131,7 @@ export function FinancePendingProcessing() {
     "OLDEST",
   );
   const [selected, setSelected] = useState<string[]>([]);
+  const [reviewRows, setReviewRows] = useState<Row[] | null>(null);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
   const [uploadingProofKey, setUploadingProofKey] = useState<string | null>(
@@ -387,6 +388,7 @@ export function FinancePendingProcessing() {
       setStatus("ALL");
       setClaimType("ALL");
       setSelected([row.key]);
+      setReviewRows([row]);
       setOpenIndex(0);
       setDeepLinkHandled(true);
     }, 0);
@@ -439,9 +441,10 @@ export function FinancePendingProcessing() {
     () => allRows.filter((row) => selected.includes(row.key)),
     [allRows, selected],
   );
-  const openRow = openIndex === null ? undefined : selectedRows[openIndex];
+  const openRow = openIndex === null ? undefined : reviewRows?.[openIndex];
   const closeReview = () => {
     setOpenIndex(null);
+    setReviewRows(null);
     setSelected([]);
     setRefreshVersion((current) => current + 1);
     void refreshVouchers();
@@ -692,6 +695,7 @@ export function FinancePendingProcessing() {
                         className={filterStyles.proofAction}
                         onClick={() => {
                           setSelected([row.key]);
+                          setReviewRows([row]);
                           setOpenIndex(0);
                         }}
                         type="button"
@@ -705,6 +709,7 @@ export function FinancePendingProcessing() {
                       className={filterStyles.rowAction}
                       onClick={() => {
                         setSelected([row.key]);
+                        setReviewRows([row]);
                         setOpenIndex(0);
                       }}
                       type="button"
@@ -729,7 +734,7 @@ export function FinancePendingProcessing() {
               <button onClick={() => setSelected([])} type="button">
                 Clear
               </button>
-              <button onClick={() => setOpenIndex(0)} type="button">
+              <button onClick={() => { setReviewRows(selectedRows); setOpenIndex(0); }} type="button">
                 Review selected ({selectedRows.length})
               </button>
             </div>
@@ -746,7 +751,7 @@ export function FinancePendingProcessing() {
             <header>
               <div>
                 <p>
-                  Finance processing · {openIndex! + 1} of {selectedRows.length}
+                  Finance processing · {openIndex! + 1} of {reviewRows?.length ?? 0}
                 </p>
                 <h2>{openRow.reference}</h2>
               </div>
@@ -770,6 +775,12 @@ export function FinancePendingProcessing() {
                 {openRow.type === "INV" && (
                   <InvoicePaymentFinanceReview
                     embedded
+                    key={openRow.key}
+                    onUpdated={(updated) => setReviewRows((rows) => rows?.map((row) =>
+                      row.key === openRow.key
+                        ? { ...row, status: updated.status, statusLabel: standardPaymentStatusLabel(updated.status), detail: updated }
+                        : row,
+                    ) ?? null)}
                     initialRecord={
                       openRow.detail as InvoicePaymentRequestRecord
                     }
@@ -779,6 +790,7 @@ export function FinancePendingProcessing() {
                 {openRow.type === "TA" && (
                   <TravelAllowanceFinanceReview
                     embedded
+                    key={openRow.key}
                     initialRecord={openRow.detail as TravelAllowanceRecord}
                     requestId={openRow.key.slice(3)}
                   />
@@ -786,6 +798,7 @@ export function FinancePendingProcessing() {
                 {openRow.type === "CA" && (
                   <CashAdvanceFinanceReview
                     embedded
+                    key={openRow.key}
                     id={openRow.key.slice(3)}
                     initialRecord={openRow.detail as CashAdvanceRecord}
                   />
@@ -793,6 +806,7 @@ export function FinancePendingProcessing() {
                 {openRow.type === "PC" && (
                   <PettyCashFinanceReview
                     embedded
+                    key={openRow.key}
                     initialRecord={openRow.detail as PettyCashRecord}
                     requestId={openRow.key.slice(3)}
                   />
@@ -800,6 +814,7 @@ export function FinancePendingProcessing() {
                 {openRow.type === "CL" && (
                   <ClaimFinanceReview
                     embedded
+                    key={openRow.key}
                     initialRecord={openRow.detail as ClaimRecord}
                     requestId={openRow.key.slice(3)}
                   />
@@ -817,10 +832,10 @@ export function FinancePendingProcessing() {
                 Previous
               </button>
               <button
-                disabled={openIndex === selectedRows.length - 1}
+                disabled={openIndex === (reviewRows?.length ?? 0) - 1}
                 onClick={() =>
                   setOpenIndex((value) =>
-                    Math.min(selectedRows.length - 1, (value ?? 0) + 1),
+                    Math.min((reviewRows?.length ?? 1) - 1, (value ?? 0) + 1),
                   )
                 }
                 type="button"

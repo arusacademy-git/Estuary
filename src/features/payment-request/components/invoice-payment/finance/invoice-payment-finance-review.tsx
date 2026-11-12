@@ -1,4 +1,5 @@
 "use client";
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -54,7 +55,7 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_00
 function readProof(file: File) {
   return new Promise<PaymentRequestDocument>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve({ id: crypto.randomUUID(), fileName: file.name, mimeType: file.type, size: file.size, dataUrl: String(reader.result) });
+    reader.onload = () => resolve({ id: createRuntimeId(), fileName: file.name, mimeType: file.type, size: file.size, dataUrl: String(reader.result) });
     reader.onerror = () => reject(new Error("The transaction proof could not be read."));
     reader.readAsDataURL(file);
   });
@@ -71,10 +72,12 @@ export function InvoicePaymentFinanceReview({
   requestId,
   embedded = false,
   initialRecord,
+  onUpdated,
 }: {
   requestId: string;
   embedded?: boolean;
   initialRecord?: InvoicePaymentRequestRecord;
+  onUpdated?: (record: InvoicePaymentRequestRecord) => void;
 }) {
   const [account, setAccount] = useState<BetaAccount | null>(null);
   const [record, setRecord] = useState<InvoicePaymentRequestRecord | null>(
@@ -122,6 +125,7 @@ export function InvoicePaymentFinanceReview({
     try {
       const updated = await processInvoicePaymentByFinance(record.id, account.id, paymentDate, paymentReference);
       setRecord(updated);
+      onUpdated?.(updated);
       setSuccess("Payment information verified. Upload the transaction proof next.");
       announceUpdate();
     } catch (actionError) {
@@ -144,6 +148,7 @@ export function InvoicePaymentFinanceReview({
       const proof = await readProof(transactionProof);
       const updated = await uploadInvoicePaymentProofByFinance(record.id, account.id, proof);
       setRecord(updated); setTransactionProof(null);
+      onUpdated?.(updated);
       setSuccess("Transaction proof uploaded. Review it and complete the record.");
       announceUpdate();
     } catch (actionError) {
@@ -157,6 +162,7 @@ export function InvoicePaymentFinanceReview({
       const updated = await completeInvoicePaymentByFinance(record.id, account.id);
       notifyStaffInvoicePaymentCompleted(updated, account);
       setRecord(updated);
+      onUpdated?.(updated);
       setSuccess("The Invoice Payment was marked as completed.");
       announceUpdate();
     } catch (actionError) {
@@ -175,6 +181,7 @@ export function InvoicePaymentFinanceReview({
       );
       notifyStaffInvoicePaymentReturned(updated, account, "Finance");
       setRecord(updated);
+      onUpdated?.(updated);
       setSuccess("The Invoice Payment was returned to Staff for correction.");
       announceUpdate();
     } catch (actionError) {

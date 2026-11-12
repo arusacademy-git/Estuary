@@ -7,7 +7,7 @@ import {
   forwardClaimByDirector,
   returnClaimByDirector,
 } from "@/data/payment-requests/claims/api";
-import { notifyClaimDirectorForwarded } from "@/features/payment-request/notifications/claim-notifications";
+import { notifyClaimDirectorForwarded, notifyClaimReturned } from "@/features/payment-request/notifications/claim-notifications";
 import type { ClaimRecord } from "@/domain/payment-requests/claims/types";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
 import { ClaimReviewDetails, ClaimWorkflow } from "../claim-review-shared";
@@ -66,8 +66,9 @@ export function ClaimDirectorReview({ requestId }: { requestId: string }) {
         account.id,
         remarks.trim(),
       );
+      notifyClaimReturned(updated, account, "Director");
       setRecord(updated);
-      setSuccess("Claim rejected. The claimant can see the rejection reason.");
+      setSuccess("Claim returned to the claimant for correction and resubmission.");
     } catch (caught) {
       setError(
         caught instanceof Error

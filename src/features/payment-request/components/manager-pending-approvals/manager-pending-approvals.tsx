@@ -197,7 +197,7 @@ export function ManagerPendingApprovals() {
               href: `/beta/project-manager/payment-requests/invoice-payments/${record.id}`,
             })),
           ...cash
-            .filter((record) => record.managerApproverId === account.id)
+            .filter((record) => record.managerApproverId === account.id && record.status === "PENDING_MANAGER_APPROVAL")
             .map((record) => ({
               key: `CA:${record.id}`,
               id: record.id,
@@ -212,7 +212,7 @@ export function ManagerPendingApprovals() {
               stage: record.managerPreviewedAt ? "Viewed" : "Preview",
               actionable:
                 !record.managerPreviewedAt &&
-                !["RETURNED_TO_STAFF", "COMPLETED"].includes(record.status),
+                record.status === "PENDING_MANAGER_APPROVAL",
               reviewed: Boolean(record.managerPreviewedAt),
               details: [
                 { label: "Project", value: record.projectName },

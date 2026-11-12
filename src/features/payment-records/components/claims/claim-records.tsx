@@ -51,7 +51,7 @@ function date(value: string) {
 function needsAttention(record: ClaimRecord, account: BetaAccount) {
   if (
     record.requesterId === account.id &&
-    ["DRAFT", "RETURNED_TO_CLAIMANT"].includes(record.status)
+    ["DRAFT", "RETURNED_TO_CLAIMANT", "PAYMENT_REJECTED"].includes(record.status)
   )
     return true;
   if (account.role === "director")

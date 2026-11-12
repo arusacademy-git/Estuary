@@ -355,17 +355,23 @@ function Progress({
       time: record.directorReviewedAt,
     },
     FINANCE_VERIFICATION: {
-      copy: `Allowance verified by ${financeName}`,
+      copy: record.financeVerifiedAt
+        ? `Allowance verified by ${financeName}`
+        : "Awaiting Finance verification",
       time: record.financeVerifiedAt,
     },
     TRANSACTION_PROOF: {
-      copy: "Finance uploaded the payment transaction proof for the requester",
+      copy: record.financeTransactionProof
+        ? "Finance uploaded the payment transaction proof for the requester"
+        : "Awaiting transaction proof upload",
       time: record.financeProofUploadedAt,
     },
     COMPLETED: {
-      copy: record.financePaymentReference
-        ? `Payment completed · Ref ${record.financePaymentReference}`
-        : "Payment completed and request closed",
+      copy: record.status === "COMPLETED"
+        ? record.financePaymentReference
+          ? `Payment completed · Ref ${record.financePaymentReference}`
+          : "Payment completed and request closed"
+        : "Awaiting completion",
       time: record.completedAt,
     },
   };

@@ -1,5 +1,16 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — PR #140 Travel Allowance merge resolution
+
+- Merged current `main` into the `payments` branch. The only conflict was `travel-allowance-record-detail.tsx` `Progress()`. Kept PR #140's shared `travelAllowanceProgress` and `stepDetail` structure, retained `main`'s conditional Awaiting wording, and used the dedicated `financeProofUploadedAt` and `completedAt` timestamps from the updated domain model.
+- TypeScript and focused ESLint pass on the merged branch. Current `main` already includes the Travel Allowance proof transition mapping from PR #138; the separate local issue #137 patch should be reconciled with that work rather than pushed unchanged.
+
+## 2026-11-12 — Cash Advance Penang retest and transition repair
+
+- On the Penang beta build, created clearly marked temporary test signatures for Afiq, Nadia and Amir, then submitted synthetic CA26-11-01/02/03. Exercised Manager and Director approvals, Director return/correction/resubmission, Finance multi-selection, simulated payment and proof upload, requester reconciliation, Finance return/correction and completion. Exact RM300, RM1 underspend and RM1 overspend all reached Completed. No real funds moved. Removed the three active test signatures after testing.
+- Updated the Estuary Testing Google Sheet: CA-05/06/07/09 passed; CA-01/08 require retest after the next deployment; CA-02 Google Sheet import remains untested. Closed CA-B02/03/04 and left CA-B01 open for the remaining metadata problem.
+- GitHub issue #135 covers two defects: the Manager approval route persisted a preview instead of a signed approval, and the Cash Advance mapper read obsolete Finance payment/proof transition names. The legacy standalone Manager preview now stays informational rather than forwarding without a signature. Added focused route and mapping tests. Four tests, TypeScript, and focused ESLint pass. The fixes are local pending push, merge, deployment and live retest.
+
 ## Project Handoff Baseline
 
 - Project: Estuary
@@ -11,8 +22,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/add-payment-request-drafts
-- Last Updated: 2026-11-10
+- Current Branch: agent/fix-travel-progress-wording (issue #133)
+- Last Updated: 2026-11-12
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -32,7 +43,49 @@
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
 
-## Current Session Log — 2026-11-10
+## Current Session Log — 2026-11-11
+
+### 2026-11-12 Penang notification and bulk return retest; TA copy repair (issue #133)
+
+- PR #132 merged as `d83a125`; Afiq ran the Penang migration and Docker rebuild. `/api/v1/system/bootstrap` and `/api/v1/notifications?recipientId=afiq-rahman` returned 200.
+- Synthetic IV26-11-05 was resubmitted, approved to Finance and returned. A fresh Staff browser with empty notification localStorage displayed one unread Invoice Payment return alert; server GET contained the notification. This verifies cross-browser delivery of issue #131.
+- Created synthetic IV26-11-06 and IV26-11-07, advanced them to Finance, selected both in Review selected, then returned each without recording payment. Each retained its own result while navigating Previous/Next, and both Staff notifications persisted. INV-B03 was closed; INV-05 is Blocked only for actual payment recording/proof, which was not simulated.
+- TA26-11-01 still appears in My Travel Allowance requests with Director approved and Finance pending. Its pending progress copy incorrectly said "Allowance verified by Finance" and described proof/completion as done. Issue #133 updates only the pending copy; payment workflow behavior is unchanged. Finance payment/proof/completion remain untested because the synthetic record says not to process payment.
+- The shared Estuary Testing sheet was updated with these observations. Afiq performs Penang deployment himself from commands we provide.
+
+### 2026-11-12 continuation — cross-browser notifications (issue #131)
+
+- Main `6edeaf6` was deployed by Afiq and the NetBird HTTP Petty Cash and Cash Advance new forms rendered successfully. PC-07 passed live: synthetic PC26-11-02 Create Another opened a blank form.
+- Retested INV-05 on synthetic IV26-11-05: Finance return success and the reason remained visible after the combined queue refreshed; Staff saw the reason on the correction form. Bulk per-record results remain unverified. The shared test sheet was updated accordingly.
+- TA-01 My Requests listed TA26-11-01 correctly, and the Finance queue displayed its merged employee row and payment controls. Finance payment/proof/completion were not exercised because the record explicitly says not to process payment. The shared test sheet remains partial.
+- Root cause for missing cross-browser notification: all payment types call `createLocalNotification`, which only wrote browser localStorage. Added a PostgreSQL in-app notification table, REST list/create/read/delete endpoints, and a shared notification refresh in the existing bell hook while retaining local notifications. The new migration must run before this branch's app image is deployed. Live cross-browser verification remains pending deployment.
+- Afiq prefers receiving Penang deployment commands and running them himself; do not SSH into Penang for deployment.
+
+### Penang deployment, live retest, and NetBird HTTP fix (issue #129)
+
+- PR #128 merged as `05bcb14`; Penang source was fast-forwarded and Afiq rebuilt the app with Docker. The new Petty Cash Director-return route returns HTTP 400 for empty input, confirming the new container is live; `/api/v1/system/bootstrap` returns 200. No schema migration was needed.
+- Live Penang retest passed CL-03 (edited manual draft restored, submitted as CL26-11-02, saved draft removed), CL-05 (CL26-11-01 Director remarks visible, requester corrected and resubmitted same reference), CL-07/CL-20 (after submitting CL26-11-03, Create Another opened a blank form), and PC-04 (PC26-11-01 Director return with remarks, Staff correction and resubmission). Tracker rows and bug log were updated; Overview now shows 40 passed, 7 failed, 3 blocked, 1 not started, 7 N/A.
+- TA26-11-01 still shows Director approved and Finance step 3/5, and appears in Finance Pending Processing. Finance payment was not simulated. There are no Cash Advance records in the live database; Afiq and Nadia have no active signatures, so CA approval/reconciliation cannot be retested without an authorized requester signature.
+- NetBird plain-HTTP `/beta/payment-requests/petty-cash/new` rendered an error because browser `crypto.randomUUID` is unavailable outside a secure context. Replaced direct calls across Petty Cash, Cash Advance and Finance screens with the existing `createRuntimeId` helper. Typecheck, lint (one existing warning), production build, and helper tests pass. This fix is local until published and deployed.
+- Afiq requested that future Penang deployment work be given as commands for him to run; do not spend time running SSH deployment steps on his behalf.
+
+### Penang retest failures (issue #127)
+
+- Restored the Claim manual-draft route so Continue Draft loads the saved snapshot instead of redirecting to My Requests.
+- Open a fresh Claim or Petty Cash form from each Create Another confirmation; added a fresh Cash Advance creation link on its confirmation.
+- Added the missing Petty Cash Director return API route. Director returned Claims now go back to the claimant for correction; previously rejected Claim records can also be edited and resubmitted. The Claim record and My Requests attention count show the correction action.
+- Restricted the Manager Cash Advance approval queue to actual pending Manager approvals, preventing paid requests waiting for reconciliation from appearing there.
+- Finance bulk review now retains its selected records while the queue refreshes, shows the result after a return, and resets per-record UI state when moving to another selected record. The Invoice Payment review snapshot is updated after each Finance action.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm lint` (one existing warning), `corepack pnpm build`, and the new Petty Cash Director-return route test pass. `corepack pnpm test` reports 16 failures in unchanged manual-draft, Claim policy/Google Sheet, Cash Advance Appendix A import, and Petty Cash policy tests; these appear to predate this branch and need separate reconciliation with current product policy.
+- This issue merged and deployed as `05bcb14`. TA-01 Finance completion and CA-05/CA-07 reconciliation behavior remain unverified on Penang.
+
+## Previous Session Log — 2026-11-10
+
+### Penang deployment build repair
+
+- Pulled GitHub `main` through `f8cd6b8` into the local and Penang source checkouts. No new Prisma migrations or deployment configuration changes were present since Penang's previous release.
+- The local production build failed because four bulk payment components still import `payment-voucher-bulk.module.css`, which commit `04333fb` deleted. Restored the last deployed stylesheet on issue #124's branch for build verification before rebuilding Penang.
+- With the stylesheet restored, the production Next.js build and TypeScript checks passed. All CSS class names referenced by the four importing components are present.
 
 ### Dashboard KPI card interaction and color treatment
 

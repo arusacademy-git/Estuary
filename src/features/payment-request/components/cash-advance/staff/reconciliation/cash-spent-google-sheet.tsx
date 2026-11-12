@@ -1,4 +1,5 @@
 'use client';
+import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import { useState } from 'react';
 import { CASH_ADVANCE_ACCOUNT_TYPES, type CashAdvanceExpense } from '@/domain/payment-requests/cash-advance/types';
@@ -92,7 +93,7 @@ export function parseSummary(csv: string, receiptUrls: Record<string, string> = 
       }
 
       return {
-        id: crypto.randomUUID(),
+        id: createRuntimeId(),
         expenseDate: sheetDate(value(row, 'expenseDate')),
         supplier: value(row, 'supplier'),
         description: value(row, 'description'),
