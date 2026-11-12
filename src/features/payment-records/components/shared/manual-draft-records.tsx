@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchManualFormDrafts } from "@/data/payment-requests/manual-drafts/api";
+import {
+  deleteManualFormDraft,
+  fetchManualFormDrafts,
+  MANUAL_DRAFTS_CHANGED_EVENT,
+} from "@/data/payment-requests/manual-drafts/api";
 import type {
   ManualDraftType,
   ManualFormDraft,
@@ -93,23 +97,31 @@ export function usePaymentTypeManualDrafts(
   useEffect(() => {
     if (!account || !enabled) return;
 
+    const accountId = account.id;
     let cancelled = false;
-    fetchManualFormDrafts("beta-arus-org", account.id)
-      .then((items) => {
-        if (!cancelled) {
-          setDrafts(items.filter((item) => item.paymentType === paymentType));
-          setLoadedKey(`${account.id}:${paymentType}`);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDrafts([]);
-          setLoadedKey(`${account.id}:${paymentType}`);
-        }
-      });
+    let requestVersion = 0;
+    function refreshDrafts() {
+      const version = ++requestVersion;
+      fetchManualFormDrafts("beta-arus-org", accountId)
+        .then((items) => {
+          if (!cancelled && version === requestVersion) {
+            setDrafts(items.filter((item) => item.paymentType === paymentType));
+            setLoadedKey(`${accountId}:${paymentType}`);
+          }
+        })
+        .catch(() => {
+          if (!cancelled && version === requestVersion) {
+            setDrafts([]);
+            setLoadedKey(`${accountId}:${paymentType}`);
+          }
+        });
+    }
+    refreshDrafts();
+    window.addEventListener(MANUAL_DRAFTS_CHANGED_EVENT, refreshDrafts);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(MANUAL_DRAFTS_CHANGED_EVENT, refreshDrafts);
     };
   }, [account, enabled, paymentType]);
 
@@ -117,6 +129,52 @@ export function usePaymentTypeManualDrafts(
     drafts: enabled ? drafts : [],
     loading: Boolean(enabled && requestKey && loadedKey !== requestKey),
   };
+}
+
+function DraftActions({ draft, account }: { draft: ManualFormDraft; account: BetaAccount }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function deleteDraft() {
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteManualFormDraft(draft.id, draft.organizationId, account.id);
+      setConfirming(false);
+      window.dispatchEvent(new Event(MANUAL_DRAFTS_CHANGED_EVENT));
+      window.dispatchEvent(new Event("estuary:action-counts-changed"));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The draft could not be deleted.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className={styles.actions}>
+      <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
+        Continue draft
+      </Link>
+      {draft.requesterId === account.id && (
+        <button className={styles.deleteButton} disabled={deleting} onClick={() => setConfirming(true)} type="button">
+          Delete draft
+        </button>
+      )}
+      {confirming && (
+        <div aria-label={`Delete ${labels[draft.paymentType]} draft`} className={styles.confirmation} role="group">
+          <p>Delete this unsubmitted draft? This cannot be undone.</p>
+          <div>
+            <button disabled={deleting} onClick={() => { setConfirming(false); setError(""); }} type="button">Cancel</button>
+            <button className={styles.confirmDeleteButton} disabled={deleting} onClick={() => void deleteDraft()} type="button">
+              {deleting ? "Deleting…" : "Confirm delete"}
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className={styles.deleteError} role="alert">{error}</p>}
+    </div>
+  );
 }
 
 export function filterManualDrafts(
@@ -189,9 +247,7 @@ export function ManualDraftRecordList({
                 <dd>Not submitted</dd>
               </div>
             </dl>
-            <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
-              Continue draft
-            </Link>
+            <DraftActions account={account} draft={draft} />
           </article>
         ))}
       </div>
@@ -223,9 +279,7 @@ export function ManualDraftRecordList({
                 <span className={styles.status}>Draft</span>
               </td>
               <td className={styles.actionCell}>
-                <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
-                  Continue draft
-                </Link>
+                <DraftActions account={account} draft={draft} />
               </td>
             </tr>
           ))}
@@ -262,9 +316,7 @@ export function ManualDraftCards({
               <dd>Not submitted</dd>
             </div>
           </dl>
-          <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
-            Continue draft
-          </Link>
+          <DraftActions account={account} draft={draft} />
         </article>
       ))}
     </>
@@ -319,9 +371,7 @@ export function ManualDraftTableRows({
             </>
           )}
           <td className={styles.actionCell}>
-            <Link href={manualDraftHref(draft.paymentType, account, draft.snapshot, draft.id)}>
-              Continue draft
-            </Link>
+            <DraftActions account={account} draft={draft} />
           </td>
         </tr>
       ))}

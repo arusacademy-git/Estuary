@@ -4,6 +4,8 @@ import type {
   SaveManualFormDraftInput,
 } from "@/domain/payment-requests/manual-drafts/types";
 
+export const MANUAL_DRAFTS_CHANGED_EVENT = "estuary:manual-drafts-changed";
+
 type Envelope<T> = { data?: T; message?: string };
 
 async function read<T>(response: Response) {

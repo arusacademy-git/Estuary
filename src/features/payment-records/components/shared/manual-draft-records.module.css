@@ -77,12 +77,85 @@
     white-space: nowrap;
 }
 
-.card>a {
+.card>.actions {
     align-self: end;
     justify-self: end;
     margin-top: 2px;
+}
+
+.card>.actions a {
     padding: 9px 14px;
     font-size: 0.78rem;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.actions button {
+    padding: 9px 12px;
+    border: 1px solid #c9d3df;
+    border-radius: 9px;
+    background: #fff;
+    color: #304663;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.actions button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.actions .deleteButton {
+    border-color: #e7b9b9;
+    color: #a32525;
+}
+
+.actions .confirmDeleteButton {
+    border-color: #a32525;
+    background: #a32525;
+    color: #fff;
+}
+
+.confirmation,
+.deleteError {
+    flex-basis: 100%;
+    margin: 0;
+    white-space: normal;
+}
+
+.confirmation {
+    display: grid;
+    gap: 8px;
+    max-width: 290px;
+    padding: 10px;
+    border: 1px solid #e7b9b9;
+    border-radius: 9px;
+    background: #fff9f9;
+    text-align: left;
+}
+
+.confirmation p {
+    margin: 0;
+    color: #5b2730;
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+
+.confirmation>div {
+    display: flex;
+    gap: 8px;
+}
+
+.deleteError {
+    color: #a32525;
+    font-size: 0.76rem;
 }
 
 .tableWrapper {
@@ -115,6 +188,10 @@
     width: 1%;
     min-width: 0;
     text-align: right !important;
+}
+
+.actionCell .actions {
+    justify-content: flex-end;
 }
 
 .actionCell a {

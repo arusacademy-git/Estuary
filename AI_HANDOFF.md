@@ -1,5 +1,10 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — Requester delete action for manual drafts
+
+- GitHub issue #142 adds a requester-visible Delete draft control to the shared manual-draft cards and table rows across payment types. The action shows an inline confirmation and error, reuses the existing requester-scoped DELETE API, and refreshes the draft lists and action counts after deletion. Submitted payment requests are outside this action.
+- Added a manual-drafts-changed event listener to payment-type draft lists and the My Requests category overview so deleted drafts disappear and counts update without a page reload. TypeScript, focused ESLint and the production build pass. A local browser check with mocked APIs confirmed the confirmation step, requester-scoped DELETE request and list removal. Live Penang verification remains after deployment.
+
 ## 2026-11-12 — Travel Allowance proof in Payment Records
 
 - Penang beta after main `9a1671f`: synthetic TA26-11-04/05/06 are all Completed; their distinct proof IDs, payment references, proof-upload timestamps and completion timestamps now appear in the API. The pending TA26-11-01 record still displays Awaiting wording for unfinished stages.

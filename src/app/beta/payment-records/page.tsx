@@ -8,7 +8,10 @@ import { fetchTravelAllowances } from "@/data/payment-requests/travel-allowance/
 import { fetchCashAdvances } from "@/data/payment-requests/cash-advance/cash-advance-api";
 import { fetchClaimRequests } from "@/data/payment-requests/claims/api";
 import { fetchPettyCashRequests } from "@/data/payment-requests/petty-cash/api";
-import { fetchManualFormDrafts } from "@/data/payment-requests/manual-drafts/api";
+import {
+  fetchManualFormDrafts,
+  MANUAL_DRAFTS_CHANGED_EVENT,
+} from "@/data/payment-requests/manual-drafts/api";
 import type {
   ManualDraftType,
   ManualFormDraft,
@@ -331,6 +334,23 @@ export default function PaymentRecordsPage() {
       active = false;
     };
   }, [account, personalOnly, router]);
+
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    const refreshDrafts = () => {
+      fetchManualFormDrafts("beta-arus-org", account.id)
+        .then((items) => {
+          if (active) setManualDrafts(items);
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener(MANUAL_DRAFTS_CHANGED_EVENT, refreshDrafts);
+    return () => {
+      active = false;
+      window.removeEventListener(MANUAL_DRAFTS_CHANGED_EVENT, refreshDrafts);
+    };
+  }, [account]);
 
   const visibleVouchers = useMemo(
     () =>
