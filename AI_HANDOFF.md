@@ -1,5 +1,11 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — Cash Advance Penang retest and transition repair
+
+- On the Penang beta build, created clearly marked temporary test signatures for Afiq, Nadia and Amir, then submitted synthetic CA26-11-01/02/03. Exercised Manager and Director approvals, Director return/correction/resubmission, Finance multi-selection, simulated payment and proof upload, requester reconciliation, Finance return/correction and completion. Exact RM300, RM1 underspend and RM1 overspend all reached Completed. No real funds moved. Removed the three active test signatures after testing.
+- Updated the Estuary Testing Google Sheet: CA-05/06/07/09 passed; CA-01/08 require retest after the next deployment; CA-02 Google Sheet import remains untested. Closed CA-B02/03/04 and left CA-B01 open for the remaining metadata problem.
+- GitHub issue #135 covers two defects: the Manager approval route persisted a preview instead of a signed approval, and the Cash Advance mapper read obsolete Finance payment/proof transition names. The legacy standalone Manager preview now stays informational rather than forwarding without a signature. Added focused route and mapping tests. Four tests, TypeScript, and focused ESLint pass. The fixes are local pending push, merge, deployment and live retest.
+
 ## Project Handoff Baseline
 
 - Project: Estuary
