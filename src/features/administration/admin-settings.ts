@@ -1,6 +1,14 @@
 import { DIVISION_OPTIONS, PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
 import { useEffect, useState } from 'react';
 import { betaAccounts, type BetaAccount } from '@/lib/auth/beta-accounts';
+import {
+  INTERNET_COMMUTE_LIMIT,
+  MEDICAL_ANNUAL_LIMIT,
+  PD_LIMIT,
+  TECH_EXTENDED_LIMIT,
+  TECH_EXTENDED_LOCK_YEARS,
+  TECH_STANDARD_LIMIT,
+} from '@/domain/payment-requests/claims/policy';
 
 export const ADMIN_SETTINGS_KEY = 'estuary-beta-admin-settings-v1';
 export const ADMIN_SETTINGS_EVENT = 'estuary:admin-settings-changed';
@@ -8,7 +16,15 @@ export const ADMIN_SETTINGS_EVENT = 'estuary:admin-settings-changed';
 export type AdminProgramme = { id: string; code: string; name: string; managerId: string; active: boolean };
 export type AdminAccountingCode = { id: string; code: string; name: string; description: string; active: boolean };
 export type AdminEmployee = { id: string; name: string; email: string; role: 'staff' | 'manager' | 'director' | 'finance'; programmeId: string; joinedAt: string; active: boolean };
-export type AdminClaimPolicy = { medicalAnnualLimit: number; pdAnnualLimit: number; prorateByEmploymentDate: boolean };
+export type AdminClaimPolicy = {
+  medicalAnnualLimit: number;
+  pdAnnualLimit: number;
+  prorateByEmploymentDate: boolean;
+  internetCommuteLimit: number;
+  techStandardLimit: number;
+  techExtendedLimit: number;
+  techExtendedLockYears: number;
+};
 export type AdminSettings = { programmes: AdminProgramme[]; accountingCodes: AdminAccountingCode[]; employees: AdminEmployee[]; claimPolicy: AdminClaimPolicy };
 
 export function canAccessAdministration(account: BetaAccount | null | undefined) {
@@ -26,7 +42,15 @@ export function createDefaultAdminSettings(): AdminSettings {
       active: true,
     })),
     employees: betaAccounts.map((account) => ({ id: account.id, name: account.name, email: account.email, role: account.role, programmeId: '', joinedAt: '2026-01-01', active: true })),
-    claimPolicy: { medicalAnnualLimit: 500, pdAnnualLimit: 500, prorateByEmploymentDate: true },
+    claimPolicy: {
+      medicalAnnualLimit: MEDICAL_ANNUAL_LIMIT,
+      pdAnnualLimit: PD_LIMIT,
+      prorateByEmploymentDate: true,
+      internetCommuteLimit: INTERNET_COMMUTE_LIMIT,
+      techStandardLimit: TECH_STANDARD_LIMIT,
+      techExtendedLimit: TECH_EXTENDED_LIMIT,
+      techExtendedLockYears: TECH_EXTENDED_LOCK_YEARS,
+    },
   };
 }
 
