@@ -14,6 +14,11 @@ import type {
 } from "@/domain/payment-requests/travel-allowance/types";
 import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import {
+  travelAllowanceProgress,
+  travelAllowanceStageTitle,
+  type TravelAllowanceProgressStage,
+} from "@/domain/payment-requests/travel-allowance/types";
+import {
   getBetaAccount,
   readBetaSession,
   type BetaAccount,
@@ -212,40 +217,40 @@ export function TravelAllowanceRecordDetail({
             </div>
           </Section>
           <Section title="Travel Entries">
-            <div className={styles.tableWrapper}>
-              <table>
+            <div className={styles.entriesTableWrapper}>
+              <table className={styles.entriesTable}>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Employee</th>
-                    <th>Date</th>
-                    <th>Project</th>
-                    <th>Reason</th>
-                    <th>Meals</th>
-                    <th>Special</th>
-                    <th>Total</th>
+                    <th className={styles.entryIndex}>#</th>
+                    <th className={styles.entryEmployee}>Employee</th>
+                    <th className={styles.entryDate}>Date</th>
+                    <th className={styles.entryProject}>Project</th>
+                    <th className={styles.entryReason}>Reason</th>
+                    <th className={styles.entryMeals}>Meals</th>
+                    <th className={styles.entryAmount}>Special</th>
+                    <th className={styles.entryAmount}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {record.lines.map((line, index) => (
                     <tr key={line.id}>
-                      <td>{index + 1}</td>
-                      <td>{line.employeeName}</td>
-                      <td>{date(line.travelDate)}</td>
-                      <td>{line.projectName}</td>
-                      <td>{line.reason}</td>
-                      <td>
+                      <td className={styles.entryIndex}>{index + 1}</td>
+                      <td className={styles.entryEmployee}>{line.employeeName}</td>
+                      <td className={styles.entryDate}>{date(line.travelDate)}</td>
+                      <td className={styles.entryProject}>{line.projectName}</td>
+                      <td className={styles.entryReason}>{line.reason || "—"}</td>
+                      <td className={styles.entryMeals}>
                         {line.meals
                           .map((meal) => `${meal} RM${TRAVEL_MEAL_RATES[meal]}`)
                           .join(", ") || "—"}
                       </td>
-                      <td>
+                      <td className={styles.entryAmount}>
                         {money(line.specialAllowance)}
                         {line.specialAllowanceReason && (
                           <small>{line.specialAllowanceReason}</small>
                         )}
                       </td>
-                      <td>
+                      <td className={styles.entryAmount}>
                         <strong>{money(travelLineTotal(line))}</strong>
                       </td>
                     </tr>
@@ -328,149 +333,78 @@ function Progress({
   manager: string;
   director: string;
 }) {
-  const managerPath = record.requesterRole === "staff";
-  const steps = managerPath
-    ? [
-      {
-        title: "Request Submitted",
-        copy: `Submitted by ${record.requesterName}`,
-        time: record.createdAt,
-      },
-      {
-        title: "Manager Review",
-        copy: `Reviewed and approved by ${manager}`,
-        time: record.managerReviewedAt,
-      },
-      {
-        title: "Director Review",
-        copy: `Reviewed and approved by ${director}`,
-        time: record.directorReviewedAt,
-      },
-      {
-        title: "Finance Verification",
-        copy: record.financeVerifiedAt
-          ? `Allowance verified by ${record.financeVerifiedById
-              ? (getBetaAccount(record.financeVerifiedById)?.name ??
-                record.financeVerifiedById)
-              : "Finance"}`
-          : "Awaiting Finance verification",
-        time: record.financeVerifiedAt,
-      },
-      {
-        title: "Payment transaction proof uploaded",
-        copy: record.financeTransactionProof
-          ? "Finance uploaded the payment transaction proof for the requester"
-          : "Awaiting transaction proof upload",
-      },
-      {
-        title: "Completed",
-        copy: record.status === "COMPLETED"
-          ? record.financePaymentReference
-            ? `Payment completed · Ref ${record.financePaymentReference}`
-            : "Payment completed and request closed"
-          : "Awaiting completion",
-        time: record.status === "COMPLETED" ? record.updatedAt : undefined,
-      },
-    ]
-    : [
-      {
-        title: "Manager Request Submitted",
-        copy: `Submitted by ${record.requesterName}`,
-        time: record.createdAt,
-      },
-      {
-        title: "Director Review",
-        copy: `Reviewed and approved by ${director}`,
-        time: record.directorReviewedAt,
-      },
-      {
-        title: "Finance Verification",
-        copy: record.financeVerifiedAt
-          ? `Allowance verified by ${record.financeVerifiedById
-              ? (getBetaAccount(record.financeVerifiedById)?.name ??
-                record.financeVerifiedById)
-              : "Finance"}`
-          : "Awaiting Finance verification",
-        time: record.financeVerifiedAt,
-      },
-      {
-        title: "Payment transaction proof uploaded",
-        copy: record.financeTransactionProof
-          ? "Finance uploaded the payment transaction proof for the requester"
-          : "Awaiting transaction proof upload",
-      },
-      {
-        title: "Completed",
-        copy: record.status === "COMPLETED"
-          ? record.financePaymentReference
-            ? `Payment completed · Ref ${record.financePaymentReference}`
-            : "Payment completed and request closed"
-          : "Awaiting completion",
-        time: record.status === "COMPLETED" ? record.updatedAt : undefined,
-      },
-    ];
-  const active =
-    record.status === "PENDING_MANAGER_REVIEW"
-      ? 2
-      : record.status === "PENDING_DIRECTOR_APPROVAL"
-        ? managerPath
-          ? 3
-          : 2
-        : record.status === "PENDING_FINANCE_VERIFICATION"
-          ? managerPath
-            ? 4
-            : 3
-          : record.status === "TRANSACTION_PROOF_UPLOADED"
-            ? steps.length - 1
-            : record.status === "COMPLETED"
-              ? steps.length
-              : record.financeReturnedAt
-                ? managerPath
-                  ? 4
-                  : 3
-                : record.directorReturnedAt
-                  ? managerPath
-                    ? 3
-                    : 2
-                  : 2;
+  const progress = travelAllowanceProgress(record);
+  const financeName = record.financeVerifiedById
+    ? (getBetaAccount(record.financeVerifiedById)?.name ??
+      record.financeVerifiedById)
+    : "Finance";
+  const stepDetail: Record<
+    TravelAllowanceProgressStage,
+    { copy: string; time?: string }
+  > = {
+    SUBMITTED: {
+      copy: `Submitted by ${record.requesterName}`,
+      time: record.createdAt,
+    },
+    MANAGER_REVIEW: {
+      copy: `Reviewed and approved by ${manager}`,
+      time: record.managerReviewedAt,
+    },
+    DIRECTOR_REVIEW: {
+      copy: `Reviewed and approved by ${director}`,
+      time: record.directorReviewedAt,
+    },
+    FINANCE_VERIFICATION: {
+      copy: record.financeVerifiedAt
+        ? `Allowance verified by ${financeName}`
+        : "Awaiting Finance verification",
+      time: record.financeVerifiedAt,
+    },
+    TRANSACTION_PROOF: {
+      copy: record.financeTransactionProof
+        ? "Finance uploaded the payment transaction proof for the requester"
+        : "Awaiting transaction proof upload",
+      time: record.financeProofUploadedAt,
+    },
+    COMPLETED: {
+      copy: record.status === "COMPLETED"
+        ? record.financePaymentReference
+          ? `Payment completed · Ref ${record.financePaymentReference}`
+          : "Payment completed and request closed"
+        : "Awaiting completion",
+      time: record.completedAt,
+    },
+  };
   return (
     <section className={styles.progressPanel}>
       <header>
         <p>Payment progress</p>
         <span>
-          Step {active} of {steps.length}
+          Step {progress.active} of {progress.total}
         </span>
       </header>
       <ol>
-        {steps.map((step, index) => {
-          const number = index + 1;
-          const complete =
-            number < active ||
-            (record.status === "COMPLETED" && number === steps.length);
-          const state = complete
-            ? "complete"
-            : number === active
-              ? record.status === "RETURNED_TO_STAFF"
-                ? "returned"
-                : "active"
-              : "pending";
+        {progress.stages.map((stage, index) => {
+          const state = progress.stateOf(index + 1);
+          const complete = state === "complete";
+          const detail = stepDetail[stage];
           return (
             <li
               className={styles.progressStep}
               data-state={state}
-              key={step.title}
+              key={stage}
             >
               <i>{complete ? "✓" : ""}</i>
               <div>
                 <strong>
-                  {step.title}
+                  {travelAllowanceStageTitle(stage, record)}
                   {state === "returned" && (
                     <em className={styles.returnedTag}>Returned</em>
                   )}
                 </strong>
                 <small>
-                  {step.copy}
-                  {step.time ? ` · ${date(step.time)}` : ""}
+                  {detail.copy}
+                  {complete && detail.time ? ` · ${date(detail.time)}` : ""}
                 </small>
               </div>
             </li>

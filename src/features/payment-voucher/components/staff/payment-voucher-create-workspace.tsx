@@ -391,12 +391,9 @@ export function PaymentVoucherCreateWorkspace() {
           </div>
         </section>
       ) : creationMode === 'single' &&
-        singleFlowStep === 'review' ? null : (
+        singleFlowStep === 'review' ? null : !isAmendmentRequest ? (
         <div
-          className={`${styles.activeWorkspace} ${isAmendmentRequest
-              ? styles.amendmentWorkspace
-              : ''
-            }`}
+          className={styles.activeWorkspace}
         >
           <div
             className={
@@ -409,9 +406,7 @@ export function PaymentVoucherCreateWorkspace() {
               }
             >
               <span>
-                {isAmendmentRequest
-                  ? 'Current action'
-                  : 'Creation method'}
+                Creation method
               </span>
 
               <strong>
@@ -419,37 +414,16 @@ export function PaymentVoucherCreateWorkspace() {
               </strong>
             </div>
 
-            {!isAmendmentRequest && (
-              <button
-                className={
-                  styles.changeMethodButton
-                }
-                type="button"
-                onClick={() =>
-                  setCreationMode(null)
-                }
-              >
-                Change creation method
-              </button>
-            )}
-
-            {isAmendmentRequest && (
-              <Link
-                className={
-                  styles.changeMethodButton
-                }
-                href={
-                  initialVoucher
-                    ? `/beta/payment-vouchers/${initialVoucher.id}`
-                    : '/beta/payment-vouchers'
-                }
-              >
-                Cancel amendment
-              </Link>
-            )}
+            <button
+              className={styles.changeMethodButton}
+              type="button"
+              onClick={() => setCreationMode(null)}
+            >
+              Change creation method
+            </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/*
        * For amendment mode, wait until the

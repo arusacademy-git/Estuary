@@ -15,6 +15,7 @@ import {
 } from "@/features/payment-request/notifications/travel-allowance-notifications";
 import type { PaymentRequestDocument, TravelAllowanceRecord } from "@/domain/payment-requests/travel-allowance/types";
 import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
+import { travelAllowanceProgress, travelAllowanceStageTitle } from "@/domain/payment-requests/travel-allowance/types";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
 
 import styles from "../travel-allowance-workflow.module.css";
@@ -320,7 +321,7 @@ export function TravelAllowanceFinanceReview({
                 <span>{isCompletionStage ? "The transaction proof is uploaded. Confirm completion to archive this request in Payment Records." : isProofStage ? "The payment is recorded. Upload its transaction proof now or close and return later." : "Check the payment details, then confirm that it has been processed."}</span>
                 <div className={styles.financeFields}>
                   <label>
-                    <span>Payment date *</span>
+                    <span>Payment date <em className={styles.requiredMark} aria-hidden="true">*</em></span>
                     <input
                       readOnly={isProofStage}
                       type="date"
@@ -329,7 +330,7 @@ export function TravelAllowanceFinanceReview({
                     />
                   </label>
                   <label>
-                    <span>Payment reference *</span>
+                    <span>Payment reference <em className={styles.requiredMark} aria-hidden="true">*</em></span>
                     <input readOnly value={paymentReference} />
                   </label>
                   {!isProofStage && !isCompletionStage && <label>
@@ -338,11 +339,16 @@ export function TravelAllowanceFinanceReview({
                   </label>}
                 </div>
                 {isProofStage ? (
-                  <div className={styles.uploadProofBox}>
-                    <label htmlFor={`travel-proof-${record.id}`}>Choose File</label>
-                    <span>{transactionProof?.name ?? "No file chosen"}</span>
-                    <input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" id={`travel-proof-${record.id}`} onChange={(event) => setTransactionProof(event.currentTarget.files?.[0] ?? null)} type="file" />
-                    <small>PDF, JPG or PNG · maximum 2.5 MB</small>
+                  <div className={styles.proofField}>
+                    <span className={styles.proofLabel}>
+                      Transaction proof <em className={styles.requiredMark} aria-hidden="true">*</em>
+                    </span>
+                    <div className={styles.uploadProofBox}>
+                      <label htmlFor={`travel-proof-${record.id}`}>Choose File</label>
+                      <span>{transactionProof?.name ?? "No file chosen"}</span>
+                      <input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" id={`travel-proof-${record.id}`} onChange={(event) => setTransactionProof(event.currentTarget.files?.[0] ?? null)} required type="file" />
+                      <small>PDF, JPG or PNG · maximum 2.5 MB</small>
+                    </div>
                   </div>
                 ) : !isCompletionStage ? <label className={styles.financePaymentConfirmation}>
                   <input
@@ -407,58 +413,32 @@ export function TravelAllowanceFinanceReview({
 }
 
 function Progress({ record }: { record: TravelAllowanceRecord }) {
-  const steps =
-    record.requesterRole === "manager"
-      ? [
-        "Request Submitted by Manager",
-        "Director Review",
-        "Finance Verification",
-        "Completed",
-      ]
-      : [
-        "Request Submitted",
-        "Manager Review",
-        "Director Review",
-        "Finance Verification",
-        "Completed",
-      ];
-  const active =
-    record.status === "PENDING_FINANCE_VERIFICATION"
-      ? record.requesterRole === "manager"
-        ? 3
-        : 4
-      : record.status === "COMPLETED"
-        ? steps.length
-        : Math.min(2, steps.length);
+  const progress = travelAllowanceProgress(record);
   return (
     <section className={styles.progress}>
       <header>
         <p>Payment progress</p>
         <span>
-          Step {active} of {steps.length}
+          Step {progress.active} of {progress.total}
         </span>
       </header>
       <ol>
-        {steps.map((title, index) => {
+        {progress.stages.map((stage, index) => {
           const number = index + 1;
-          const state =
-            number < active ||
-              (record.status === "COMPLETED" && number === steps.length)
-              ? "complete"
-              : number === active
-                ? "active"
-                : "pending";
+          const state = progress.stateOf(number);
           return (
-            <li data-state={state} key={title}>
+            <li data-state={state} key={stage}>
               <i>{state === "complete" ? "✓" : number}</i>
               <div>
-                <strong>{title}</strong>
+                <strong>{travelAllowanceStageTitle(stage, record)}</strong>
                 <small>
-                  {state === "active"
-                    ? "Current stage"
-                    : state === "complete"
-                      ? "Completed"
-                      : "Waiting"}
+                  {state === "complete"
+                    ? "Completed"
+                    : state === "returned"
+                      ? "Returned for correction"
+                      : state === "active"
+                        ? "Current stage"
+                        : "Waiting"}
                 </small>
               </div>
             </li>
@@ -468,6 +448,7 @@ function Progress({ record }: { record: TravelAllowanceRecord }) {
     </section>
   );
 }
+
 function InfoSection({
   title,
   children,

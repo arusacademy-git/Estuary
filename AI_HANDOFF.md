@@ -1,5 +1,10 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — PR #140 Travel Allowance merge resolution
+
+- Merged current `main` into the `payments` branch. The only conflict was `travel-allowance-record-detail.tsx` `Progress()`. Kept PR #140's shared `travelAllowanceProgress` and `stepDetail` structure, retained `main`'s conditional Awaiting wording, and used the dedicated `financeProofUploadedAt` and `completedAt` timestamps from the updated domain model.
+- TypeScript and focused ESLint pass on the merged branch. Current `main` already includes the Travel Allowance proof transition mapping from PR #138; the separate local issue #137 patch should be reconciled with that work rather than pushed unchanged.
+
 ## 2026-11-12 — Cash Advance Penang retest and transition repair
 
 - On the Penang beta build, created clearly marked temporary test signatures for Afiq, Nadia and Amir, then submitted synthetic CA26-11-01/02/03. Exercised Manager and Director approvals, Director return/correction/resubmission, Finance multi-selection, simulated payment and proof upload, requester reconciliation, Finance return/correction and completion. Exact RM300, RM1 underspend and RM1 overspend all reached Completed. No real funds moved. Removed the three active test signatures after testing.

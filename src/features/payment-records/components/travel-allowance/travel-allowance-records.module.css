@@ -1428,3 +1428,105 @@
   text-align: center;
   white-space: normal;
 }
+
+/* Record detail: Travel Entries table.
+   Uses its own classes so the records-list `.tableWrapper` rules
+   (fixed layout, list column widths, break-anywhere wrapping) do not apply. */
+.entriesTableWrapper {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.entriesTable {
+  width: 100%;
+  min-width: 880px;
+  table-layout: auto;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.entriesTable th,
+.entriesTable td {
+  padding: 14px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.entriesTable th {
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.entriesTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.entriesTable tbody tr:hover {
+  background: #f8fbff;
+}
+
+.entriesTable .entryIndex {
+  width: 44px;
+  color: #64748b;
+}
+
+.entriesTable .entryEmployee {
+  min-width: 180px;
+  color: #102a4c;
+  font-weight: 700;
+}
+
+.entriesTable .entryDate {
+  white-space: nowrap;
+}
+
+.entriesTable .entryProject {
+  min-width: 150px;
+}
+
+.entriesTable .entryReason {
+  min-width: 160px;
+}
+
+.entriesTable .entryMeals {
+  min-width: 170px;
+}
+
+.entriesTable .entryAmount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.entriesTable .entryAmount strong {
+  display: block;
+  color: #0f2f57;
+  font-weight: 800;
+}
+
+.entriesTable .entryAmount small {
+  display: block;
+  max-width: 200px;
+  margin-top: 4px;
+  margin-left: auto;
+  color: #64748b;
+  font-size: 0.74rem;
+  white-space: normal;
+  text-align: right;
+}

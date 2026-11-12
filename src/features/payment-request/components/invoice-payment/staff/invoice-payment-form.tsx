@@ -382,7 +382,7 @@ export function InvoicePaymentForm({
         onCreateAnother={() =>
           initialRecord
             ? window.location.assign("/beta/payment-records/invoice-payments")
-            : window.location.reload()
+            : window.location.assign("/beta/payment-requests/invoice-payment/new")
         }
       />
     );

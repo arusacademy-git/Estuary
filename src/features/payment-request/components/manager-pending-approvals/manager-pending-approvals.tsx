@@ -502,6 +502,7 @@ export function ManagerPendingApprovals() {
     setSaving(true);
     setError("");
     const succeeded: string[] = [];
+    const failures: string[] = [];
     for (const row of selected) {
       try {
         if (row.type === "INV")
@@ -513,8 +514,12 @@ export function ManagerPendingApprovals() {
         if (row.type === "PC")
           await approvePettyCashByManager(row.id, account.id);
         succeeded.push(row.key);
-      } catch {
-        /* Preserve failed rows for retry. */
+      } catch (error) {
+        failures.push(
+          error instanceof Error
+            ? `${row.reference}: ${error.message}`
+            : `${row.reference}: could not be updated.`,
+        );
       }
     }
     setRows((current) => current.filter((row) => !succeeded.includes(row.key)));
@@ -528,12 +533,11 @@ export function ManagerPendingApprovals() {
     setConfirmed(false);
     setSaving(false);
     setMessage(
-      `${succeeded.length} of ${selected.length} selected requests were approved or marked as reviewed.`,
+      succeeded.length > 0
+        ? `${succeeded.length} of ${selected.length} selected requests were approved or marked as reviewed.`
+        : "",
     );
-    if (succeeded.length !== selected.length)
-      setError(
-        "Some requests could not be updated. The remaining selections are ready to retry.",
-      );
+    setError(failures.length > 0 ? failures.join(" ") : "");
   }
 
   if (!account || account.role !== "manager")

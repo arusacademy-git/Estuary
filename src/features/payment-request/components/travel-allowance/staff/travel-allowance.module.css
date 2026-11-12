@@ -806,14 +806,22 @@
 
 .reviewSideColumn .reviewActions {
   display: grid;
-  gap: 9px;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  justify-items: stretch;
+  gap: 10px;
+  width: 100%;
   margin-top: auto;
   padding: 28px 0 0;
   border: 0;
+  background: transparent;
 }
 
 .reviewSideColumn .reviewActions button {
   width: 100%;
+  min-height: 46px;
+  padding: 11px 18px;
+  font-size: 13px;
 }
 
 .confirmation {

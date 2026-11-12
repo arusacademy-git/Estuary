@@ -8,6 +8,7 @@ import { notifyTravelAllowanceDirectorApproved, notifyTravelAllowanceReturned } 
 import type { TravelAllowanceRecord } from '@/domain/payment-requests/travel-allowance/types';
 import { TravelAllowanceGroupedTable } from '../travel-allowance-grouped-table';
 import { standardPaymentStatusLabel } from '@/domain/payment-requests/standard-payment-status';
+import { travelAllowanceProgress, travelAllowanceStageTitle } from '@/domain/payment-requests/travel-allowance/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
 
 import styles from '../travel-allowance-workflow.module.css';
@@ -67,7 +68,43 @@ export function TravelAllowanceDirectorReview({ requestId }: { requestId: string
   </main>;
 }
 
-function Progress({ record }: { record: TravelAllowanceRecord }) { const steps = record.requesterRole === 'manager' ? ['Request Submitted by Manager', 'Director Review', 'Finance Verification', 'Completed'] : ['Request Submitted', 'Manager Review', 'Director Review', 'Finance Verification', 'Completed']; const active = record.status === 'PENDING_MANAGER_REVIEW' ? 2 : record.status === 'PENDING_DIRECTOR_APPROVAL' ? (record.requesterRole === 'manager' ? 2 : 3) : record.status === 'PENDING_FINANCE_VERIFICATION' ? (record.requesterRole === 'manager' ? 3 : 4) : record.status === 'COMPLETED' ? steps.length : Math.min(2, steps.length); return <section className={styles.progress}><header><p>Payment progress</p><span>Step {active} of {steps.length}</span></header><ol>{steps.map((title, index) => { const number = index + 1; const state = number < active || (record.status === 'COMPLETED' && number === steps.length) ? 'complete' : number === active ? 'active' : 'pending'; return <li data-state={state} key={title}><i>{state === 'complete' ? '✓' : number}</i><div><strong>{title}</strong><small>{state === 'active' ? 'Current stage' : state === 'complete' ? 'Completed' : 'Waiting'}</small></div></li>; })}</ol></section>; }
+function Progress({ record }: { record: TravelAllowanceRecord }) {
+  const progress = travelAllowanceProgress(record);
+  return (
+    <section className={styles.progress}>
+      <header>
+        <p>Payment progress</p>
+        <span>
+          Step {progress.active} of {progress.total}
+        </span>
+      </header>
+      <ol>
+        {progress.stages.map((stage, index) => {
+          const number = index + 1;
+          const state = progress.stateOf(number);
+          return (
+            <li data-state={state} key={stage}>
+              <i>{state === "complete" ? "✓" : number}</i>
+              <div>
+                <strong>{travelAllowanceStageTitle(stage, record)}</strong>
+                <small>
+                  {state === "complete"
+                    ? "Completed"
+                    : state === "returned"
+                      ? "Returned for correction"
+                      : state === "active"
+                        ? "Current stage"
+                        : "Waiting"}
+                </small>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 function InfoSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className={styles.infoSection}><h2>{title}</h2>{children}</section>; }
 function Value({ label, value }: { label: string; value: string }) { return <div><dt>{label}</dt><dd>{value}</dd></div>; }
 function State({ title, copy }: { title: string; copy: string }) { return <main className={styles.state}><h1>{title}</h1><p>{copy}</p><Link href={baseHref}>Back to Travel Allowances</Link></main>; }

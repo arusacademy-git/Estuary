@@ -971,3 +971,50 @@
         margin-left: 16px;
     }
 }
+
+/* Finance proof upload: spacing, medium-size picker and red required marks. */
+.requiredMark {
+    margin-left: 2px;
+    color: #dc2626;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.proofField {
+    display: grid;
+    gap: 7px;
+    margin-top: 18px;
+}
+
+.proofLabel {
+    color: #526987;
+    font-size: 11px;
+}
+
+.actionCard .uploadProofBox {
+    gap: 8px 12px;
+    padding: 12px 14px;
+}
+
+.actionCard .uploadProofBox label {
+    flex-direction: row;
+    gap: 0;
+    min-height: 36px;
+    padding: 0 16px;
+    color: #12365f;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.actionCard .uploadProofBox label:hover {
+    border-color: #12365f;
+}
+
+.actionCard .uploadProofBox>span {
+    font-size: 0.76rem;
+}
+
+.actionCard .uploadProofBox small {
+    font-size: 0.58rem;
+}
