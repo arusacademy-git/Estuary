@@ -122,10 +122,6 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
         { label: 'Payment Records', href: '/beta/payment-records' },
       ],
     },
-    {
-      label: 'System',
-      items: [{ label: 'Administration', href: '/beta/administration' }],
-    },
   ],
   finance: [
     { items: [{ label: 'Dashboard', href: '/beta/dashboard' }] },
@@ -166,7 +162,9 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const searchParameters = useSearchParams();
   const currentQuery = searchParameters.toString();
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
-  const groups = roleNavigation[account.role];
+  const groups = account.isAdministrator
+    ? [...roleNavigation[account.role], { label: 'System', items: [{ label: 'Settings', href: '/beta/settings' }] }]
+    : roleNavigation[account.role];
   const hrefs = groups.flatMap((group) => collectHrefs(group.items));
   const activeHref = hrefs
     .filter((href) => href.includes('?')
