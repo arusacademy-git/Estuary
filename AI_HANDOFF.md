@@ -1,5 +1,11 @@
 # AI_HANDOFF.md
 
+## 2026-11-12 — Tech and Internet/Commute beta claim settings
+
+- GitHub issue #146 extends Daniel Lee's administrator-only Settings claim policy preview with Internet/Commute per-claim limit (RM70), Tech standard and extended limits (RM500/RM1,000), and the extended-option lock duration (three years). The defaults come from the existing claim policy constants. Medical and PD fields remain unchanged.
+- Older browser-saved settings receive the new defaults when read. Edits to these values are still browser-local preview data and do not alter server claim validation; shared policy storage and enforcement require later work.
+- TypeScript, focused ESLint, and production build pass. A local browser check confirmed six policy cards, legacy settings fallback, edits persisting in the browser, and denial of direct Settings access to another Director.
+
 ## 2026-11-12 — Daniel Lee beta administrator Settings
 
 - GitHub issue #144: Daniel Lee's existing Director dummy account now has a separate Administrator flag. The sidebar shows Settings at `/beta/settings` only for accounts with that flag; direct navigation to Settings or the old `/beta/administration` route shows an access-required page for other dummy accounts. Director approval navigation remains intact.
