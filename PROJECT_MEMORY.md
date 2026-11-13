@@ -151,3 +151,9 @@
 - The transaction-proof upload appears only in that state. Travel Allowance completes after upload; Cash Advance proceeds to requester reconciliation.
 - Any combined Finance queue, dashboard action predicate, or sidebar count must include `PAYMENT_PROCESSED`, otherwise a record disappears between the two Finance actions.
 
+## Project-scoped manager authority
+
+- Manager is not an organization-wide access role. A manager remains Staff in `UserOrgMembership` and gains approval authority through an active `ProjectManagerAssignment`.
+- Manager queues and actions must require both an active project assignment and the request's assigned manager ID. Never infer access from a job title or expose every project to a manager.
+- Keep the legacy `MANAGER` workflow enum while historical approval steps depend on it; do not create new organization-level Manager memberships.
+

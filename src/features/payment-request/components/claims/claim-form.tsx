@@ -29,6 +29,7 @@ import {
   type CreateClaimInput,
 } from "@/domain/payment-requests/claims/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { projectManagerFor } from "@/features/administration/admin-settings";
 
 import { ClaimConfirmation } from "./claim-confirmation";
 import { ClaimGoogleSheet, type ClaimSheetData } from "./claim-google-sheet";
@@ -175,6 +176,11 @@ export function ClaimForm({
   }, [account, claimDate]);
 
   const total = useMemo(() => claimTotal(claimType, lines), [claimType, lines]);
+  const assignedManagerIds = useMemo(
+    () => [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))],
+    [lines],
+  );
+  const managerApproverId = assignedManagerIds.length === 1 ? assignedManagerIds[0] : undefined;
   const limit = claimLimit({ claimType, techExtended }, context);
   const type = claimTypeDetails(claimType);
   const limitExceeded = limit !== null && total > limit;
@@ -189,7 +195,7 @@ export function ClaimForm({
       requesterPosition: currentAccount.position,
       requesterRole: currentAccount.role,
       requesterContact: contact.trim(),
-      managerApproverId: undefined,
+      managerApproverId,
       directorApproverId: directorId,
       claimDate,
       claimType,
@@ -226,7 +232,10 @@ export function ClaimForm({
       requesterPosition: account.position,
       requesterRole: account.role,
       requesterContact: nextContact.trim(),
-      managerApproverId: undefined,
+      managerApproverId: (() => {
+        const ids = [...new Set(data.lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))];
+        return ids.length === 1 ? ids[0] : undefined;
+      })(),
       directorApproverId: directorId,
       claimDate: nextClaimDate,
       claimType: data.claimType,
@@ -250,6 +259,8 @@ export function ClaimForm({
     }
     const validation = validateClaimInput(input, activeContext);
     if (validation) return setError(validation);
+    if (!input.managerApproverId)
+      return setError("Assign one project manager to every Claim division. Split Claims that have different project managers.");
     if (!confirmed)
       return setError(
         "Confirm that the retrieved claim information and supporting links are correct.",
@@ -306,6 +317,8 @@ export function ClaimForm({
     event.preventDefault();
     if (!account) return setError("Sign in before creating a claim.");
     const input = buildInput(account);
+    if (!input.managerApproverId)
+      return setError("Assign one project manager to every Claim division. Split Claims that have different project managers.");
     const validation = validateClaimInput(input, context);
     if (validation) return setError(validation);
     if (!confirmed)

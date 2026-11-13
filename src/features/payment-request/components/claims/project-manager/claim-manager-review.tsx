@@ -8,6 +8,7 @@ import { notifyClaimManagerApproved } from '@/features/payment-request/notificat
 import { requiresTechManagerApproval } from '@/domain/payment-requests/claims/policy';
 import type { ClaimRecord } from '@/domain/payment-requests/claims/types';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
+import { isProjectManagerAccount } from '@/features/administration/admin-settings';
 
 import { ClaimReviewDetails, ClaimWorkflow, claimStatusLabel } from '../claim-review-shared';
 import styles from '../claim-workflow.module.css';
@@ -45,7 +46,7 @@ export function ClaimManagerReview({ requestId }: { requestId: string }) {
   }
 
   if (!checked) return <State title="Loading Claim" copy="Reading the Claim details and receipts…" />;
-  if (!account || account.role !== 'manager') return <State title="Manager access required" copy="This page is available only to Managers." />;
+  if (!account || !isProjectManagerAccount(account)) return <State title="Manager access required" copy="You need an active project manager assignment." />;
   if (!record) return <State title="Claim not found" copy={error || 'This Claim could not be found.'} />;
   if (record.managerApproverId !== account.id && record.requesterId !== account.id) return <State title="Claim unavailable" copy="This Claim is not assigned to or created by your Manager account." />;
 

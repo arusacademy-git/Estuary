@@ -503,8 +503,14 @@ export async function createClaimInDatabase(
               ? undefined
               : {
                 create: [
-                  {
+                  ...(input.managerApproverId ? [{
                     step_number: 1,
+                    required_role: OrgRole.MANAGER,
+                    assigned_user_id: input.managerApproverId,
+                    status_code: "ACTIVE",
+                  }] : []),
+                  {
+                    step_number: 2,
                     required_role: OrgRole.DIRECTOR,
                     assigned_user_id: input.directorApproverId,
                     status_code: "PENDING",
@@ -731,8 +737,14 @@ export async function updateClaimDraftInDatabase(
                 ? undefined
                 : {
                   create: [
-                    {
+                    ...(input.managerApproverId ? [{
                       step_number: 1,
+                      required_role: OrgRole.MANAGER,
+                      assigned_user_id: input.managerApproverId,
+                      status_code: "ACTIVE",
+                    }] : []),
+                    {
+                      step_number: 2,
                       required_role: OrgRole.DIRECTOR,
                       assigned_user_id: input.directorApproverId,
                       status_code: "PENDING",

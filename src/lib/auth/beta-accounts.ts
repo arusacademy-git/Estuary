@@ -35,7 +35,7 @@ export const betaAccounts: BetaAccount[] = [
     email: 'nadia@arus.example',
     position: 'Operations Manager',
     department: 'Operations',
-    role: 'manager',
+    role: 'staff',
   },
   {
     id: 'amir-iskandar',

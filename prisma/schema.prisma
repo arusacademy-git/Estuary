@@ -13,28 +13,28 @@ datasource db {
 
 model Organization {
   id                 String   @id @default(cuid())
-  name               String                           // e.g. "Arus Education Sdn Bhd"
-  registration_no    String                           // e.g. "1177232-U"
-  registered_address String                           // printed on all PV PDFs
+  name               String // e.g. "Arus Education Sdn Bhd"
+  registration_no    String // e.g. "1177232-U"
+  registered_address String // printed on all PV PDFs
   currency_code      String   @default("MYR")
   is_active          Boolean  @default(true)
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
-  memberships        UserOrgMembership[]
-  gl_accounts        GlAccount[]
-  agents             Agent[]
-  areas              Area[]
-  projects           Project[]
-  submissions        Submission[]
-  batches            Batch[]
-  document_sequences DocumentSequence[]
-  petty_cash_floats  PettyCashFloat[]
-  documents          Document[]
-  audit_events       AuditEvent[]
-  system_events      SystemEvent[]
-  job_queue          JobQueue[]
-  export_batches     ExportBatch[]
+  memberships            UserOrgMembership[]
+  gl_accounts            GlAccount[]
+  agents                 Agent[]
+  areas                  Area[]
+  projects               Project[]
+  submissions            Submission[]
+  batches                Batch[]
+  document_sequences     DocumentSequence[]
+  petty_cash_floats      PettyCashFloat[]
+  documents              Document[]
+  audit_events           AuditEvent[]
+  system_events          SystemEvent[]
+  job_queue              JobQueue[]
+  export_batches         ExportBatch[]
   payment_request_drafts PaymentRequestDraft[]
 
   @@map("organizations")
@@ -49,15 +49,15 @@ model User {
   updated_at DateTime @updatedAt
 
   memberships               UserOrgMembership[]
-  submitted_submissions     Submission[]         @relation("Submitter")
-  assigned_submissions      Submission[]         @relation("CurrentAssignee")
-  created_batches           Batch[]              @relation("BatchCreator")
-  approval_decisions        ApprovalDecision[]   @relation("ApprovalDecider")
-  verified_signature_events SignatureEvent[]     @relation("SignatureVerifier")
-  audit_events              AuditEvent[]         @relation("AuditActor")
-  uploaded_documents        Document[]           @relation("DocumentUploader")
-  export_batches            ExportBatch[]        @relation("ExportRequester")
-  sql_entry_updates         SqlEntryTracking[]   @relation("SqlEntryUpdatedBy")
+  submitted_submissions     Submission[]          @relation("Submitter")
+  assigned_submissions      Submission[]          @relation("CurrentAssignee")
+  created_batches           Batch[]               @relation("BatchCreator")
+  approval_decisions        ApprovalDecision[]    @relation("ApprovalDecider")
+  verified_signature_events SignatureEvent[]      @relation("SignatureVerifier")
+  audit_events              AuditEvent[]          @relation("AuditActor")
+  uploaded_documents        Document[]            @relation("DocumentUploader")
+  export_batches            ExportBatch[]         @relation("ExportRequester")
+  sql_entry_updates         SqlEntryTracking[]    @relation("SqlEntryUpdatedBy")
   payment_request_drafts    PaymentRequestDraft[] @relation("DraftRequester")
 
   @@map("users")
@@ -88,18 +88,19 @@ model UserOrgMembership {
   // PENDING:   first SSO login; awaiting org admin approval
   // ACTIVE:    approved; can access org data
   // SUSPENDED: access revoked; record kept for audit
-  agent_id          String?          // FK → Agent: default SQL Account agent for this user in this org
-  default_area_id   String?          // FK → Area: pre-fills Area on new submissions
-  signature_url     String?          // S3 key of approver's signature image (renders on PV PDF)
+  agent_id          String? // FK → Agent: default SQL Account agent for this user in this org
+  default_area_id   String? // FK → Area: pre-fills Area on new submissions
+  signature_url     String? // S3 key of approver's signature image (renders on PV PDF)
   is_active         Boolean          @default(true)
   created_at        DateTime         @default(now())
   updated_at        DateTime         @updatedAt
 
-  user         User         @relation(fields: [user_id], references: [id])
-  organization Organization @relation(fields: [organization_id], references: [id])
-  agent        Agent?       @relation(fields: [agent_id], references: [id])
-  default_area Area?        @relation("DefaultArea", fields: [default_area_id], references: [id])
-  roles        UserOrgRole[]
+  user             User                       @relation(fields: [user_id], references: [id])
+  organization     Organization               @relation(fields: [organization_id], references: [id])
+  agent            Agent?                     @relation(fields: [agent_id], references: [id])
+  default_area     Area?                      @relation("DefaultArea", fields: [default_area_id], references: [id])
+  roles            UserOrgRole[]
+  managed_projects ProjectManagerAssignment[]
 
   @@unique([user_id, organization_id])
   @@map("user_org_memberships")
@@ -115,10 +116,10 @@ enum MembershipStatus {
 // e.g. MANAGER + PETTY_CASH_CUSTODIAN is a valid combination.
 
 model UserOrgRole {
-  id            String            @id @default(cuid())
+  id            String   @id @default(cuid())
   membership_id String
   role          OrgRole
-  created_at    DateTime          @default(now())
+  created_at    DateTime @default(now())
 
   membership UserOrgMembership @relation(fields: [membership_id], references: [id], onDelete: Cascade)
 
@@ -130,7 +131,7 @@ enum OrgRole {
   OWNER
   FINANCE_ADMIN
   DIRECTOR
-  MANAGER
+  MANAGER // Legacy workflow value; project authority comes from ProjectManagerAssignment.
   STAFF
   PETTY_CASH_CUSTODIAN
 }
@@ -202,12 +203,33 @@ model Project {
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())
 
-  organization       Organization     @relation(fields: [organization_id], references: [id])
-  submission_lines   SubmissionLine[]
-  petty_cash_entries PettyCashEntry[]
+  organization        Organization               @relation(fields: [organization_id], references: [id])
+  submission_lines    SubmissionLine[]
+  petty_cash_entries  PettyCashEntry[]
+  manager_assignments ProjectManagerAssignment[]
 
   @@unique([organization_id, code])
   @@map("projects")
+}
+
+// Manager authority is scoped to a project. The membership remains STAFF at
+// organization level and receives approval access only through this record.
+model ProjectManagerAssignment {
+  id              String    @id @default(cuid())
+  project_id      String
+  membership_id   String
+  is_active       Boolean   @default(true)
+  effective_from  DateTime  @default(now())
+  effective_until DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  project    Project           @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  membership UserOrgMembership @relation(fields: [membership_id], references: [id], onDelete: Cascade)
+
+  @@unique([project_id, membership_id])
+  @@index([membership_id, is_active])
+  @@map("project_manager_assignments")
 }
 
 // ─────────────────────────────────────────────
@@ -227,10 +249,10 @@ model DocumentSequence {
   organization_id     String
   payment_type        PaymentType
   year                Int
-  month               Int         // 1–12
-  prefix              String      // configurable per org per type
+  month               Int // 1–12
+  prefix              String // configurable per org per type
   last_sequence       Int         @default(0)
-  admin_next_sequence Int?        // admin override; cleared after use
+  admin_next_sequence Int? // admin override; cleared after use
   created_at          DateTime    @default(now())
   updated_at          DateTime    @updatedAt
 
@@ -246,14 +268,14 @@ model DocumentSequence {
 // ─────────────────────────────────────────────
 
 model Batch {
-  id                 String   @id @default(cuid())
+  id                 String      @id @default(cuid())
   organization_id    String
-  name               String   // e.g. "April Teacher Transport Claims"
+  name               String // e.g. "April Teacher Transport Claims"
   payment_type       PaymentType
-  current_state_code String   @default("BATCH_DRAFT")
+  current_state_code String      @default("BATCH_DRAFT")
   created_by_id      String
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
 
   organization Organization @relation(fields: [organization_id], references: [id])
   created_by   User         @relation("BatchCreator", fields: [created_by_id], references: [id])
@@ -295,13 +317,13 @@ model WorkflowDefinition {
 }
 
 model WorkflowState {
-  id                    String     @id @default(cuid())
+  id                     String     @id @default(cuid())
   workflow_definition_id String
-  state_code            String     // e.g. "PV_DRAFT", "PV_PENDING_DIRECTOR_APPROVAL"
-  state_group           StateGroup // reporting bucket
-  label                 String     // human-readable UI label
-  is_terminal           Boolean    @default(false)
-  sort_order            Int
+  state_code             String // e.g. "PV_DRAFT", "PV_PENDING_DIRECTOR_APPROVAL"
+  state_group            StateGroup // reporting bucket
+  label                  String // human-readable UI label
+  is_terminal            Boolean    @default(false)
+  sort_order             Int
 
   definition WorkflowDefinition @relation(fields: [workflow_definition_id], references: [id], onDelete: Cascade)
 
@@ -325,16 +347,16 @@ enum StateGroup {
 }
 
 model WorkflowTransitionRule {
-  id                    String    @id @default(cuid())
+  id                     String    @id @default(cuid())
   workflow_definition_id String
-  from_state_code       String
-  action_code           String    // e.g. "APPROVE", "REJECT", "SUBMIT_FOR_APPROVAL"
-  to_state_code         String
-  allowed_actor_type    ActorType
-  allowed_role          OrgRole?  // null when actor_type = SYSTEM or EXTERNAL_RECIPIENT
-  requires_reason       Boolean   @default(false)
-  requires_document     Boolean   @default(false)
-  is_active             Boolean   @default(true)
+  from_state_code        String
+  action_code            String // e.g. "APPROVE", "REJECT", "SUBMIT_FOR_APPROVAL"
+  to_state_code          String
+  allowed_actor_type     ActorType
+  allowed_role           OrgRole? // null when actor_type = SYSTEM or EXTERNAL_RECIPIENT
+  requires_reason        Boolean   @default(false)
+  requires_document      Boolean   @default(false)
+  is_active              Boolean   @default(true)
 
   definition WorkflowDefinition @relation(fields: [workflow_definition_id], references: [id], onDelete: Cascade)
 
@@ -363,7 +385,7 @@ enum ActorType {
 // ─────────────────────────────────────────────
 
 model Submission {
-  id              String     @id @default(cuid())
+  id              String      @id @default(cuid())
   organization_id String
   batch_id        String?
   payment_type    PaymentType
@@ -375,7 +397,7 @@ model Submission {
   workflow_definition_id String?
   current_state_code     String     @default("DRAFT_INITIALIZING") // set to type-specific initial state on creation
   current_state_group    StateGroup @default(DRAFT)
-  current_assignee_id    String?    // who is expected to act next; set by workflow engine
+  current_assignee_id    String? // who is expected to act next; set by workflow engine
 
   // Document number — null until document generation; globally unique when set
   submission_number String? @unique // e.g. "PV-2025-04-08"
@@ -401,19 +423,19 @@ model Submission {
   updated_at DateTime @updatedAt
 
   // Relations
-  organization         Organization         @relation(fields: [organization_id], references: [id])
-  workflow_definition  WorkflowDefinition?  @relation(fields: [workflow_definition_id], references: [id])
-  submitted_by         User                 @relation("Submitter", fields: [submitted_by_id], references: [id])
-  current_assignee  User?                @relation("CurrentAssignee", fields: [current_assignee_id], references: [id])
-  agent             Agent?               @relation(fields: [agent_id], references: [id])
-  area              Area?                @relation(fields: [area_id], references: [id])
-  batch             Batch?               @relation(fields: [batch_id], references: [id])
-  lines             SubmissionLine[]
-  transitions       SubmissionTransition[]
-  evidence          SubmissionEvidence[]
-  approval_steps    ApprovalStep[]
-  external_tokens   ExternalActionToken[]
-  sql_entry_tracking SqlEntryTracking?
+  organization        Organization           @relation(fields: [organization_id], references: [id])
+  workflow_definition WorkflowDefinition?    @relation(fields: [workflow_definition_id], references: [id])
+  submitted_by        User                   @relation("Submitter", fields: [submitted_by_id], references: [id])
+  current_assignee    User?                  @relation("CurrentAssignee", fields: [current_assignee_id], references: [id])
+  agent               Agent?                 @relation(fields: [agent_id], references: [id])
+  area                Area?                  @relation(fields: [area_id], references: [id])
+  batch               Batch?                 @relation(fields: [batch_id], references: [id])
+  lines               SubmissionLine[]
+  transitions         SubmissionTransition[]
+  evidence            SubmissionEvidence[]
+  approval_steps      ApprovalStep[]
+  external_tokens     ExternalActionToken[]
+  sql_entry_tracking  SqlEntryTracking?
 
   // Type-specific detail (at most one per payment type)
   pv_detail         PaymentVoucherDetail?
@@ -431,15 +453,15 @@ model Submission {
 }
 
 model SqlEntryTracking {
-  id             String         @id @default(cuid())
-  submission_id  String         @unique
-  status         SqlEntryStatus @default(PENDING_ENTRY)
-  sql_reference  String?        @db.VarChar(100)
-  recorded_at    DateTime?
-  notes          String?        @db.VarChar(500)
-  updated_by_id  String?
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  submission_id String         @unique
+  status        SqlEntryStatus @default(PENDING_ENTRY)
+  sql_reference String?        @db.VarChar(100)
+  recorded_at   DateTime?
+  notes         String?        @db.VarChar(500)
+  updated_by_id String?
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
 
   submission Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
   updated_by User?      @relation("SqlEntryUpdatedBy", fields: [updated_by_id], references: [id])
@@ -482,14 +504,14 @@ enum PaymentMode {
 }
 
 enum SignatureMethod {
-  DIGITAL  // in-browser canvas pad; system generates signed PDF
-  UPLOAD   // recipient uploads scanned copy; requires staff verification
+  DIGITAL // in-browser canvas pad; system generates signed PDF
+  UPLOAD // recipient uploads scanned copy; requires staff verification
 }
 
 enum ReconOutcome {
-  EXACT       // all money spent; docs submitted; closed
-  UNDERSPEND  // balance returned; confirmed; docs submitted; closed
-  OVERSPEND   // child CA created for overspent amount; original held until child closes
+  EXACT // all money spent; docs submitted; closed
+  UNDERSPEND // balance returned; confirmed; docs submitted; closed
+  OVERSPEND // child CA created for overspent amount; original held until child closes
 }
 
 // ─────────────────────────────────────────────
@@ -503,7 +525,7 @@ enum ReconOutcome {
 model SubmissionLine {
   id            String   @id @default(cuid())
   submission_id String
-  line_number   Int      // 1-based display order
+  line_number   Int // 1-based display order
   description   String?
   amount        Decimal  @db.Decimal(12, 2)
   gl_account_id String?
@@ -531,15 +553,15 @@ model SubmissionTransition {
   id                  String    @id @default(cuid())
   submission_id       String
   from_state_code     String
-  action_code         String    // e.g. "APPROVE", "REJECT", "SUBMIT_FOR_APPROVAL", "VOID"
+  action_code         String // e.g. "APPROVE", "REJECT", "SUBMIT_FOR_APPROVAL", "VOID"
   to_state_code       String
   actor_type          ActorType
-  actor_user_id       String?   // null if SYSTEM; present for INTERNAL_USER and EXTERNAL_RECIPIENT (if registered)
-  actor_membership_id String?   // snapshot of membership_id at time of action (for audit)
-  reason_text         String?   // mandatory for REJECT, VOID, OVERRIDE actions
+  actor_user_id       String? // null if SYSTEM; present for INTERNAL_USER and EXTERNAL_RECIPIENT (if registered)
+  actor_membership_id String? // snapshot of membership_id at time of action (for audit)
+  reason_text         String? // mandatory for REJECT, VOID, OVERRIDE actions
   request_ip          String?
   request_user_agent  String?
-  metadata_json       Json?     // additional context (e.g. token_id for external actions)
+  metadata_json       Json? // additional context (e.g. token_id for external actions)
   created_at          DateTime  @default(now())
 
   submission Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
@@ -564,7 +586,7 @@ model SubmissionEvidence {
   submission_id        String
   document_id          String
   evidence_type_code   String
-  source_transition_id String?  // which transition produced or required this evidence (plain field)
+  source_transition_id String? // which transition produced or required this evidence (plain field)
   created_at           DateTime @default(now())
 
   submission Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
@@ -591,24 +613,24 @@ model PaymentVoucherDetail {
 
   // Recipient (sensitive fields)
   recipient_name         String
-  recipient_ic           String?  // Malaysian IC or passport number — masked in UI
-  recipient_email        String   // used for signature request email and reminders
-  recipient_phone        String?  // for future reminder channels
-  recipient_bank_name    String?  // sensitive
-  recipient_bank_account String?  // sensitive — masked in UI
+  recipient_ic           String? // Malaysian IC or passport number — masked in UI
+  recipient_email        String // used for signature request email and reminders
+  recipient_phone        String? // for future reminder channels
+  recipient_bank_name    String? // sensitive
+  recipient_bank_account String? // sensitive — masked in UI
 
   // Payment — defaults to BANK_TRANSFER; overridable at submission time
-  payment_mode   PaymentMode @default(BANK_TRANSFER)
-  paid_at        DateTime?
-  paid_reference String?   // bank reference number
+  payment_mode              PaymentMode @default(BANK_TRANSFER)
+  paid_at                   DateTime?
+  paid_reference            String? // bank reference number
   payment_proof_document_id String? // Document.id of bank transfer proof
 
   // Document content
   being_text String? // "Being: ___" description on the PV PDF
 
   // Document references (convenience denormalization; full trail in SubmissionEvidence)
-  issued_document_id    String? // Document.id of unsigned generated PDF
-  signed_document_id    String? // Document.id of final signed artifact
+  issued_document_id String? // Document.id of unsigned generated PDF
+  signed_document_id String? // Document.id of final signed artifact
 
   // Signature
   signature_method       SignatureMethod?
@@ -633,17 +655,17 @@ model CashAdvanceDetail {
   submission_id String @id
 
   purpose_text              String?
-  manager_user_id           String?   // assigned manager approver at submission time
-  director_user_id          String?   // assigned director approver
+  manager_user_id           String? // assigned manager approver at submission time
+  director_user_id          String? // assigned director approver
   payment_mode              PaymentMode?
   paid_at                   DateTime?
   paid_reference            String?
   reconciliation_due_at     DateTime? // set to paid_at + 14 days
-  current_checkpoint_number Int?      // 1, 2, or 3 (2w/3w/4w)
+  current_checkpoint_number Int? // 1, 2, or 3 (2w/3w/4w)
   reconciliation_outcome    ReconOutcome?
   reconciliation_closed_at  DateTime?
-  parent_submission_id      String?   // this CA is an overspend child of the referenced CA
-  child_submission_id       String?   // set when overspend creates a child CA
+  parent_submission_id      String? // this CA is an overspend child of the referenced CA
+  child_submission_id       String? // set when overspend creates a child CA
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -680,12 +702,12 @@ model TravelAllowanceDetail {
 model InvoicePaymentDetail {
   submission_id String @id
 
-  vendor_name    String?
-  invoice_number String?
-  invoice_date   DateTime?
-  payment_mode   PaymentMode?
-  paid_at        DateTime?
-  paid_reference String?
+  vendor_name               String?
+  invoice_number            String?
+  invoice_date              DateTime?
+  payment_mode              PaymentMode?
+  paid_at                   DateTime?
+  paid_reference            String?
   payment_proof_document_id String? // Document.id of payment proof
 
   created_at DateTime @default(now())
@@ -746,12 +768,12 @@ model PettyCashTopupDetail {
 // ─────────────────────────────────────────────
 
 model ApprovalStep {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   submission_id    String
-  step_number      Int      // 1 = first approver, 2 = second
-  required_role    OrgRole  // MANAGER or DIRECTOR
-  assigned_user_id String?  // set when step becomes active
-  status_code      String   @default("PENDING")  // PENDING, ACTIVE, COMPLETE, BYPASSED
+  step_number      Int // 1 = first approver, 2 = second
+  required_role    OrgRole // MANAGER or DIRECTOR
+  assigned_user_id String? // set when step becomes active
+  status_code      String    @default("PENDING") // PENDING, ACTIVE, COMPLETE, BYPASSED
   due_at           DateTime? // SLA deadline for this step
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
@@ -768,10 +790,10 @@ model ApprovalStep {
 
 model ApprovalDecision {
   id                 String   @id @default(cuid())
-  approval_step_id   String   @unique  // one decision per step; immutable once created
-  decision_code      String   // "APPROVED" or "REJECTED"
-  decided_by_user_id String   // SSO-authenticated user
-  reason_text        String?  // mandatory when decision_code = "REJECTED"
+  approval_step_id   String   @unique // one decision per step; immutable once created
+  decision_code      String // "APPROVED" or "REJECTED"
+  decided_by_user_id String // SSO-authenticated user
+  reason_text        String? // mandatory when decision_code = "REJECTED"
   created_at         DateTime @default(now())
 
   approval_step ApprovalStep @relation(fields: [approval_step_id], references: [id])
@@ -789,21 +811,21 @@ model ApprovalDecision {
 // ─────────────────────────────────────────────
 
 model Document {
-  id               String   @id @default(cuid())
-  organization_id  String
-  document_type    String   // "SUPPORTING_DOC" | "GENERATED_PDF" | "SIGNED_DOCUMENT" |
-                             // "RECONCILIATION_DOC" | "PAYMENT_PROOF" | "SIGNATURE_IMAGE"
-  storage_bucket   String   // S3 bucket name
-  storage_key      String   // S3 object key — used to generate signed URLs; never exposed directly
+  id                 String   @id @default(cuid())
+  organization_id    String
+  document_type      String // "SUPPORTING_DOC" | "GENERATED_PDF" | "SIGNED_DOCUMENT" |
+  // "RECONCILIATION_DOC" | "PAYMENT_PROOF" | "SIGNATURE_IMAGE"
+  storage_bucket     String // S3 bucket name
+  storage_key        String // S3 object key — used to generate signed URLs; never exposed directly
   original_file_name String
-  mime_type        String?
-  file_size_bytes  Int?
-  sha256_hash      String?  // SHA-256 of file contents; used for integrity verification
-  uploaded_by_id   String?  // null for system-generated documents (PDFs)
-  created_at       DateTime @default(now())
+  mime_type          String?
+  file_size_bytes    Int?
+  sha256_hash        String? // SHA-256 of file contents; used for integrity verification
+  uploaded_by_id     String? // null for system-generated documents (PDFs)
+  created_at         DateTime @default(now())
 
-  organization     Organization        @relation(fields: [organization_id], references: [id])
-  uploaded_by      User?               @relation("DocumentUploader", fields: [uploaded_by_id], references: [id])
+  organization     Organization         @relation(fields: [organization_id], references: [id])
+  uploaded_by      User?                @relation("DocumentUploader", fields: [uploaded_by_id], references: [id])
   evidence         SubmissionEvidence[]
   signature_events SignatureEvent[]
   export_files     ExportFile[]
@@ -822,22 +844,22 @@ model Document {
 
 model SignatureEvent {
   id                  String          @id @default(cuid())
-  submission_id       String          // plain field; join via application code
-  document_id         String          // the document that was signed
+  submission_id       String // plain field; join via application code
+  document_id         String // the document that was signed
   signature_method    SignatureMethod
   signer_name         String
   signer_email        String
-  consent_text        String          // exact consent text shown to the signer
-  document_hash       String?         // SHA-256 of document content at signing time
+  consent_text        String // exact consent text shown to the signer
+  document_hash       String? // SHA-256 of document content at signing time
   request_ip          String?
   request_user_agent  String?
   signed_at           DateTime
-  verified_by_user_id String?         // set for UPLOAD method after staff verification
+  verified_by_user_id String? // set for UPLOAD method after staff verification
   verified_at         DateTime?
   created_at          DateTime        @default(now())
 
-  document     Document @relation(fields: [document_id], references: [id])
-  verified_by  User?    @relation("SignatureVerifier", fields: [verified_by_user_id], references: [id])
+  document    Document @relation(fields: [document_id], references: [id])
+  verified_by User?    @relation("SignatureVerifier", fields: [verified_by_user_id], references: [id])
 
   @@index([submission_id])
   @@map("signature_events")
@@ -859,8 +881,8 @@ model ExternalActionToken {
   id            String    @id @default(cuid())
   submission_id String
   token_hash    String    @unique // SHA-256 of raw token; never stored plaintext
-  token_type    String    // "SIGNATURE_REQUEST"
-  bound_email   String    // email the token was issued to; validated on access
+  token_type    String // "SIGNATURE_REQUEST"
+  bound_email   String // email the token was issued to; validated on access
   expires_at    DateTime
   used_at       DateTime? // set on first valid use; prevents re-use
   revoked_at    DateTime? // set when superseded by a new token (re-send)
@@ -893,16 +915,16 @@ model ExternalActionToken {
 
 model JobQueue {
   id              String    @id @default(cuid())
-  organization_id String?   // null for system-wide jobs
-  job_type        String    // "SEND_APPROVAL_EMAIL" | "SEND_SIGNATURE_REQUEST" |
-                             // "SEND_REMINDER" | "EXPIRE_TOKEN" | "GENERATE_PDF" |
-                             // "EVALUATE_OVERDUE" | "CREATE_RECON_CHECKPOINT" | "GENERATE_EXPORT"
-  dedupe_key      String?   // idempotency key; see strategy note above; NOT a DB unique constraint
-  status          String    @default("PENDING")  // PENDING | RUNNING | COMPLETE | FAILED | DEAD_LETTER
+  organization_id String? // null for system-wide jobs
+  job_type        String // "SEND_APPROVAL_EMAIL" | "SEND_SIGNATURE_REQUEST" |
+  // "SEND_REMINDER" | "EXPIRE_TOKEN" | "GENERATE_PDF" |
+  // "EVALUATE_OVERDUE" | "CREATE_RECON_CHECKPOINT" | "GENERATE_EXPORT"
+  dedupe_key      String? // idempotency key; see strategy note above; NOT a DB unique constraint
+  status          String    @default("PENDING") // PENDING | RUNNING | COMPLETE | FAILED | DEAD_LETTER
   scheduled_for   DateTime  @default(now())
-  available_at    DateTime  @default(now())      // honour delay (e.g. reminder in 3 days)
+  available_at    DateTime  @default(now()) // honour delay (e.g. reminder in 3 days)
   locked_at       DateTime?
-  locked_by       String?   // worker instance ID
+  locked_by       String? // worker instance ID
   attempt_count   Int       @default(0)
   max_attempts    Int       @default(3)
   payload_json    Json
@@ -927,8 +949,8 @@ model JobQueue {
 
 model OutboxEvent {
   id             String    @id @default(cuid())
-  event_type     String    // "submission.submitted" | "approval.approved" | ...
-  aggregate_type String    // "Submission" | "Organization"
+  event_type     String // "submission.submitted" | "approval.approved" | ...
+  aggregate_type String // "Submission" | "Organization"
   aggregate_id   String
   payload_json   Json
   published_at   DateTime? // null until dispatched by worker
@@ -946,12 +968,12 @@ model OutboxEvent {
 model NotificationDelivery {
   id                  String    @id @default(cuid())
   organization_id     String?
-  submission_id       String?   // plain field; join via application code
-  channel             String    // "EMAIL" | "SLACK" (future)
-  template_code       String    // "APPROVAL_REQUEST" | "SIGNATURE_REQUEST" | "REMINDER" | "OVERDUE"
+  submission_id       String? // plain field; join via application code
+  channel             String // "EMAIL" | "SLACK" (future)
+  template_code       String // "APPROVAL_REQUEST" | "SIGNATURE_REQUEST" | "REMINDER" | "OVERDUE"
   recipient_address   String
-  provider_message_id String?   // AWS SES message ID
-  status              String    @default("PENDING")  // PENDING | SENT | FAILED
+  provider_message_id String? // AWS SES message ID
+  status              String    @default("PENDING") // PENDING | SENT | FAILED
   sent_at             DateTime?
   failed_at           DateTime?
   error_text          String?
@@ -964,18 +986,18 @@ model NotificationDelivery {
 
 // In-app messages use beta account IDs, which are not User table IDs yet.
 model InAppNotification {
-  id              String    @id
-  recipient_id    String
-  actor_id        String?
-  type            String
-  entity_type     String
-  entity_id       String
+  id               String    @id
+  recipient_id     String
+  actor_id         String?
+  type             String
+  entity_type      String
+  entity_id        String
   reference_number String
-  title           String
-  message         String
-  href            String
-  read_at         DateTime?
-  created_at      DateTime  @default(now())
+  title            String
+  message          String
+  href             String
+  read_at          DateTime?
+  created_at       DateTime  @default(now())
 
   @@index([recipient_id, created_at])
   @@map("in_app_notifications")
@@ -994,11 +1016,11 @@ model InAppNotification {
 model AuditEvent {
   id              String    @id @default(cuid())
   organization_id String
-  submission_id   String?   // plain field; query by ID in application code
-  event_type      String    // "membership.approved" | "submission.submitted" | "approval.rejected" | ...
+  submission_id   String? // plain field; query by ID in application code
+  event_type      String // "membership.approved" | "submission.submitted" | "approval.rejected" | ...
   actor_type      ActorType
-  actor_user_id   String?   // null for SYSTEM events
-  payload_json    Json?     // context snapshot at time of event; sensitive values must be redacted
+  actor_user_id   String? // null for SYSTEM events
+  payload_json    Json? // context snapshot at time of event; sensitive values must be redacted
   request_ip      String?
   created_at      DateTime  @default(now())
 
@@ -1017,8 +1039,8 @@ model AuditEvent {
 model SystemEvent {
   id              String   @id @default(cuid())
   organization_id String?
-  severity        String   // "INFO" | "WARN" | "ERROR" | "CRITICAL"
-  component       String   // "worker" | "api" | "pdf_generator" | "email_sender" | ...
+  severity        String // "INFO" | "WARN" | "ERROR" | "CRITICAL"
+  component       String // "worker" | "api" | "pdf_generator" | "email_sender" | ...
   event_type      String
   payload_json    Json?
   created_at      DateTime @default(now())
@@ -1043,16 +1065,16 @@ model SystemEvent {
 model ExportBatch {
   id              String    @id @default(cuid())
   organization_id String
-  export_type     String    // "ACCOUNTING_CSV" | "BANK_BATCH"
-  status          String    @default("PENDING")  // PENDING | GENERATING | COMPLETE | FAILED
+  export_type     String // "ACCOUNTING_CSV" | "BANK_BATCH"
+  status          String    @default("PENDING") // PENDING | GENERATING | COMPLETE | FAILED
   requested_by_id String
-  filter_json     Json?     // date range, payment type, etc.
-  reason_text     String?   // mandatory for re-exports
+  filter_json     Json? // date range, payment type, etc.
+  reason_text     String? // mandatory for re-exports
   created_at      DateTime  @default(now())
   completed_at    DateTime?
 
-  organization Organization    @relation(fields: [organization_id], references: [id])
-  requested_by User            @relation("ExportRequester", fields: [requested_by_id], references: [id])
+  organization Organization      @relation(fields: [organization_id], references: [id])
+  requested_by User              @relation("ExportRequester", fields: [requested_by_id], references: [id])
   items        ExportBatchItem[]
   files        ExportFile[]
 
@@ -1063,8 +1085,8 @@ model ExportBatch {
 model ExportBatchItem {
   id              String   @id @default(cuid())
   export_batch_id String
-  submission_id   String   // plain field; join via application code
-  snapshot_json   Json     // submission values at export time — immutable
+  submission_id   String // plain field; join via application code
+  snapshot_json   Json // submission values at export time — immutable
   created_at      DateTime @default(now())
 
   export_batch ExportBatch @relation(fields: [export_batch_id], references: [id])
@@ -1077,7 +1099,7 @@ model ExportFile {
   id              String   @id @default(cuid())
   export_batch_id String
   document_id     String
-  file_role       String   // "PRIMARY" | "BANK_BATCH"
+  file_role       String // "PRIMARY" | "BANK_BATCH"
   created_at      DateTime @default(now())
 
   export_batch ExportBatch @relation(fields: [export_batch_id], references: [id])
@@ -1095,8 +1117,8 @@ model ExportFile {
 model PettyCashFloat {
   id              String   @id @default(cuid())
   organization_id String
-  custodian_id    String   // user_id of assigned custodian (plain field)
-  name            String   // e.g. "Penang Office Petty Cash"
+  custodian_id    String // user_id of assigned custodian (plain field)
+  name            String // e.g. "Penang Office Petty Cash"
   ceiling_amount  Decimal  @db.Decimal(10, 2)
   low_threshold   Decimal  @db.Decimal(10, 2)
   current_balance Decimal  @db.Decimal(10, 2)
@@ -1104,7 +1126,7 @@ model PettyCashFloat {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
-  organization  Organization          @relation(fields: [organization_id], references: [id])
+  organization  Organization           @relation(fields: [organization_id], references: [id])
   entries       PettyCashEntry[]
   topup_details PettyCashTopupDetail[]
 
@@ -1119,9 +1141,9 @@ model PettyCashEntry {
   description         String
   gl_account_id       String?
   project_id          String?
-  recorded_by_id      String             // user_id of custodian (plain field)
-  receipt_url         String?            // S3 key of receipt
-  topup_submission_id String?            // Submission.id if entry is a top-up (plain field)
+  recorded_by_id      String // user_id of custodian (plain field)
+  receipt_url         String? // S3 key of receipt
+  topup_submission_id String? // Submission.id if entry is a top-up (plain field)
   created_at          DateTime           @default(now())
 
   float      PettyCashFloat @relation(fields: [float_id], references: [id])
@@ -1132,7 +1154,7 @@ model PettyCashEntry {
 }
 
 enum PettyCashEntryType {
-  DISBURSEMENT    // money out; decrements balance; receipt attached
-  TOPUP           // money in; increments balance; linked to approved submission
-  RECONCILIATION  // periodic physical count; records discrepancy if any
+  DISBURSEMENT // money out; decrements balance; receipt attached
+  TOPUP // money in; increments balance; linked to approved submission
+  RECONCILIATION // periodic physical count; records discrepancy if any
 }

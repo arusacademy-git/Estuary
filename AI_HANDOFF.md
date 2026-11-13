@@ -1,5 +1,14 @@
 # AI_HANDOFF.md
 
+## 2026-11-13 — Project-scoped manager authority
+
+- GitHub issue #148 is implemented on `agent/project-scoped-managers`.
+- Removed Manager from the beta organization-role selector and changed Nadia's demo organization role to Staff. Legacy browser settings that stored `manager` are normalized to `staff` when read.
+- Programme Settings now assigns active Staff as the manager. Staff with at least one active assignment receive the Project Manager approval workspace; manager queues and detail pages still enforce the request's assigned manager ID.
+- Invoice, Cash Advance, Travel Allowance and Petty Cash forms resolve manager choices from project settings. Travel requests spanning projects with different managers must be split.
+- Added `ProjectManagerAssignment` and migration `20261113090000_project_scoped_managers` for the production data model. `OrgRole.MANAGER` remains only as a legacy workflow enum value so historical approval rows are not broken.
+- Verification: focused project-manager tests pass (2), full TypeScript passes, focused ESLint passes, and Prisma schema validation passes. The full Vitest run has 15 unrelated failures already present in Petty Cash policy, Claim policy/Google Sheet, and Cash Advance spent-sheet tests; 65 tests pass. The repository `pnpm` wrapper attempted a dependency-policy install and failed on ignored build scripts, so verification used the checked-in local binaries directly.
+
 ## 2026-11-12 — Tech and Internet/Commute beta claim settings
 
 - GitHub issue #146 extends Daniel Lee's administrator-only Settings claim policy preview with Internet/Commute per-claim limit (RM70), Tech standard and extended limits (RM500/RM1,000), and the extended-option lock duration (three years). The defaults come from the existing claim policy constants. Medical and PD fields remain unchanged.

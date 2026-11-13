@@ -15,7 +15,7 @@ export const ADMIN_SETTINGS_EVENT = 'estuary:admin-settings-changed';
 
 export type AdminProgramme = { id: string; code: string; name: string; managerId: string; active: boolean };
 export type AdminAccountingCode = { id: string; code: string; name: string; description: string; active: boolean };
-export type AdminEmployee = { id: string; name: string; email: string; role: 'staff' | 'manager' | 'director' | 'finance'; programmeId: string; joinedAt: string; active: boolean };
+export type AdminEmployee = { id: string; name: string; email: string; role: 'staff' | 'director' | 'finance'; programmeId: string; joinedAt: string; active: boolean };
 export type AdminClaimPolicy = {
   medicalAnnualLimit: number;
   pdAnnualLimit: number;
@@ -33,7 +33,7 @@ export function canAccessAdministration(account: BetaAccount | null | undefined)
 
 export function createDefaultAdminSettings(): AdminSettings {
   return {
-    programmes: DIVISION_OPTIONS.map((code) => ({ id: `programme-${code}`, code, name: code, managerId: '', active: true })),
+    programmes: DIVISION_OPTIONS.map((code) => ({ id: `programme-${code}`, code, name: code, managerId: 'nadia-hassan', active: true })),
     accountingCodes: PAYMENT_VOUCHER_ACCOUNT_OPTIONS.map((option) => ({
       id: `account-${option.value}`,
       code: option.value,
@@ -41,7 +41,15 @@ export function createDefaultAdminSettings(): AdminSettings {
       description: '',
       active: true,
     })),
-    employees: betaAccounts.map((account) => ({ id: account.id, name: account.name, email: account.email, role: account.role, programmeId: '', joinedAt: '2026-01-01', active: true })),
+    employees: betaAccounts.map((account) => ({
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      role: account.role === 'manager' ? 'staff' as const : account.role,
+      programmeId: '',
+      joinedAt: '2026-01-01',
+      active: true,
+    })),
     claimPolicy: {
       medicalAnnualLimit: MEDICAL_ANNUAL_LIMIT,
       pdAnnualLimit: PD_LIMIT,
@@ -60,16 +68,59 @@ export function readAdminSettings(): AdminSettings {
   try {
     const saved = window.localStorage.getItem(ADMIN_SETTINGS_KEY);
     if (!saved) return defaults;
-    const parsed = JSON.parse(saved) as Partial<AdminSettings>;
+    const parsed = JSON.parse(saved) as Omit<Partial<AdminSettings>, 'employees'> & {
+      employees?: Array<Omit<AdminEmployee, 'role'> & { role: AdminEmployee['role'] | 'manager' }>;
+    };
+    const employees: AdminEmployee[] = Array.isArray(parsed.employees)
+      ? parsed.employees.map((employee) => ({
+          ...employee,
+          role: employee.role === 'manager' ? 'staff' : employee.role,
+        }))
+      : defaults.employees;
     return {
       programmes: Array.isArray(parsed.programmes) ? parsed.programmes : defaults.programmes,
       accountingCodes: Array.isArray(parsed.accountingCodes) ? parsed.accountingCodes : defaults.accountingCodes,
-      employees: Array.isArray(parsed.employees) ? parsed.employees : defaults.employees,
+      employees,
       claimPolicy: parsed.claimPolicy && typeof parsed.claimPolicy === 'object' ? { ...defaults.claimPolicy, ...parsed.claimPolicy } : defaults.claimPolicy,
     };
   } catch {
     return defaults;
   }
+}
+
+export function managedProgrammesFor(accountId: string, settings = readAdminSettings()) {
+  return settings.programmes.filter(
+    (programme) => programme.active && programme.managerId === accountId,
+  );
+}
+
+export function isProjectManagerAccount(
+  account: BetaAccount | null | undefined,
+  settings = readAdminSettings(),
+) {
+  return Boolean(account && managedProgrammesFor(account.id, settings).length);
+}
+
+export function projectManagerFor(
+  projectCodeOrName: string,
+  settings = readAdminSettings(),
+) {
+  const key = projectCodeOrName.trim().toLocaleLowerCase();
+  const programme = settings.programmes.find(
+    (item) => item.active &&
+      (item.code.trim().toLocaleLowerCase() === key ||
+        item.name.trim().toLocaleLowerCase() === key),
+  );
+  return programme?.managerId || undefined;
+}
+
+export function activeProjectManagerAccounts(settings = readAdminSettings()) {
+  const ids = new Set(
+    settings.programmes
+      .filter((programme) => programme.active && programme.managerId)
+      .map((programme) => programme.managerId),
+  );
+  return betaAccounts.filter((account) => ids.has(account.id));
 }
 
 export function saveAdminSettings(settings: AdminSettings) {

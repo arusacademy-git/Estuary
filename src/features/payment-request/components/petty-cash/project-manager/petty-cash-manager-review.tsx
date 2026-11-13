@@ -10,6 +10,7 @@ import {
 import type { PettyCashRecord } from '@/domain/payment-requests/petty-cash/types';
 import { notifyPettyCashManagerApproved } from '@/features/payment-request/notifications/petty-cash-notifications';
 import { readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
+import { isProjectManagerAccount } from '@/features/administration/admin-settings';
 
 import { PettyCashStatusBadge } from '../petty-cash-status-badge';
 import styles from '../petty-cash.module.css';
@@ -60,7 +61,7 @@ export function PettyCashManagerReview({ requestId }: PettyCashManagerReviewProp
   }, [requestId]);
 
   async function handleApprove() {
-    if (!account || account.role !== 'manager' || !record) return;
+    if (!account || !isProjectManagerAccount(account) || !record) return;
 
     setSaving(true);
     setError('');
@@ -85,8 +86,8 @@ export function PettyCashManagerReview({ requestId }: PettyCashManagerReviewProp
   if (!checked) {
     return <StatePage title="Loading request" copy="Reading the Petty Cash details…" />;
   }
-  if (!account || account.role !== 'manager') {
-    return <StatePage title="Manager access required" copy="This page is available only to a Manager." />;
+  if (!account || !isProjectManagerAccount(account)) {
+    return <StatePage title="Manager access required" copy="You need an active project manager assignment." />;
   }
   if (!record) {
     return <StatePage title="Petty Cash request not found" copy={error || 'The request could not be found.'} />;

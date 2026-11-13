@@ -16,6 +16,7 @@ import {
   readBetaSession,
   type BetaAccount,
 } from '@/lib/auth/beta-accounts';
+import { isProjectManagerAccount } from '@/features/administration/admin-settings';
 
 import {
   usePaymentVouchers,
@@ -255,7 +256,7 @@ export default function ProjectManagerPaymentVouchersPage() {
     return null;
   }
 
-  if (account.role !== 'manager') {
+  if (!isProjectManagerAccount(account)) {
     return (
       <main className={styles.statePage}>
         <h1>

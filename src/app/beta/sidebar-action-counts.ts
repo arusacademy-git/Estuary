@@ -2,6 +2,7 @@ import { fetchDashboardSummary } from "@/data/dashboard/api";
 import { fetchManualFormDrafts } from "@/data/payment-requests/manual-drafts/api";
 import type { DashboardSummaryRecord } from "@/domain/dashboard/types";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
+import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 
 export type SidebarPaymentType =
   | "PAYMENT_VOUCHER"
@@ -83,7 +84,8 @@ function needsRequesterAction(
 }
 
 function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
-  if (account.role === "staff") {
+  const projectManager = isProjectManagerAccount(account);
+  if (account.role === "staff" && !projectManager) {
     return [
       "DRAFT",
       "REJECTED",
@@ -98,7 +100,7 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
     ].includes(record.status);
   }
 
-  if (account.role === "manager") {
+  if (account.role === "manager" || projectManager) {
     if (record.paymentType === "TRAVEL_ALLOWANCE") {
       return false;
     }
@@ -177,8 +179,9 @@ function needsRoleAction(record: DashboardSummaryRecord, account: BetaAccount) {
 export async function fetchSidebarActionCounts(
   account: BetaAccount,
 ): Promise<SidebarActionCounts> {
+  const projectManager = isProjectManagerAccount(account);
   const records = await fetchDashboardSummary({
-    role: account.role,
+    role: projectManager ? "manager" : account.role,
     userId: account.id,
   });
   const counts = records.reduce<SidebarActionCounts>(
