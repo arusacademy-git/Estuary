@@ -14,6 +14,7 @@ import {
     readBetaSession,
     type BetaAccount,
 } from '@/lib/auth/beta-accounts';
+import { isProjectManagerAccount } from '@/features/administration/admin-settings';
 
 import styles from './invoice-payment-manager.module.css';
 import {
@@ -89,7 +90,7 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
     }
 
     if (!checked) return <StatePage title="Loading request" copy="Reading the Invoice Payment details…" />;
-    if (!account || account.role !== 'manager') return <StatePage title="Manager access required" copy="This page is available only to a Manager." />;
+    if (!account || !isProjectManagerAccount(account)) return <StatePage title="Manager access required" copy="You need an active project manager assignment." />;
     if (!record) return <StatePage title="Invoice Payment not found" copy="The local request could not be found in this browser." />;
     if (record.managerApproverId !== account.id) return <StatePage title="Request assigned to another Manager" copy="You cannot review this Invoice Payment." />;
 

@@ -22,6 +22,7 @@ import {
   type PettyCashRequestLine,
 } from "@/domain/payment-requests/petty-cash/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { projectManagerFor } from "@/features/administration/admin-settings";
 import { notifyPettyCashSubmitted } from "@/features/payment-request/notifications/petty-cash-notifications";
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
@@ -82,7 +83,12 @@ export function PettyCashForm({
   const [stage, setStage] = useState<"FORM" | "REVIEW">("FORM");
 
   useEffect(() => setAccount(readBetaSession()), []);
-  const managers = betaAccounts.filter((item) => item.role === "manager");
+  const assignedManagerIds = useMemo(
+    () => [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))],
+    [lines],
+  );
+  const assignedManagerId = assignedManagerIds.length === 1 ? assignedManagerIds[0] : undefined;
+  const managers = betaAccounts.filter((item) => item.id === assignedManagerId);
   const directors = betaAccounts.filter((item) => item.role === "director");
   const financeReviewers = betaAccounts.filter(
     (item) =>
@@ -90,6 +96,10 @@ export function PettyCashForm({
       (item.role === "finance" && item.id !== account?.id),
   );
   const total = useMemo(() => pettyCashTotal(lines), [lines]);
+  useEffect(() => {
+    if (initialRecord) return;
+    setManagerId(assignedManagerId ?? "");
+  }, [assignedManagerId, initialRecord]);
   const draft = useManualFormDraft({
     paymentType: "PETTY_CASH",
     requesterId: account?.id,
@@ -175,6 +185,11 @@ export function PettyCashForm({
     event.preventDefault();
     if (!account) {
       return setError("Sign in before submitting a Petty Cash request.");
+    }
+    if (assignedManagerIds.length !== 1) {
+      return setError(assignedManagerIds.length > 1
+        ? "The selected projects have different managers. Submit separate requests per project manager."
+        : "Assign a manager to the selected project in Settings first.");
     }
     const input = buildInput(account);
     const validation = validatePettyCashInput(input);

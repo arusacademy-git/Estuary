@@ -10,6 +10,7 @@ import type { TravelAllowanceRecord } from '@/domain/payment-requests/travel-all
 import { standardPaymentStatusLabel } from '@/domain/payment-requests/standard-payment-status';
 import { travelAllowanceProgress, travelAllowanceStageTitle } from '@/domain/payment-requests/travel-allowance/types';
 import { getBetaAccount, readBetaSession, type BetaAccount } from '@/lib/auth/beta-accounts';
+import { isProjectManagerAccount } from '@/features/administration/admin-settings';
 
 import styles from '../travel-allowance-workflow.module.css';
 
@@ -30,7 +31,7 @@ export function TravelAllowanceManagerReview({ requestId }: { requestId: string 
     useEffect(() => {
         const session = readBetaSession();
         setAccount(session);
-        if (!session || session.role !== 'manager') { setChecked(true); return; }
+        if (!session || !isProjectManagerAccount(session)) { setChecked(true); return; }
         fetchTravelAllowance(requestId).then(setRecord).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Request could not be loaded.')).finally(() => setChecked(true));
     }, [requestId]);
 
@@ -51,7 +52,7 @@ export function TravelAllowanceManagerReview({ requestId }: { requestId: string 
     }
 
     if (!checked) return <State title="Loading Travel Allowance" copy="Reading the request from the database…" />;
-    if (!account || account.role !== 'manager') return <State title="Manager access required" copy="Sign in using a Manager account." />;
+    if (!account || !isProjectManagerAccount(account)) return <State title="Manager access required" copy="You need an active project manager assignment." />;
     if (!record) return <State title="Travel Allowance not found" copy={error || 'The request could not be found.'} />;
     if (record.managerApproverId !== account.id && record.requesterId !== account.id) return <State title="Travel Allowance unavailable" copy="This request is not assigned to or created by your Manager account." />;
 

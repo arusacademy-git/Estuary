@@ -13,12 +13,13 @@ import type {
   PaymentRequestDocument,
 } from "@/domain/payment-requests/invoice-payment/types";
 import { INVOICE_PAYMENT_PROJECTS } from "@/domain/payment-requests/invoice-payment/types";
-import { readBetaSession } from "@/lib/auth/beta-accounts";
+import { getBetaAccount, readBetaSession } from "@/lib/auth/beta-accounts";
 import { amountToMalayWords } from "@/lib/currency/amount-words";
 import { notifyManagerInvoicePaymentSubmitted } from "@/features/payment-request/notifications/invoice-payment-notifications";
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
+import { projectManagerFor } from "@/features/administration/admin-settings";
 
 import { InvoicePaymentReview } from "./invoice-payment-review";
 import { InvoicePaymentConfirmation } from "./invoice-payment-confirmation";
@@ -106,7 +107,7 @@ export function InvoicePaymentForm({
     initialRecord?.paymentPortionOther ?? "",
   );
   const [managerApproverId, setManagerApproverId] = useState(
-    initialRecord?.managerApproverId ?? "nadia-hassan",
+    initialRecord?.managerApproverId ?? "",
   );
   const [directorApproverId, setDirectorApproverId] = useState(
     initialRecord?.directorApproverId ?? "",
@@ -183,7 +184,7 @@ export function InvoicePaymentForm({
       setTransferType(value.transferType ?? "");
       setPaymentPortion(value.paymentPortion ?? "");
       setPaymentPortionOther(value.paymentPortionOther ?? "");
-      setManagerApproverId(value.managerApproverId ?? "nadia-hassan");
+      setManagerApproverId(value.managerApproverId ?? "");
       setDirectorApproverId(value.directorApproverId ?? "");
       setRemarks(value.remarks ?? "");
       setInvoiceTotal(value.invoiceTotal ?? "");
@@ -194,6 +195,11 @@ export function InvoicePaymentForm({
 
   const projectName =
     projectSelection === "OTHER" ? otherProjectName.trim() : projectSelection;
+
+  useEffect(() => {
+    if (initialRecord) return;
+    setManagerApproverId(projectManagerFor(projectName) ?? "");
+  }, [initialRecord, projectName]);
 
   const requestedAmount = useMemo(() => {
     const total = Number(invoiceTotal) || 0;
@@ -715,14 +721,11 @@ export function InvoicePaymentForm({
           copy="Manager and Director review without signatures"
         >
           <div className={styles.fieldGrid}>
-            <Field label="Manager reviewer" required>
-              <select
-                required
-                value={managerApproverId}
-                onChange={(event) => setManagerApproverId(event.target.value)}
-              >
-                <option value="nadia-hassan">Nadia Hassan</option>
-              </select>
+            <Field label="Project manager" required>
+              <input
+                disabled
+                value={managerApproverId ? getBetaAccount(managerApproverId)?.name ?? managerApproverId : "No manager assigned to this project"}
+              />
             </Field>
             <Field label="Director reviewer" required>
               <select

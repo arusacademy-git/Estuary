@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { BetaAccount, BetaRole } from '@/lib/auth/beta-accounts';
+import { isProjectManagerAccount } from '@/features/administration/admin-settings';
 import {
   createEmptySidebarActionCounts,
   fetchSidebarActionCounts,
@@ -162,9 +163,19 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const searchParameters = useSearchParams();
   const currentQuery = searchParameters.toString();
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
-  const groups = account.isAdministrator
-    ? [...roleNavigation[account.role], { label: 'System', items: [{ label: 'Settings', href: '/beta/settings' }] }]
+  const projectManager = isProjectManagerAccount(account);
+  const baseGroups = account.role === 'staff' && projectManager
+    ? [
+        ...roleNavigation.staff,
+        {
+          label: 'Project management',
+          items: [{ label: 'Pending Approvals', href: '/beta/project-manager/pending-approvals', actionType: 'ALL_PENDING' as const }],
+        },
+      ]
     : roleNavigation[account.role];
+  const groups = account.isAdministrator
+    ? [...baseGroups, { label: 'System', items: [{ label: 'Settings', href: '/beta/settings' }] }]
+    : baseGroups;
   const hrefs = groups.flatMap((group) => collectHrefs(group.items));
   const activeHref = hrefs
     .filter((href) => href.includes('?')
@@ -186,7 +197,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   useEffect(() => {
     let active = true;
     const isCombinedQueue =
-      (account.role === 'manager' && pathname.startsWith('/beta/project-manager/pending-approvals')) ||
+      (projectManager && pathname.startsWith('/beta/project-manager/pending-approvals')) ||
       (account.role === 'director' && pathname.startsWith('/beta/director/pending-approvals')) ||
       (account.role === 'finance' && pathname.startsWith('/beta/finance/pending-processing'));
     const refreshCounts = () => {
@@ -231,7 +242,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
       window.removeEventListener('estuary:action-counts-changed', refreshCounts);
       window.removeEventListener(PENDING_QUEUE_COUNT_EVENT, syncPendingCount);
     };
-  }, [account, currentUrl, pathname]);
+  }, [account, currentUrl, pathname, projectManager]);
 
   function itemActionCount(item: NavigationItem): number {
     if (item.actionType) return actionCounts[item.actionType];
@@ -266,7 +277,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   return <aside className={styles.sidebar}>
     <div className={styles.sidebarIdentity}>
       <Link className={styles.brand} href="/beta/dashboard">Estuary</Link>
-      <p className={styles.roleLabel}>{roleLabels[account.role]}</p>
+      <p className={styles.roleLabel}>{projectManager && account.role === 'staff' ? 'Staff · Project Manager' : roleLabels[account.role]}</p>
     </div>
     <nav aria-label={`${roleLabels[account.role]} navigation`} className={styles.roleNavigation}>
       {groups.map((group, index) => <section className={group.label ? styles.navigationGroupCard : styles.navigationGroup} key={`${group.label ?? 'main'}-${index}`}>

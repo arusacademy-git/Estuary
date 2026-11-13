@@ -1,7 +1,7 @@
 "use client";
 import { createRuntimeId } from '@/lib/ids/runtime-id';
 
-import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   createCashAdvance,
@@ -22,6 +22,7 @@ import {
   type CashAdvanceRequestLine,
 } from "@/domain/payment-requests/cash-advance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { projectManagerFor } from "@/features/administration/admin-settings";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 import { BANK_NAME_SELECT_OPTIONS } from "@/shared/constants/payment-options";
 import { CashAdvanceConfirmation } from "./cash-advance-confirmation";
@@ -184,8 +185,14 @@ export function CashAdvanceForm({
   });
 
   const { signature: activeSignature } = useUserSignature(account?.id);
-  const managers = betaAccounts.filter((item) => item.role === "manager");
+  const selectedProject = isOtherProject ? otherProject.trim() : projectName;
+  const assignedManagerId = projectManagerFor(selectedProject);
+  const managers = betaAccounts.filter((item) => item.id === assignedManagerId);
   const directors = betaAccounts.filter((item) => item.role === "director");
+  useEffect(() => {
+    if (initialRecord) return;
+    queueMicrotask(() => setManagerId(assignedManagerId ?? ""));
+  }, [assignedManagerId, initialRecord]);
   const total = useMemo(() => cashAdvanceRequestedTotal(lines), [lines]);
 
   function updateLine(id: string, patch: Partial<CashAdvanceRequestLine>) {

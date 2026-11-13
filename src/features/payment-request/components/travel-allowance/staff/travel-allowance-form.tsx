@@ -23,6 +23,7 @@ import {
   travelLineTotal,
 } from "@/domain/payment-requests/travel-allowance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
 import {
   EMPLOYEE_OPTIONS,
   findEmployeeByName,
@@ -143,7 +144,7 @@ export function TravelAllowanceForm({
     const session = readBetaSession();
     setAccount(session);
     if (
-      session?.role === "manager" &&
+      session && isProjectManagerAccount(session) &&
       requestMode === "manager" &&
       !initialRecord
     ) {
@@ -152,11 +153,19 @@ export function TravelAllowanceForm({
   }, [initialRecord, requestMode]);
 
   const directors = betaAccounts.filter((item) => item.role === "director");
-  const managers = betaAccounts.filter((item) => item.role === "manager");
+  const assignedManagerIds = useMemo(
+    () => [...new Set(lines.map((line) => projectManagerFor(line.projectName)).filter((id): id is string => Boolean(id)))],
+    [lines],
+  );
+  const managers = betaAccounts.filter((item) => assignedManagerIds.includes(item.id));
   const employees = EMPLOYEE_OPTIONS;
   const [managerApproverId, setManagerApproverId] = useState(
     initialRecord?.managerApproverId ?? "",
   );
+  useEffect(() => {
+    if (initialRecord || requestMode === "manager") return;
+    queueMicrotask(() => setManagerApproverId(assignedManagerIds.length === 1 ? assignedManagerIds[0] : ""));
+  }, [assignedManagerIds, initialRecord, requestMode]);
   const draft = useManualFormDraft({
     paymentType: "TRAVEL_ALLOWANCE",
     requesterId: account?.id,
@@ -313,13 +322,14 @@ export function TravelAllowanceForm({
       );
       return;
     }
-    if (requestMode === "staff" && !managerApproverId) {
-      setError("Select the Manager reviewer on this page.");
+    const importedManagerIds = [...new Set(importedLines.map((line) => projectManagerFor(line.projectName)).filter((id): id is string => Boolean(id)))];
+    if (requestMode === "staff" && importedManagerIds.length !== 1) {
+      setError(importedManagerIds.length > 1 ? "The imported projects have different managers. Submit separate requests per project manager." : "Assign a manager to the imported project in Settings first.");
       return;
     }
     setRequestDate(nextRequestDate);
     setContact(nextContact);
-    if (requestMode === "manager") setManagerApproverId(account.id);
+    setManagerApproverId(requestMode === "manager" ? account.id : importedManagerIds[0]);
     setLines(importedLines);
     setError("");
     setSheetImportMessage("");
@@ -366,12 +376,14 @@ export function TravelAllowanceForm({
   }
 
   function validationMessage() {
-    if (!account || account.role !== requestMode)
+    if (!account || (requestMode === "staff" ? account.role !== "staff" : !isProjectManagerAccount(account)))
       return `Sign in using a ${requestMode === "staff" ? "Staff" : "Manager"} account.`;
     if (!requestDate || !contact.trim() || !projectDirectorId)
       return "Complete the request date, contact and Project Director.";
-    if (requestMode === "staff" && !managerApproverId)
-      return "Select the Manager reviewer.";
+    if (requestMode === "staff" && assignedManagerIds.length !== 1)
+      return assignedManagerIds.length > 1
+        ? "The selected projects have different managers. Submit separate requests per project manager."
+        : "Assign a manager to the selected project in Settings first.";
     if (!lines.length) return "Add at least one travel entry.";
     const incomplete = lines.find(
       (line) =>

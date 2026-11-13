@@ -15,6 +15,7 @@ import {
   approvePettyCashByManager,
   fetchPettyCashRequests,
 } from "@/data/payment-requests/petty-cash/api";
+import { approveClaimByManager, fetchClaimRequests } from "@/data/payment-requests/claims/api";
 import { usePaymentVouchers } from "@/features/payment-voucher/hooks/use-payment-vouchers";
 import { markPaymentVoucherManagerViewed } from "@/data/payment-vouchers/payment-voucher-api";
 import type { PaymentVoucherRecord } from "@/domain/payment-vouchers/types";
@@ -22,6 +23,7 @@ import { amountToMalayWords } from "@/lib/currency/amount-words";
 import { publishPendingQueueCount } from "@/app/beta/sidebar-action-counts";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
+import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 
 import styles from "./manager-pending-approvals.module.css";
 import filterStyles from "./manager-pending-approvals-filter.module.css";
@@ -124,6 +126,7 @@ export function ManagerPendingApprovals() {
     isLoading: vouchersLoading,
     refresh: refreshVouchers,
   } = usePaymentVouchers();
+  const projectManager = isProjectManagerAccount(account);
 
   useEffect(() => {
     const requestedType = new URLSearchParams(window.location.search).get(
@@ -137,7 +140,7 @@ export function ManagerPendingApprovals() {
   }, []);
 
   useEffect(() => {
-    if (!account || account.role !== "manager") return;
+    if (!account || !projectManager) return;
     let cancelled = false;
     Promise.all([
       fetchInvoicePayments({
@@ -152,8 +155,12 @@ export function ManagerPendingApprovals() {
         role: "manager",
         userId: account.id,
       }),
+      fetchClaimRequests({
+        role: "manager",
+        userId: account.id,
+      }),
     ])
-      .then(([invoices, cash, petty]) => {
+      .then(([invoices, cash, petty, claims]) => {
         if (cancelled) return;
         const next: ApprovalRow[] = [
           ...invoices
@@ -278,6 +285,39 @@ export function ManagerPendingApprovals() {
                 })),
               href: `/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`,
             })),
+          ...claims
+            .filter((record) => record.managerApproverId === account.id)
+            .map((record) => ({
+              key: `CL:${record.id}`,
+              id: record.id,
+              type: "CL" as const,
+              reference: record.claimNumber,
+              requester: record.requesterName,
+              programme: [...new Set(record.lines.map((line) => line.division))].join(", "),
+              amount: record.totalAmount,
+              submittedAt: record.createdAt,
+              status: record.status,
+              stage: record.managerApprovedAt ? "Previewed" : "Manager preview",
+              actionable: !record.managerApprovedAt && !["DRAFT", "RETURNED_TO_CLAIMANT"].includes(record.status),
+              reviewed: Boolean(record.managerApprovedAt),
+              details: [
+                { label: "Claim type", value: record.claimType.replaceAll("_", " ") },
+                { label: "Projects", value: [...new Set(record.lines.map((line) => line.division))].join(", ") },
+                { label: "Contact", value: record.requesterContact },
+              ],
+              lines: record.lines.map((line) => ({
+                label: line.supplier || line.accountType,
+                description: line.details,
+                amount: line.amount,
+              })),
+              documents: record.lines
+                .filter((line) => line.receiptLink)
+                .map((line, index) => ({
+                  name: line.receiptFileName || `Receipt ${index + 1}`,
+                  href: line.receiptLink!,
+                })),
+              href: `/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`,
+            })),
         ];
         setRows(next);
       })
@@ -294,7 +334,7 @@ export function ManagerPendingApprovals() {
     return () => {
       cancelled = true;
     };
-  }, [account]);
+  }, [account, projectManager]);
 
   const voucherRows = useMemo<ApprovalRow[]>(() => {
     if (!account) return [];
@@ -513,6 +553,8 @@ export function ManagerPendingApprovals() {
         }
         if (row.type === "PC")
           await approvePettyCashByManager(row.id, account.id);
+        if (row.type === "CL")
+          await approveClaimByManager(row.id, account.id);
         succeeded.push(row.key);
       } catch (error) {
         failures.push(
@@ -540,11 +582,11 @@ export function ManagerPendingApprovals() {
     setError(failures.length > 0 ? failures.join(" ") : "");
   }
 
-  if (!account || account.role !== "manager")
+  if (!account || !projectManager)
     return (
       <main className={styles.state}>
         <h1>Manager access required</h1>
-        <p>Sign in using a Manager account.</p>
+        <p>You need an active project manager assignment.</p>
       </main>
     );
   if (loading || vouchersLoading)
