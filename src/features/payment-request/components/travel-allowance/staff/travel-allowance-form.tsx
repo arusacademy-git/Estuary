@@ -23,7 +23,7 @@ import {
   travelLineTotal,
 } from "@/domain/payment-requests/travel-allowance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount, projectManagerFor, travelProjectCodesFor } from "@/features/administration/admin-settings";
 import {
   EMPLOYEE_OPTIONS,
   findEmployeeByName,
@@ -153,6 +153,8 @@ export function TravelAllowanceForm({
   }, [initialRecord, requestMode]);
 
   const directors = betaAccounts.filter((item) => item.role === "director");
+  const isDirector = account?.role === "director";
+  const availableProjects = travelProjectCodesFor(account);
   const assignedManagerIds = useMemo(
     () => [...new Set(lines.map((line) => projectManagerFor(line.projectName)).filter((id): id is string => Boolean(id)))],
     [lines],
@@ -287,6 +289,10 @@ export function TravelAllowanceForm({
       );
       return;
     }
+    if (!isDirector && importedProjects.some((project) => !availableProjects.includes(project))) {
+      setError("You can import Travel Allowance entries only for projects you manage.");
+      return;
+    }
 
     const importedLines = data.entries.map((entry, index) => {
       const employee =
@@ -376,7 +382,7 @@ export function TravelAllowanceForm({
   }
 
   function validationMessage() {
-    if (!account || (requestMode === "staff" ? account.role !== "staff" : !isProjectManagerAccount(account)))
+    if (!account || (requestMode === "staff" ? account.role !== "staff" : !(isDirector || isProjectManagerAccount(account))))
       return `Sign in using a ${requestMode === "staff" ? "Staff" : "Manager"} account.`;
     if (!requestDate || !contact.trim() || !projectDirectorId)
       return "Complete the request date, contact and Project Director.";
@@ -385,6 +391,8 @@ export function TravelAllowanceForm({
         ? "The selected projects have different managers. Submit separate requests per project manager."
         : "Assign a manager to the selected project in Settings first.";
     if (!lines.length) return "Add at least one travel entry.";
+    if (!isDirector && lines.some((line) => !availableProjects.includes(line.projectName)))
+      return "Travel Allowance is limited to projects you manage.";
     const incomplete = lines.find(
       (line) =>
         !line.employeeId ||
@@ -642,8 +650,10 @@ export function TravelAllowanceForm({
             <div className={styles.sectionHeading}>
               <h2>Requester and approval</h2>
               <p>
-                {requestMode === "manager"
-                  ? "You are submitting this request on behalf of Staff."
+                  {requestMode === "manager"
+                    ? isDirector
+                      ? "You are submitting this request as Director."
+                      : "You are submitting this request on behalf of Staff."
                   : "Your profile is used as the requester."}
               </p>
             </div>
@@ -659,7 +669,7 @@ export function TravelAllowanceForm({
               <label>
                 <span>
                   {requestMode === "manager"
-                    ? "Submitted by Manager"
+                    ? isDirector ? "Submitted by Director" : "Submitted by Manager"
                     : "Staff name"}
                 </span>
                 <input disabled value={account?.name ?? "Loading…"} />
@@ -912,12 +922,12 @@ export function TravelAllowanceForm({
                             }}
                           >
                             <option value="">Choose a project</option>
-                            {TRAVEL_ALLOWANCE_PROJECTS.map((project) => (
+                            {availableProjects.map((project) => (
                               <option key={project} value={project}>
                                 {project}
                               </option>
                             ))}
-                            <option value="OTHER">Other</option>
+                            {isDirector && <option value="OTHER">Other</option>}
                           </select>
                           {line.isOtherProject && (
                             <input

@@ -94,6 +94,17 @@ export function managedProgrammesFor(accountId: string, settings = readAdminSett
   );
 }
 
+export function travelProjectCodesFor(
+  account: BetaAccount | null | undefined,
+  settings = readAdminSettings(),
+) {
+  if (!account) return [];
+  const programmes = account.role === 'director'
+    ? settings.programmes.filter((programme) => programme.active)
+    : managedProgrammesFor(account.id, settings);
+  return programmes.map((programme) => programme.code);
+}
+
 export function isProjectManagerAccount(
   account: BetaAccount | null | undefined,
   settings = readAdminSettings(),

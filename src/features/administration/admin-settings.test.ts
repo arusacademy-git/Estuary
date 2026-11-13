@@ -6,6 +6,7 @@ import {
   isProjectManagerAccount,
   managedProgrammesFor,
   projectManagerFor,
+  travelProjectCodesFor,
 } from './admin-settings';
 
 describe('project-scoped manager settings', () => {
@@ -30,5 +31,17 @@ describe('project-scoped manager settings', () => {
     expect(projectManagerFor('PROJECT-B', settings)).toBe('nadia-hassan');
     expect(projectManagerFor('PROJECT-C', settings)).toBeUndefined();
     expect(managedProgrammesFor('afiq-rahman', settings).map((item) => item.code)).toEqual(['PROJECT-A']);
+  });
+
+  it('limits project Managers to assigned travel projects while Directors see all active projects', () => {
+    const settings = createDefaultAdminSettings();
+    settings.programmes = [
+      { id: 'a', code: 'PROJECT-A', name: 'Project A', managerId: 'nadia-hassan', active: true },
+      { id: 'b', code: 'PROJECT-B', name: 'Project B', managerId: 'afiq-rahman', active: true },
+      { id: 'c', code: 'PROJECT-C', name: 'Project C', managerId: 'nadia-hassan', active: false },
+    ];
+
+    expect(travelProjectCodesFor(getBetaAccount('nadia-hassan'), settings)).toEqual(['PROJECT-A']);
+    expect(travelProjectCodesFor(getBetaAccount('daniel-lee'), settings)).toEqual(['PROJECT-A', 'PROJECT-B']);
   });
 });

@@ -70,7 +70,7 @@ const pettyCash: NavigationItem = {
   ],
 };
 
-const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
+export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
   staff: [
     { items: [{ label: 'Dashboard', href: '/beta/dashboard' }] },
     {
@@ -109,7 +109,7 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     { items: [{ label: 'Dashboard', href: '/beta/dashboard' }] },
     {
       label: 'Create payments',
-      items: [paymentRequest(true, undefined, false)],
+      items: [paymentRequest(true, '/beta/payment-requests/travel-allowance/new')],
     },
     {
       label: 'Approvals',
@@ -151,6 +151,19 @@ const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
   ],
 };
 
+export function navigationForRole(role: BetaRole, projectManager = false): NavigationGroup[] {
+  if (role !== 'staff' || !projectManager) return roleNavigation[role];
+  return [
+    ...roleNavigation.staff.map((group) => group.label === 'Create payments'
+      ? { ...group, items: [paymentRequest(true, '/beta/payment-requests/travel-allowance/new')] }
+      : group),
+    {
+      label: 'Project management',
+      items: [{ label: 'Pending Approvals', href: '/beta/project-manager/pending-approvals', actionType: 'ALL_PENDING' }],
+    },
+  ];
+}
+
 function collectHrefs(items: NavigationItem[]): string[] {
   return items.flatMap((item) => [
     ...(item.href ? [item.href] : []),
@@ -164,15 +177,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const currentQuery = searchParameters.toString();
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
   const projectManager = isProjectManagerAccount(account);
-  const baseGroups = account.role === 'staff' && projectManager
-    ? [
-        ...roleNavigation.staff,
-        {
-          label: 'Project management',
-          items: [{ label: 'Pending Approvals', href: '/beta/project-manager/pending-approvals', actionType: 'ALL_PENDING' as const }],
-        },
-      ]
-    : roleNavigation[account.role];
+  const baseGroups = navigationForRole(account.role, projectManager);
   const groups = account.isAdministrator
     ? [...baseGroups, { label: 'System', items: [{ label: 'Settings', href: '/beta/settings' }] }]
     : baseGroups;
