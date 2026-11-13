@@ -1,5 +1,12 @@
 # AI_HANDOFF.md
 
+## 2026-11-13 — Restored Director and project-manager create-payment links
+
+- GitHub issue #150 fixes a sidebar regression: Director navigation explicitly disabled Payment Voucher, while Director and the new project-scoped Manager navigation omitted Travel Allowance.
+- Directors now see every create-payment type. Staff with an active project-manager assignment see Travel Allowance; ordinary Staff do not.
+- Project-scoped Managers can select or import only their assigned active projects in Travel Allowance. Directors can select every active project and retain the Other-project option.
+- Added focused navigation tests covering ordinary Staff, project-scoped Managers and Directors.
+
 ## 2026-11-13 — Project-scoped manager authority
 
 - GitHub issue #148 is implemented on `agent/project-scoped-managers`.
