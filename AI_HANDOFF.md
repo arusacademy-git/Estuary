@@ -1,54 +1,5 @@
 # AI_HANDOFF.md
 
-## 2026-11-13 — Restored Director and project-manager create-payment links
-
-- GitHub issue #150 fixes a sidebar regression: Director navigation explicitly disabled Payment Voucher, while Director and the new project-scoped Manager navigation omitted Travel Allowance.
-- Directors now see every create-payment type. Staff with an active project-manager assignment see Travel Allowance; ordinary Staff do not.
-- Project-scoped Managers can select or import only their assigned active projects in Travel Allowance. Directors can select every active project and retain the Other-project option.
-- Added focused navigation tests covering ordinary Staff, project-scoped Managers and Directors.
-
-## 2026-11-13 — Project-scoped manager authority
-
-- GitHub issue #148 is implemented on `agent/project-scoped-managers`.
-- Removed Manager from the beta organization-role selector and changed Nadia's demo organization role to Staff. Legacy browser settings that stored `manager` are normalized to `staff` when read.
-- Programme Settings now assigns active Staff as the manager. Staff with at least one active assignment receive the Project Manager approval workspace; manager queues and detail pages still enforce the request's assigned manager ID.
-- Invoice, Cash Advance, Travel Allowance and Petty Cash forms resolve manager choices from project settings. Travel requests spanning projects with different managers must be split.
-- Added `ProjectManagerAssignment` and migration `20261113090000_project_scoped_managers` for the production data model. `OrgRole.MANAGER` remains only as a legacy workflow enum value so historical approval rows are not broken.
-- Verification: focused project-manager tests pass (2), full TypeScript passes, focused ESLint passes, and Prisma schema validation passes. The full Vitest run has 15 unrelated failures already present in Petty Cash policy, Claim policy/Google Sheet, and Cash Advance spent-sheet tests; 65 tests pass. The repository `pnpm` wrapper attempted a dependency-policy install and failed on ignored build scripts, so verification used the checked-in local binaries directly.
-
-## 2026-11-12 — Tech and Internet/Commute beta claim settings
-
-- GitHub issue #146 extends Daniel Lee's administrator-only Settings claim policy preview with Internet/Commute per-claim limit (RM70), Tech standard and extended limits (RM500/RM1,000), and the extended-option lock duration (three years). The defaults come from the existing claim policy constants. Medical and PD fields remain unchanged.
-- Older browser-saved settings receive the new defaults when read. Edits to these values are still browser-local preview data and do not alter server claim validation; shared policy storage and enforcement require later work.
-- TypeScript, focused ESLint, and production build pass. A local browser check confirmed six policy cards, legacy settings fallback, edits persisting in the browser, and denial of direct Settings access to another Director.
-
-## 2026-11-12 — Daniel Lee beta administrator Settings
-
-- GitHub issue #144: Daniel Lee's existing Director dummy account now has a separate Administrator flag. The sidebar shows Settings at `/beta/settings` only for accounts with that flag; direct navigation to Settings or the old `/beta/administration` route shows an access-required page for other dummy accounts. Director approval navigation remains intact.
-- The existing Administration interface is reused as the beta Settings page. Its current edits still use browser local storage and are labeled as a preview; shared cross-organization settings and Google-authenticated server authorization remain future work.
-- TypeScript, focused ESLint, and the production build pass. A local browser check confirmed Daniel sees Settings and can open it, while Amir and Afiq see no Settings tab and are denied by the direct route.
-
-## 2026-11-12 — Requester delete action for manual drafts
-
-- GitHub issue #142 adds a requester-visible Delete draft control to the shared manual-draft cards and table rows across payment types. The action shows an inline confirmation and error, reuses the existing requester-scoped DELETE API, and refreshes the draft lists and action counts after deletion. Submitted payment requests are outside this action.
-- Added a manual-drafts-changed event listener to payment-type draft lists and the My Requests category overview so deleted drafts disappear and counts update without a page reload. TypeScript, focused ESLint and the production build pass. A local browser check with mocked APIs confirmed the confirmation step, requester-scoped DELETE request and list removal. Live Penang verification remains after deployment.
-
-## 2026-11-12 — Travel Allowance proof in Payment Records
-
-- Penang beta after main `9a1671f`: synthetic TA26-11-04/05/06 are all Completed; their distinct proof IDs, payment references, proof-upload timestamps and completion timestamps now appear in the API. The pending TA26-11-01 record still displays Awaiting wording for unfinished stages.
-- The Completed Records detail page had no link to the uploaded proof even though the API returned it. Added a Payment transaction proof section with a download link for the stored file. This is issue #137's remaining UI work; the older local mapper patch was superseded by main PR #138.
-
-## 2026-11-12 — PR #140 Travel Allowance merge resolution
-
-- Merged current `main` into the `payments` branch. The only conflict was `travel-allowance-record-detail.tsx` `Progress()`. Kept PR #140's shared `travelAllowanceProgress` and `stepDetail` structure, retained `main`'s conditional Awaiting wording, and used the dedicated `financeProofUploadedAt` and `completedAt` timestamps from the updated domain model.
-- TypeScript and focused ESLint pass on the merged branch. Current `main` already includes the Travel Allowance proof transition mapping from PR #138; the separate local issue #137 patch should be reconciled with that work rather than pushed unchanged.
-
-## 2026-11-12 — Cash Advance Penang retest and transition repair
-
-- On the Penang beta build, created clearly marked temporary test signatures for Afiq, Nadia and Amir, then submitted synthetic CA26-11-01/02/03. Exercised Manager and Director approvals, Director return/correction/resubmission, Finance multi-selection, simulated payment and proof upload, requester reconciliation, Finance return/correction and completion. Exact RM300, RM1 underspend and RM1 overspend all reached Completed. No real funds moved. Removed the three active test signatures after testing.
-- Updated the Estuary Testing Google Sheet: CA-05/06/07/09 passed; CA-01/08 require retest after the next deployment; CA-02 Google Sheet import remains untested. Closed CA-B02/03/04 and left CA-B01 open for the remaining metadata problem.
-- GitHub issue #135 covers two defects: the Manager approval route persisted a preview instead of a signed approval, and the Cash Advance mapper read obsolete Finance payment/proof transition names. The legacy standalone Manager preview now stays informational rather than forwarding without a signature. Added focused route and mapping tests. Four tests, TypeScript, and focused ESLint pass. The fixes are local pending push, merge, deployment and live retest.
-
 ## Project Handoff Baseline
 
 - Project: Estuary
@@ -60,8 +11,8 @@
 - Governance Profile:
 - Cast ID:
 - Homunculus Memo Path:
-- Current Branch: agent/fix-travel-progress-wording (issue #133)
-- Last Updated: 2026-11-12
+- Current Branch: agent/add-payment-request-drafts
+- Last Updated: 2026-11-15
 - Session Status: ACTIVE
 - Lock Status: RELEASED / non-blocking compatibility record
 - Session Started: 2026-08-12T16:52:22+08:00
@@ -81,49 +32,118 @@
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
 
+## 2026-11-14 — Unified My Requests table
+
+- Added icon-based clickable summary filters with active badges, exact prototype tile colors and 38% color glows.
+- Compacted the My Requests stat tiles to the supplied 112px prototype proportions, including smaller icons, labels and active badge.
+- Changed the four My Requests stat tiles to equal 1:1 squares in the four-column desktop grid.
+- Replaced the square ratio with the specified desktop dimensions: four `266.5px × 158px` tiles with a `14px` gap.
+- Applied the supplied stat typography specification: 11px labels and selected pill, 40px values, and 12.5px captions/action cues with exact weights and spacing.
+- Removed the redundant `Show list` text from all four clickable My Requests stat filters.
+- Added the dashboard-style request menu, visible-row CSV download, payment-colored active type tabs and Project Manager Payment Records navigation.
+- Fixed the React Hooks ESLint failure by deriving the effective status and resetting it only from payment-type user events, not synchronously inside an effect.
+- Changed My Requests status options from loaded-row discovery to domain-driven lists; Payment Voucher uses its exported status constants and every other list is checked against its domain status union.
+- Added a combined cross-payment-type My Requests table at `generated/src/app/beta/payment-records/my-requests.tsx` with its own CSS module.
+- Kept the existing organization Payment Records view and exposed it separately through `payment-records.tsx`; the route chooses the view from `scope=mine`.
+- Added real-status filtering that derives options from the selected payment type, plus search, date, sort and type filters.
+- Reused the existing shared list pagination component and hook.
+- Focused TypeScript and Prettier verification pass for the new route, table component and styles.
+- Added `generated/MY_REQUESTS_UNIFIED_TABLE_COPY_FILES.md`; no live-project files were edited.
+
+## 2026-11-14 — Removed nested payment sidebar dots
+
+- Prepared `generated/src/app/beta/beta.module.css` as a copy-ready sidebar style update.
+- Removed only the six small circular markers beside Payment Voucher through Claims while retaining navigation links, indentation, guide line and active states.
+- Preserved the latest `Settings` sidebar icon selectors; no live-project files were edited.
+
+## 2026-11-14 — Interactive dashboard redesign
+
+- Prepared copy-ready dashboard page and CSS files under `generated/src/app/beta/dashboard/`.
+- Refined KPI cards to prototype proportions with large translucent lower-right icons and stronger hover/focus lift, glow, highlight and icon motion.
+- Corrected blurry KPI artwork by requesting 96×96 optimized images and strengthened the prototype-style color-matched bottom shadows.
+- Increased reconciliation-icon visibility, changed its card action to `Reconcile now`, and aligned KPI hover/focus behavior with the six prototype effects.
+- Added a local-time greeting that refreshes every minute and switches between morning, afternoon and evening.
+- Updated KPI counts to five cards for Staff/Manager and four for Director/Finance, retaining public icon assets.
+- Applied the prototype's white layers, light-blue borders, soft shadows, strong KPI colors, pale-blue rate card and pale-yellow action panel.
+- Left Payment Portfolio, Records and Expenditure logic intact; no live-project files were edited.
+
+## 2026-11-14 — Project Manager sidebar order
+
+- Prepared `generated/src/app/beta/role-sidebar.tsx` as a copy-ready update based on the latest live sidebar.
+- Changed only the Staff · Project Manager group order so Project management appears immediately after Create payments and before Records.
+- Added `generated/MANAGER_SIDEBAR_ORDER_COPY_FILE.md`; no live-project files were edited.
+
+## 2026-11-14 — Claims manual-only form and CSS
+
+- Prepared copy-ready manual-only replacements for the Claims form and its CSS under `generated/src/features/payment-request/components/claims/`.
+- Removed the request-time Google Sheet component, entry-mode state, application handler, tabs, conditional UI, and Sheet-only CSS while retaining the manual official-claim layout.
+- Preserved manual drafts, receipt/document handling, policy validation, review/submission, and the latest division-based Project Manager routing rule.
+- Added `generated/CLAIMS_MANUAL_ONLY_COPY_FILES.md` with the two copy destinations and the two Claims-only Google Sheet files that may be deleted.
+- No live-project files were edited.
+
+## 2026-11-14 — Travel Allowance manual-only copy file
+
+- Prepared `generated/src/features/payment-request/components/travel-allowance/staff/travel-allowance-form.tsx` as a copy-ready manual-only replacement.
+- Removed the request-time Google Sheet import, state, parser application handler, entry-mode tabs and conditional Sheet UI.
+- Preserved the latest project-scoped Manager and Director authorization behavior from merged PR #151.
+- Added `generated/TRAVEL_ALLOWANCE_MANUAL_ONLY_COPY_FILES.md` with copy, delete and preserve instructions.
+- Focused TypeScript verification passes and the replacement was formatted with Prettier.
+
+## 2026-11-14 — Cash Advance manual-only copy file
+
+- Prepared a copy-ready replacement at `generated/src/features/payment-request/components/cash-advance/staff/cash-advance-form.tsx`.
+- Removed only the request-time Google Sheet import, state, handler, entry tabs and conditional UI.
+- Preserved manual draft saving, review/submission behavior, APIs and Cash Advance reconciliation Google Sheet support.
+- Added `generated/CASH_ADVANCE_MANUAL_ONLY_COPY_FILES.md` with copy, delete and preserve instructions.
+- Focused Cash Advance TypeScript verification passes.
+
 ## Current Session Log — 2026-11-11
 
-### 2026-11-12 Penang notification and bulk return retest; TA copy repair (issue #133)
+### Invoice Payment manager approval and create-another routing
 
-- PR #132 merged as `d83a125`; Afiq ran the Penang migration and Docker rebuild. `/api/v1/system/bootstrap` and `/api/v1/notifications?recipientId=afiq-rahman` returned 200.
-- Synthetic IV26-11-05 was resubmitted, approved to Finance and returned. A fresh Staff browser with empty notification localStorage displayed one unread Invoice Payment return alert; server GET contained the notification. This verifies cross-browser delivery of issue #131.
-- Created synthetic IV26-11-06 and IV26-11-07, advanced them to Finance, selected both in Review selected, then returned each without recording payment. Each retained its own result while navigating Previous/Next, and both Staff notifications persisted. INV-B03 was closed; INV-05 is Blocked only for actual payment recording/proof, which was not simulated.
-- TA26-11-01 still appears in My Travel Allowance requests with Director approved and Finance pending. Its pending progress copy incorrectly said "Allowance verified by Finance" and described proof/completion as done. Issue #133 updates only the pending copy; payment workflow behavior is unchanged. Finance payment/proof/completion remain untested because the synthetic record says not to process payment.
-- The shared Estuary Testing sheet was updated with these observations. Afiq performs Penang deployment himself from commands we provide.
+- Fixed Invoice Payment Manager approval authorization so it follows the active `MANAGER` approval step and its assigned reviewer instead of relying on the denormalized submission assignee, which could drift from the workflow step and reject a valid Manager action.
+- Improved Manager bulk-processing feedback so failed rows report their reference and the actual API/repository error. The success banner is no longer shown when zero selected requests succeed.
+- Fixed the Invoice Payment success action so `Create another Invoice Payment` opens a clean `/beta/payment-requests/invoice-payment/new` form instead of reloading the completed Review state.
+- Updated copy-ready files:
+  - `generated/src/data/payment-requests/invoice-payment/prisma-repository.ts`
+  - `generated/src/features/payment-request/components/manager-pending-approvals/manager-pending-approvals.tsx`
+  - `generated/src/features/payment-request/components/invoice-payment/staff/invoice-payment-form.tsx`
 
-### 2026-11-12 continuation — cross-browser notifications (issue #131)
+### Verification — 2026-11-11
 
-- Main `6edeaf6` was deployed by Afiq and the NetBird HTTP Petty Cash and Cash Advance new forms rendered successfully. PC-07 passed live: synthetic PC26-11-02 Create Another opened a blank form.
-- Retested INV-05 on synthetic IV26-11-05: Finance return success and the reason remained visible after the combined queue refreshed; Staff saw the reason on the correction form. Bulk per-record results remain unverified. The shared test sheet was updated accordingly.
-- TA-01 My Requests listed TA26-11-01 correctly, and the Finance queue displayed its merged employee row and payment controls. Finance payment/proof/completion were not exercised because the record explicitly says not to process payment. The shared test sheet remains partial.
-- Root cause for missing cross-browser notification: all payment types call `createLocalNotification`, which only wrote browser localStorage. Added a PostgreSQL in-app notification table, REST list/create/read/delete endpoints, and a shared notification refresh in the existing bell hook while retaining local notifications. The new migration must run before this branch's app image is deployed. Live cross-browser verification remains pending deployment.
-- Afiq prefers receiving Penang deployment commands and running them himself; do not SSH into Penang for deployment.
-
-### Penang deployment, live retest, and NetBird HTTP fix (issue #129)
-
-- PR #128 merged as `05bcb14`; Penang source was fast-forwarded and Afiq rebuilt the app with Docker. The new Petty Cash Director-return route returns HTTP 400 for empty input, confirming the new container is live; `/api/v1/system/bootstrap` returns 200. No schema migration was needed.
-- Live Penang retest passed CL-03 (edited manual draft restored, submitted as CL26-11-02, saved draft removed), CL-05 (CL26-11-01 Director remarks visible, requester corrected and resubmitted same reference), CL-07/CL-20 (after submitting CL26-11-03, Create Another opened a blank form), and PC-04 (PC26-11-01 Director return with remarks, Staff correction and resubmission). Tracker rows and bug log were updated; Overview now shows 40 passed, 7 failed, 3 blocked, 1 not started, 7 N/A.
-- TA26-11-01 still shows Director approved and Finance step 3/5, and appears in Finance Pending Processing. Finance payment was not simulated. There are no Cash Advance records in the live database; Afiq and Nadia have no active signatures, so CA approval/reconciliation cannot be retested without an authorized requester signature.
-- NetBird plain-HTTP `/beta/payment-requests/petty-cash/new` rendered an error because browser `crypto.randomUUID` is unavailable outside a secure context. Replaced direct calls across Petty Cash, Cash Advance and Finance screens with the existing `createRuntimeId` helper. Typecheck, lint (one existing warning), production build, and helper tests pass. This fix is local until published and deployed.
-- Afiq requested that future Penang deployment work be given as commands for him to run; do not spend time running SSH deployment steps on his behalf.
-
-### Penang retest failures (issue #127)
-
-- Restored the Claim manual-draft route so Continue Draft loads the saved snapshot instead of redirecting to My Requests.
-- Open a fresh Claim or Petty Cash form from each Create Another confirmation; added a fresh Cash Advance creation link on its confirmation.
-- Added the missing Petty Cash Director return API route. Director returned Claims now go back to the claimant for correction; previously rejected Claim records can also be edited and resubmitted. The Claim record and My Requests attention count show the correction action.
-- Restricted the Manager Cash Advance approval queue to actual pending Manager approvals, preventing paid requests waiting for reconciliation from appearing there.
-- Finance bulk review now retains its selected records while the queue refreshes, shows the result after a return, and resets per-record UI state when moving to another selected record. The Invoice Payment review snapshot is updated after each Finance action.
-- Verification: `corepack pnpm typecheck`, `corepack pnpm lint` (one existing warning), `corepack pnpm build`, and the new Petty Cash Director-return route test pass. `corepack pnpm test` reports 16 failures in unchanged manual-draft, Claim policy/Google Sheet, Cash Advance Appendix A import, and Petty Cash policy tests; these appear to predate this branch and need separate reconciliation with current product policy.
-- This issue merged and deployed as `05bcb14`. TA-01 Finance completion and CA-05/CA-07 reconciliation behavior remain unverified on Penang.
+- Static inspection confirmed the Invoice repository selects an active role-specific approval step and authorizes against that step's assigned user.
+- Static inspection confirmed Manager bulk approval captures per-record failures and only renders a success message when at least one row succeeds.
+- Static inspection confirmed the Invoice create-another action targets the clean new-form route.
+- Runtime lint, typecheck and workflow tests are unavailable in this manual scaffold because it has no independent dependency manifest or runnable application.
 
 ## Previous Session Log — 2026-11-10
 
-### Penang deployment build repair
+### Payment Voucher amendment success state
 
-- Pulled GitHub `main` through `f8cd6b8` into the local and Penang source checkouts. No new Prisma migrations or deployment configuration changes were present since Penang's previous release.
-- The local production build failed because four bulk payment components still import `payment-voucher-bulk.module.css`, which commit `04333fb` deleted. Restored the last deployed stylesheet on issue #124's branch for build verification before rebuilding Penang.
-- With the stylesheet restored, the production Next.js build and TypeScript checks passed. All CSS class names referenced by the four importing components are present.
+- Fixed the Payment Voucher detail page so a successfully resubmitted amendment no longer continues to display the rejected status or the `Amend Payment Voucher` action card while refreshed request data is loading.
+- The `submitted=true` success redirect now takes precedence over a briefly stale rejected snapshot and presents the voucher as `Pending Director Approval`.
+- The amendment action remains available only when the voucher is genuinely rejected and the current page is not a successful resubmission result.
+- Updated copy-ready file: `generated/src/features/payment-voucher/components/payment-voucher-detail.tsx`.
+- Verification is structural only because this manual scaffold has no independent dependency manifest or runnable application.
+
+### Payment Voucher amendment interface
+
+- Restyled the rejected Payment Voucher `Amend Payment Voucher` action with the same amber/brown action treatment used by `Go to Settings`, including a darker hover state.
+- Reworked amendment editing into a compact two-column interface: editable Recipient, Payment, Purpose/documents and existing Voucher line sections on the left; Director remarks, voucher total, Continue to review and Cancel amendment actions in a sticky right rail.
+- Amendment mode does not expose an `Add line` control. The existing voucher lines remain editable without allowing extra lines to be appended.
+- Removed the duplicate amendment toolbar above the form so the right-hand action rail is the single amendment control area.
+- `Continue to review amendment` still submits through the existing `onContinue` callback and therefore reuses the established Payment Voucher review component and resubmission path.
+- Updated copy-ready files: `generated/src/features/payment-voucher/components/staff/payment-voucher-form.tsx`, `generated/src/features/payment-voucher/components/staff/payment-voucher-create-workspace.tsx`, `generated/src/features/payment-voucher/components/payment-voucher.module.css`, and `generated/src/features/payment-voucher/components/payment-voucher-correction-card.module.css`.
+- Verification is structural only because this manual scaffold has no independent dependency manifest or runnable application.
+
+### Finance pre-generation Payment Voucher rejection
+
+- Finance can now reject and permanently lock a Payment Voucher while it is either `APPROVED_FOR_PAYMENT` or `FINANCE_PROCESSING`, before PV generation.
+- The inactive transition and audit event now preserve the voucher's actual source state instead of always claiming `FINANCE_PROCESSING`.
+- Rejection moves the original request to terminal `INACTIVE` / `VOIDED`, clears its assignee, records the Finance reason, closes the request and revokes any external-action tokens. The requester must create a new PV for a later payment attempt.
+- Updated Finance wording distinguishes this control from Director rejection: `Reject PV`, `Finance rejection remarks`, and `Reject and lock PV`.
+- Updated copy-ready files: `generated/prisma-payment-voucher-repository.ts`, `generated/src/features/payment-voucher/components/finance/finance-payment-panel.tsx`, `generated/src/app/api/v1/payment-vouchers/[id]/finance/inactive/route.ts`, and `generated/payment-voucher-finance-inactive-route.ts`.
+- Verification is structural only because this manual scaffold has no independent dependency manifest or runnable application. Confirmed the repository guard accepts both pre-generation Finance states and that transition/audit records use the captured source state.
 
 ### Dashboard KPI card interaction and color treatment
 
@@ -135,6 +155,8 @@
 - Expected scaffold PNG destinations are `generated/public/assets/icons/payments-received.png`, `in-workflow.png` and `payments-completed.png`; in the live Next.js project, copy them to `public/assets/icons/`.
 - Replaced the sidebar's main CSS character placeholders with the supplied `*-light.png` assets for Dashboard, Payment Request, Pending Approvals, Pending Processing, Petty Cash, SQL Entry Tracker, Administration, My Requests and Payment Records. These assets must also live under the live project's `public/assets/icons/` directory. Nested payment types intentionally retain their ARUS-colored dots.
 - Removed the decorative up/down caret characters from every sidebar group heading and expandable navigation branch. The full branch row remains the accessible expand/collapse control through `aria-expanded`.
+- Added the missing fourth dashboard KPI image mapping, `reconciliation-sync-icon.png`. Staff's non-percentage Cash Advance pending-reconciliation card uses this PNG inside its colored icon tile. Percentage-based reconciliation-rate cards for Manager, Director and Finance retain the live circular performance ring instead of the PNG tile. The shared KPI paths live under `public/assets/icons/`.
+- Updated the Staff Cash Advance pending-reconciliation KPI to use the ARUS Cash Advance red icon-tile treatment (`#db224a`) instead of inheriting the completed-payment green treatment.
 
 ### Prototype sidebar hierarchy and icon placeholders
 
@@ -5216,3 +5238,24 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Implemented the first copy-ready performance pass. `sidebar-action-counts.ts` now derives all role counts from the existing lightweight dashboard `Submission` summary instead of downloading six complete payment datasets; the redundant Manager Payment Voucher reload was also removed. Finance proof-uploaded records remain included in its pending count.
 - Finance, Director and Manager combined queues no longer send `includeAll: true` to Invoice, Travel Allowance, Cash Advance and Petty Cash list APIs. Existing role scopes now reduce the response before the browser maps and filters it. This preserves the current UI/workflows while substantially reducing duplicated payloads.
 - Full active-tab-only pagination and on-demand detail loading remain the next performance phase. They require queue-summary endpoints or equivalent per-type summary queries so inactive-tab counts remain correct without fetching complete records.
+
+## 2026-11-14 — Reusable completed-file download panel
+
+- Replaced the My Requests CSV download action with a prototype-aligned completed-file panel in `features/payment-records/components/shared` for reuse by Payment Records.
+- Added ARUS-coloured multi-select payment-type chips, This month/Last month/Month/Date range controls, Signed forms/Receipts/Both selection, available-file and skipped-request summaries, and ZIP download through the existing shared `downloadPaymentRecordFormsZip` helper.
+- My Requests now normalizes uploaded supporting documents and line-level receipt/proof links. Completed Travel Allowance, Cash Advance and Claims records use their existing form endpoints; signed Payment Vouchers use their stored signed-PV data URL. Drafts are never offered for download.
+- Updated `generated/MY_REQUESTS_UNIFIED_TABLE_COPY_FILES.md` with the two new shared feature files. Focused TypeScript and ESLint pass.
+- Hardened the shared panel against older callers that omit `forms` or `receipts`; missing arrays are treated as empty, preventing the runtime `is not iterable` failure.
+- Aligned payment-type counts with their chip labels, reset the document selector to Both when payment types change so available completed forms are not hidden by a previous Receipts-only choice, and replaced the static filename template with the exact dynamic ZIP filename derived from payment types, period, document selection and download date.
+- Applied the supplied Download Files typography scale and interactive button states: 11px section headings, 13px intro/period controls, 14px document/month controls and summaries, and the specified 14.5px/13.5px primary/tertiary actions with navy hover shadows and pressed fills.
+- Expanded shared ZIP entries to support either a URL or browser-generated bytes. Completed Payment Vouchers can now generate their signed PDF from stored signatures when no saved signed-PDF data URL exists. ZIP preparation skips an individually unavailable file while still downloading valid files and reports the skipped count.
+- Cash Advance form generation now tolerates missing legacy local signature images by producing the approved form without the unavailable image instead of returning a server error that cancels the ZIP. Updated the panel label from Signed forms to Forms because Travel Allowance and Claims provide approved forms without a signing stage.
+- Made the payment-type chip counts period-aware. Counts now use the same completed-status and This month/Last month/specific month/date-range rules as the ZIP selection, so historical totals no longer remain visible when the chosen period has no matching records.
+- Replaced My Requests non-draft navigation links with a modal overlay that embeds each payment type's existing detail and workflow-progress component. The first version used dynamic imports, but Next.js 16 Turbopack produced stale missing CSS chunks for those detail modules, so the overlay now uses stable static imports.
+- Added maintainable draft actions in the same shared component: Continue draft keeps the existing `draftId` form route and therefore restores the saved snapshot, while Delete draft opens a bin-icon confirmation modal, calls the existing manual-draft DELETE API and removes the row only after success.
+- Corrected Continue draft restoration: all manual-form links now include the `draft=1` flag required by `useManualFormDraft`; Payment Voucher also receives `mode=single`, and Claims uses its dedicated `/claims/draft` page. Centered both draft buttons and stopped the action cell's nowrap rule from leaking into the delete overlay; the confirmation modal is wider and wraps long copy safely.
+- Refined draft-action interactions: Continue Draft uses the navy secondary palette with a pale-blue lifted hover and no underline; Delete Draft uses the red danger palette, fills red and lifts on hover, and uses the darker-red pressed state.
+- Hardened Continue Draft against the parent table's higher-specificity anchor styles: its text and border now share `#1457d9`, and hover/focus/visited states explicitly suppress underlining.
+- Expanded the request-detail overlay to nearly the full viewport, removed inherited detail-page max-width constraints and reserved stable scrollbar space for a cleaner layout. Embedded Payment Records and Payment Voucher back links (and their simple wrappers) are hidden because the modal close control is now the sole return action.
+- Rebalanced the detail overlay after review: the outer dialog is now medium-sized at up to 1320px by 820px/86vh rather than nearly full-screen, while desktop embedded content keeps an 1100px minimum so detail and progress columns remain readable instead of collapsing.
+- Added a 22px/24px/28px inner gutter between the modal shell and embedded payment page, with a light-blue canvas and a rounded bordered inner surface. Mobile uses a compact 12px gutter.
