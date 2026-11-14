@@ -32,7 +32,6 @@ import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
 import { projectManagerFor } from "@/features/administration/admin-settings";
 
 import { ClaimConfirmation } from "./claim-confirmation";
-import { ClaimGoogleSheet, type ClaimSheetData } from "./claim-google-sheet";
 import { ManualDraftConfirmation } from "../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../shared/manual-draft-status";
 import { useManualFormDraft } from "../shared/use-manual-form-draft";
@@ -45,7 +44,6 @@ type ClaimDraftSnapshot = {
   directorId: string;
   techExtended: boolean;
   lines: ClaimLine[];
-  entryMode: "MANUAL" | "GOOGLE_SHEET";
   notes: string;
 };
 
@@ -103,9 +101,6 @@ export function ClaimForm({
     initialRecord?.lines?.length ? initialRecord.lines : [makeLine()],
   );
   const [receiptFiles, setReceiptFiles] = useState<Record<string, File>>({});
-  const [entryMode, setEntryMode] = useState<"MANUAL" | "GOOGLE_SHEET">(
-    "MANUAL",
-  );
   const [notes, setNotes] = useState(initialRecord?.notes ?? "");
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -126,7 +121,6 @@ export function ClaimForm({
       directorId,
       techExtended,
       lines: lines.map((line) => ({ ...line })),
-      entryMode,
       notes,
     }),
     restoreSnapshot: (snapshot) => {
@@ -140,7 +134,6 @@ export function ClaimForm({
           ? snapshot.lines.map((line) => ({ ...line }))
           : [makeLine()],
       );
-      setEntryMode(snapshot.entryMode ?? "MANUAL");
       setNotes(snapshot.notes ?? "");
       setReceiptFiles({});
       setConfirmed(false);
@@ -177,10 +170,17 @@ export function ClaimForm({
 
   const total = useMemo(() => claimTotal(claimType, lines), [claimType, lines]);
   const assignedManagerIds = useMemo(
-    () => [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))],
+    () => [
+      ...new Set(
+        lines
+          .map((line) => projectManagerFor(line.division))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ],
     [lines],
   );
-  const managerApproverId = assignedManagerIds.length === 1 ? assignedManagerIds[0] : undefined;
+  const managerApproverId =
+    assignedManagerIds.length === 1 ? assignedManagerIds[0] : undefined;
   const limit = claimLimit({ claimType, techExtended }, context);
   const type = claimTypeDetails(claimType);
   const limitExceeded = limit !== null && total > limit;
@@ -221,69 +221,6 @@ export function ClaimForm({
     );
   }
 
-  async function applyGoogleSheet(data: ClaimSheetData) {
-    if (!account) return setError("Sign in before creating a claim.");
-    const nextClaimDate = claimDate || data.claimDate;
-    const nextContact = contact || data.contact;
-    const input: CreateClaimInput = {
-      organizationId: "beta-arus-org",
-      requesterId: account.id,
-      requesterName: account.name,
-      requesterPosition: account.position,
-      requesterRole: account.role,
-      requesterContact: nextContact.trim(),
-      managerApproverId: (() => {
-        const ids = [...new Set(data.lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))];
-        return ids.length === 1 ? ids[0] : undefined;
-      })(),
-      directorApproverId: directorId,
-      claimDate: nextClaimDate,
-      claimType: data.claimType,
-      techExtended: false,
-      lines: data.lines,
-      notes: notes.trim() || undefined,
-    };
-    let activeContext = context;
-    try {
-      activeContext = await fetchClaimPolicyContext({
-        organizationId: "beta-arus-org",
-        requesterId: account.id,
-        claimDate: nextClaimDate,
-      });
-    } catch (caught) {
-      return setError(
-        caught instanceof Error
-          ? caught.message
-          : "Claim policy balances could not be loaded.",
-      );
-    }
-    const validation = validateClaimInput(input, activeContext);
-    if (validation) return setError(validation);
-    if (!input.managerApproverId)
-      return setError("Assign one project manager to every Claim division. Split Claims that have different project managers.");
-    if (!confirmed)
-      return setError(
-        "Confirm that the retrieved claim information and supporting links are correct.",
-      );
-    setSaving(true);
-    setError("");
-    try {
-      const record = initialRecord
-        ? await submitClaimDraft(initialRecord.id, input, {})
-        : await createClaimRequest(input, {});
-      notifyClaimSubmitted(record, account);
-      setCreated(record);
-    } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "The claim could not be submitted.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
   function selectReceipt(lineId: string, file?: File) {
     if (!file) return;
     if (!RECEIPT_TYPES.includes(file.type)) {
@@ -318,7 +255,9 @@ export function ClaimForm({
     if (!account) return setError("Sign in before creating a claim.");
     const input = buildInput(account);
     if (!input.managerApproverId)
-      return setError("Assign one project manager to every Claim division. Split Claims that have different project managers.");
+      return setError(
+        "Assign one project manager to every Claim division. Split Claims that have different project managers.",
+      );
     const validation = validateClaimInput(input, context);
     if (validation) return setError(validation);
     if (!confirmed)
@@ -394,7 +333,17 @@ export function ClaimForm({
       <ClaimConfirmation
         record={created}
         onCreateAnother={() => {
-          window.location.assign("/beta/payment-requests/claims/new");
+          if (initialRecord) {
+            window.location.assign("/beta/payment-requests/claims/new");
+            return;
+          }
+          setCreated(null);
+          setClaimType("EXPENSE");
+          setTechExtended(false);
+          setLines([makeLine()]);
+          setReceiptFiles({});
+          setNotes("");
+          setConfirmed(false);
         }}
       />
     );
@@ -402,52 +351,118 @@ export function ClaimForm({
   if (stage === "REVIEW")
     return (
       <main className={styles.compactReviewPage}>
-        {error && <div className={styles.error} role="alert">{error}</div>}
+        {error && (
+          <div className={styles.error} role="alert">
+            {error}
+          </div>
+        )}
         <article className={styles.compactReviewCard}>
           <div className={styles.compactReviewMain}>
             <header className={styles.compactReviewHeader}>
               <span className={styles.compactTypeBadge}>CL</span>
               <span>Claim request</span>
               <h1>Review Claim Request</h1>
-              <p>Check the request before submitting it into the approval workflow.</p>
+              <p>
+                Check the request before submitting it into the approval
+                workflow.
+              </p>
             </header>
             <section className={styles.compactReviewSection}>
               <h2>Claim summary</h2>
               <dl className={styles.compactSummaryGrid}>
-                <div><dt>Requester</dt><dd>{account?.name}</dd></div>
-                <div><dt>Claim type</dt><dd>{type.label}</dd></div>
-                <div><dt>Claim date</dt><dd>{claimDate}</dd></div>
-                <div><dt>Entries</dt><dd>{lines.length}</dd></div>
-                <div><dt>Notes</dt><dd>{notes || "—"}</dd></div>
+                <div>
+                  <dt>Requester</dt>
+                  <dd>{account?.name}</dd>
+                </div>
+                <div>
+                  <dt>Claim type</dt>
+                  <dd>{type.label}</dd>
+                </div>
+                <div>
+                  <dt>Claim date</dt>
+                  <dd>{claimDate}</dd>
+                </div>
+                <div>
+                  <dt>Entries</dt>
+                  <dd>{lines.length}</dd>
+                </div>
+                <div>
+                  <dt>Notes</dt>
+                  <dd>{notes || "—"}</dd>
+                </div>
               </dl>
             </section>
             <section className={styles.compactReviewSection}>
-              <h2>Claim entries <small>{lines.length} {lines.length === 1 ? "entry" : "entries"}</small></h2>
+              <h2>
+                Claim entries{" "}
+                <small>
+                  {lines.length} {lines.length === 1 ? "entry" : "entries"}
+                </small>
+              </h2>
               <div className={styles.compactTableWrap}>
                 <table className={styles.compactReviewTable}>
-                  <thead><tr><th>#</th><th>Date</th><th>Category</th><th>Description</th><th>Receipt</th><th>Amount</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Description</th>
+                      <th>Receipt</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {lines.map((line, index) => (
                       <tr key={line.id}>
-                        <td>{index + 1}</td><td>{line.expenseDate || "—"}</td>
-                        <td>{line.accountType || type.label}</td><td>{line.details || "—"}</td>
-                        <td>{line.receiptFileName || (line.receiptLink ? "Receipt link" : "—")}</td>
-                        <td><strong>RM {claimLineAmount(claimType, line).toFixed(2)}</strong></td>
+                        <td>{index + 1}</td>
+                        <td>{line.expenseDate || "—"}</td>
+                        <td>{line.accountType || type.label}</td>
+                        <td>{line.details || "—"}</td>
+                        <td>
+                          {line.receiptFileName ||
+                            (line.receiptLink ? "Receipt link" : "—")}
+                        </td>
+                        <td>
+                          <strong>
+                            RM {claimLineAmount(claimType, line).toFixed(2)}
+                          </strong>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot><tr><td colSpan={5}>Total claimed</td><td>RM {total.toFixed(2)}</td></tr></tfoot>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={5}>Total claimed</td>
+                      <td>RM {total.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </section>
           </div>
           <aside className={styles.compactReviewAside}>
-            <span>Total claimed</span><strong>RM {total.toFixed(2)}</strong>
-            <small>{lines.length} {lines.length === 1 ? "entry" : "entries"} · {type.label}</small>
-            <div className={styles.compactNextStep}><span>What happens next</span><p>After you submit, the claim enters the approval workflow.</p></div>
+            <span>Total claimed</span>
+            <strong>RM {total.toFixed(2)}</strong>
+            <small>
+              {lines.length} {lines.length === 1 ? "entry" : "entries"} ·{" "}
+              {type.label}
+            </small>
+            <div className={styles.compactNextStep}>
+              <span>What happens next</span>
+              <p>After you submit, the claim enters the approval workflow.</p>
+            </div>
             <div className={styles.compactReviewActions}>
-              <button className={styles.primaryButton} disabled={saving} type="button" onClick={submit}>
-                {saving ? "Submitting…" : initialRecord ? "Submit draft →" : "Submit claim →"}
+              <button
+                className={styles.primaryButton}
+                disabled={saving}
+                type="button"
+                onClick={submit}
+              >
+                {saving
+                  ? "Submitting…"
+                  : initialRecord
+                    ? "Submit draft →"
+                    : "Submit claim →"}
               </button>
               <button
                 className={styles.draftButton}
@@ -474,53 +489,141 @@ export function ClaimForm({
               : "Submit claims and itemized expenses with automatic policy checks."}
           </p>
         </div>
-        <span className={styles.heroPill}>{resumeDraft ? "Saved draft" : "Draft"}</span>
+        <span className={styles.heroPill}>
+          {resumeDraft ? "Saved draft" : "Draft"}
+        </span>
       </header>
-      <nav className={styles.entryModeTabs} aria-label="Claim entry method">
-        <button
-          className={entryMode === "MANUAL" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("MANUAL")}
-          type="button"
-        >
-          Manual form
-        </button>
-        <button
-          className={entryMode === "GOOGLE_SHEET" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("GOOGLE_SHEET")}
-          type="button"
-        >
-          Google Sheet link
-        </button>
-      </nav>
-      {error && entryMode === "GOOGLE_SHEET" && (
-        <div className={styles.error} role="alert">
-          {error}
-        </div>
-      )}
-      {entryMode === "GOOGLE_SHEET" ? (
-        <ClaimGoogleSheet
-          completionFields={
-            <>
+      <form className={styles.page} onSubmit={review}>
+        {error && (
+          <div className={styles.error} role="alert">
+            {error}
+          </div>
+        )}
+
+        <article className={styles.sheet}>
+          <header className={styles.documentBar}>
+            <div>
+              <strong>Official {type.label} sheet</strong>
+              <span>Reference assigned after submission</span>
+            </div>
+          </header>
+
+          <section className={styles.section}>
+            <SectionHeading
+              number="1"
+              title="Select claim type & policy matrix"
+            />
+            <div className={styles.policyMatrix}>
+              <label className={styles.claimTypeField}>
+                <span>Claim type</span>
+                <select
+                  value={claimType}
+                  onChange={(event) =>
+                    chooseType(event.target.value as ClaimType)
+                  }
+                >
+                  {CLAIM_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  Form fields adjust automatically based on the selected type.
+                </small>
+              </label>
+              <div
+                className={`${styles.policyChoice} ${context.techExtendedLockedUntil && claimType === "TECH" ? styles.policyLocked : ""}`}
+              >
+                <div className={styles.policyDescription}>
+                  <i aria-hidden="true" />
+                  <p>
+                    <strong>{type.label} policy:</strong> {type.description}
+                  </p>
+                </div>
+                {claimType === "TECH" && (
+                  <>
+                    <label className={styles.extendedChoice}>
+                      <input
+                        checked={techExtended}
+                        disabled={Boolean(context.techExtendedLockedUntil)}
+                        onChange={(event) =>
+                          setTechExtended(event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      <span>
+                        <strong>
+                          Use the extended RM1,000.00 Tech allowance
+                        </strong>
+                        <small>
+                          Prevents another Tech claim for three calendar years
+                          after submission.
+                        </small>
+                      </span>
+                    </label>
+                    {context.techExtendedLockedUntil && (
+                      <p className={styles.lockMessage}>
+                        Tech claims are locked until{" "}
+                        {displayDate(context.techExtendedLockedUntil)}.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.headingRow}>
+              <SectionHeading number="2" title="Claimant information" />
+              <span>Signed-in profile verified</span>
+            </div>
+            <div className={styles.fieldGrid}>
               <label>
-                <span>Claim date *</span>
+                <span>Staff name</span>
+                <input disabled value={account?.name ?? ""} />
+              </label>
+              <label>
+                <span>Position & title</span>
+                <input disabled value={account?.position ?? ""} />
+              </label>
+              <label>
+                <span>Role</span>
                 <input
+                  disabled
+                  value={account ? roleLabel(account.role) : ""}
+                />
+              </label>
+              <label>
+                <span>Claim date</span>
+                <input
+                  required
                   type="date"
                   value={claimDate}
                   onChange={(event) => setClaimDate(event.target.value)}
                 />
               </label>
-              <label>
-                <span>Contact *</span>
+              <label className={styles.halfField}>
+                <span>
+                  Contact details (notification & audit trail){" "}
+                  <em className={styles.requiredMark}>*</em>
+                </span>
                 <input
+                  required
                   value={contact}
                   onChange={(event) => setContact(event.target.value)}
                   placeholder="Phone number or email"
                 />
               </label>
               {account && (
-                <label>
-                  <span>Final approving Director *</span>
+                <label className={styles.halfField}>
+                  <span>
+                    Final approving Director{" "}
+                    <em className={styles.requiredMark}>*</em>
+                  </span>
                   <select
+                    required
                     value={directorId}
                     onChange={(event) => setDirectorId(event.target.value)}
                   >
@@ -538,317 +641,130 @@ export function ClaimForm({
                   </select>
                 </label>
               )}
-              <label className={styles.sheetCompletionWide}>
-                <span>Notes</span>
-                <textarea
-                  rows={3}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Optional context for the reviewer"
-                />
-              </label>
-              <label
-                className={`${styles.sheetCompletionWide} ${styles.sheetDeclaration}`}
-              >
-                <input
-                  checked={confirmed}
-                  onChange={(event) => setConfirmed(event.target.checked)}
-                  type="checkbox"
-                />
-                <span>
-                  I confirm that the retrieved claim and receipt links are
-                  correct.
-                </span>
-              </label>
-            </>
-          }
-          disabled={saving || loadingPolicy}
-          onApply={applyGoogleSheet}
-          onCancel={() => setEntryMode("MANUAL")}
-          onRetrieved={(data) => {
-            setClaimType(data.claimType);
-            setTechExtended(false);
-            if (data.claimDate) setClaimDate(data.claimDate);
-            if (data.contact) setContact(data.contact);
-            setError("");
-          }}
-        />
-      ) : (
-        <form className={styles.page} onSubmit={review}>
-          {error && (
-            <div className={styles.error} role="alert">
-              {error}
             </div>
-          )}
+          </section>
 
-          <article className={styles.sheet}>
-            <header className={styles.documentBar}>
-              <div>
-                <strong>Official {type.label} sheet</strong>
-                <span>Reference assigned after submission</span>
-              </div>
-            </header>
-
-            <section className={styles.section}>
+          <section className={styles.section}>
+            <div className={styles.itemsHeading}>
               <SectionHeading
-                number="1"
-                title="Select claim type & policy matrix"
+                number="3"
+                title={
+                  claimType === "MILEAGE"
+                    ? "Itemized trips"
+                    : "Itemized expenses"
+                }
+                copy={
+                  claimType === "MILEAGE"
+                    ? "Enter the route and distance for every trip."
+                    : "Attach a merchant receipt and state the operational purpose for each line item."
+                }
               />
-              <div className={styles.policyMatrix}>
-                <label className={styles.claimTypeField}>
-                  <span>Claim type</span>
-                  <select
-                    value={claimType}
-                    onChange={(event) =>
-                      chooseType(event.target.value as ClaimType)
-                    }
-                  >
-                    {CLAIM_TYPES.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                  <small>
-                    Form fields adjust automatically based on the selected type.
-                  </small>
-                </label>
-                <div
-                  className={`${styles.policyChoice} ${context.techExtendedLockedUntil && claimType === "TECH" ? styles.policyLocked : ""}`}
-                >
-                  <div className={styles.policyDescription}>
-                    <i aria-hidden="true" />
-                    <p>
-                      <strong>{type.label} policy:</strong> {type.description}
-                    </p>
-                  </div>
-                  {claimType === "TECH" && (
-                    <>
-                      <label className={styles.extendedChoice}>
-                        <input
-                          checked={techExtended}
-                          disabled={Boolean(context.techExtendedLockedUntil)}
-                          onChange={(event) =>
-                            setTechExtended(event.target.checked)
-                          }
-                          type="checkbox"
-                        />
-                        <span>
-                          <strong>
-                            Use the extended RM1,000.00 Tech allowance
-                          </strong>
-                          <small>
-                            Prevents another Tech claim for three calendar years
-                            after submission.
-                          </small>
-                        </span>
-                      </label>
-                      {context.techExtendedLockedUntil && (
-                        <p className={styles.lockMessage}>
-                          Tech claims are locked until{" "}
-                          {displayDate(context.techExtendedLockedUntil)}.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.section}>
-              <div className={styles.headingRow}>
-                <SectionHeading number="2" title="Claimant information" />
-                <span>Signed-in profile verified</span>
-              </div>
-              <div className={styles.fieldGrid}>
-                <label>
-                  <span>Staff name</span>
-                  <input disabled value={account?.name ?? ""} />
-                </label>
-                <label>
-                  <span>Position & title</span>
-                  <input disabled value={account?.position ?? ""} />
-                </label>
-                <label>
-                  <span>Role</span>
-                  <input
-                    disabled
-                    value={account ? roleLabel(account.role) : ""}
-                  />
-                </label>
-                <label>
-                  <span>Claim date</span>
-                  <input
-                    required
-                    type="date"
-                    value={claimDate}
-                    onChange={(event) => setClaimDate(event.target.value)}
-                  />
-                </label>
-                <label className={styles.halfField}>
-                  <span>
-                    Contact details (notification & audit trail){" "}
-                    <em className={styles.requiredMark}>*</em>
-                  </span>
-                  <input
-                    required
-                    value={contact}
-                    onChange={(event) => setContact(event.target.value)}
-                    placeholder="Phone number or email"
-                  />
-                </label>
-                {account && (
-                  <label className={styles.halfField}>
-                    <span>
-                      Final approving Director{" "}
-                      <em className={styles.requiredMark}>*</em>
-                    </span>
-                    <select
-                      required
-                      value={directorId}
-                      onChange={(event) => setDirectorId(event.target.value)}
-                    >
-                      <option value="">Choose a Director</option>
-                      {betaAccounts
-                        .filter(
-                          (item) =>
-                            item.role === "director" && item.id !== account.id,
-                        )
-                        .map((director) => (
-                          <option key={director.id} value={director.id}>
-                            {director.name} — {director.position}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                )}
-              </div>
-            </section>
-
-            <section className={styles.section}>
-              <div className={styles.itemsHeading}>
-                <SectionHeading
-                  number="3"
-                  title={
-                    claimType === "MILEAGE"
-                      ? "Itemized trips"
-                      : "Itemized expenses"
-                  }
-                  copy={
-                    claimType === "MILEAGE"
-                      ? "Enter the route and distance for every trip."
-                      : "Attach a merchant receipt and state the operational purpose for each line item."
-                  }
+              <button
+                className={styles.secondaryButton}
+                onClick={() => setLines((current) => [...current, makeLine()])}
+                type="button"
+              >
+                + Add {claimType === "MILEAGE" ? "trip" : "expense item"}
+              </button>
+            </div>
+            <div className={styles.tableWrap}>
+              {claimType === "MILEAGE" ? (
+                <MileageTable
+                  lines={lines}
+                  updateLine={updateLine}
+                  removeLine={removeLine}
                 />
-                <button
-                  className={styles.secondaryButton}
-                  onClick={() =>
-                    setLines((current) => [...current, makeLine()])
-                  }
-                  type="button"
-                >
-                  + Add {claimType === "MILEAGE" ? "trip" : "expense item"}
-                </button>
-              </div>
-              <div className={styles.tableWrap}>
-                {claimType === "MILEAGE" ? (
-                  <MileageTable
-                    lines={lines}
-                    updateLine={updateLine}
-                    removeLine={removeLine}
-                  />
-                ) : (
-                  <ExpenseTable
-                    claimType={claimType}
-                    lines={lines}
-                    receiptFiles={receiptFiles}
-                    selectReceipt={selectReceipt}
-                    updateLine={updateLine}
-                    removeLine={removeLine}
-                  />
-                )}
-              </div>
-              <PolicyBar
-                claimType={claimType}
-                context={context}
-                limit={limit}
-                limitExceeded={limitExceeded}
-                loading={loadingPolicy}
-                techExtended={techExtended}
-                total={total}
-              />
-            </section>
-
-            <section className={styles.section}>
-              <SectionHeading
-                number="4"
-                title="Purpose & context justification"
-              />
-              <label className={styles.notesField}>
-                <textarea
-                  rows={4}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Add clear operational context that will help the reviewer understand this claim"
+              ) : (
+                <ExpenseTable
+                  claimType={claimType}
+                  lines={lines}
+                  receiptFiles={receiptFiles}
+                  selectReceipt={selectReceipt}
+                  updateLine={updateLine}
+                  removeLine={removeLine}
                 />
-                <small>
-                  Explain the business purpose to support Manager review and
-                  Finance verification.
-                </small>
-              </label>
-            </section>
-
-            <footer className={styles.submitSection}>
-              {!initialRecord && (
-                <ManualDraftStatus message={draft.draftMessage} />
               )}
-              <label className={styles.declaration}>
-                <input
-                  checked={confirmed}
-                  onChange={(event) => setConfirmed(event.target.checked)}
-                  type="checkbox"
-                />
-                <span>
-                  I confirm that this claim is accurate, complies with Estuary
-                  policies, and all uploaded documents relate directly to the
-                  expenses listed.
-                </span>
-              </label>
-              <div className={styles.actions}>
-                <button
-                  className={styles.draftButton}
-                  disabled={saving || draft.isSavingDraft}
-                  onClick={saveDraft}
-                  type="button"
-                >
-                  {saving || draft.isSavingDraft
-                    ? "Saving…"
-                    : initialRecord
-                      ? "Save draft changes"
-                      : "Save as draft"}
-                </button>
-                <button
-                  className={styles.primaryButton}
-                  disabled={
-                    saving ||
-                    loadingPolicy ||
-                    Boolean(
-                      context.techExtendedLockedUntil && claimType === "TECH",
-                    )
-                  }
-                  type="submit"
-                >
-                  {saving
-                    ? "Submitting…"
-                    : loadingPolicy
-                      ? "Checking policy…"
-                      : "Continue to review →"}
-                </button>
-              </div>
-            </footer>
-          </article>
-        </form>
-      )}
+            </div>
+            <PolicyBar
+              claimType={claimType}
+              context={context}
+              limit={limit}
+              limitExceeded={limitExceeded}
+              loading={loadingPolicy}
+              techExtended={techExtended}
+              total={total}
+            />
+          </section>
+
+          <section className={styles.section}>
+            <SectionHeading
+              number="4"
+              title="Purpose & context justification"
+            />
+            <label className={styles.notesField}>
+              <textarea
+                rows={4}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Add clear operational context that will help the reviewer understand this claim"
+              />
+              <small>
+                Explain the business purpose to support Manager review and
+                Finance verification.
+              </small>
+            </label>
+          </section>
+
+          <footer className={styles.submitSection}>
+            {!initialRecord && (
+              <ManualDraftStatus message={draft.draftMessage} />
+            )}
+            <label className={styles.declaration}>
+              <input
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                I confirm that this claim is accurate, complies with Estuary
+                policies, and all uploaded documents relate directly to the
+                expenses listed.
+              </span>
+            </label>
+            <div className={styles.actions}>
+              <button
+                className={styles.draftButton}
+                disabled={saving || draft.isSavingDraft}
+                onClick={saveDraft}
+                type="button"
+              >
+                {saving || draft.isSavingDraft
+                  ? "Saving…"
+                  : initialRecord
+                    ? "Save draft changes"
+                    : "Save as draft"}
+              </button>
+              <button
+                className={styles.primaryButton}
+                disabled={
+                  saving ||
+                  loadingPolicy ||
+                  Boolean(
+                    context.techExtendedLockedUntil && claimType === "TECH",
+                  )
+                }
+                type="submit"
+              >
+                {saving
+                  ? "Submitting…"
+                  : loadingPolicy
+                    ? "Checking policy…"
+                    : "Continue to review →"}
+              </button>
+            </div>
+          </footer>
+        </article>
+      </form>
     </div>
   );
 }
@@ -999,7 +915,11 @@ function ExpenseTable({
               )}
             </td>
             <td>
-              <DecimalInput value={line.amount} placeholder="0.00" onValueChange={(amount) => updateLine(line.id, { amount })} />
+              <DecimalInput
+                value={line.amount}
+                placeholder="0.00"
+                onValueChange={(amount) => updateLine(line.id, { amount })}
+              />
             </td>
             <td>
               <RemoveButton
@@ -1093,7 +1013,13 @@ function MileageTable({
               />
             </td>
             <td>
-              <DecimalInput value={line.kilometers} placeholder="0.1" onValueChange={(kilometers) => updateLine(line.id, { kilometers })} />
+              <DecimalInput
+                value={line.kilometers}
+                placeholder="0.1"
+                onValueChange={(kilometers) =>
+                  updateLine(line.id, { kilometers })
+                }
+              />
             </td>
             <td>
               <strong>RM {mileageRate(line.kilometers).toFixed(2)}</strong>
@@ -1114,11 +1040,35 @@ function MileageTable({
   );
 }
 
-function DecimalInput({ value, placeholder, onValueChange }: { value: number; placeholder: string; onValueChange: (value: number) => void }) {
+function DecimalInput({
+  value,
+  placeholder,
+  onValueChange,
+}: {
+  value: number;
+  placeholder: string;
+  onValueChange: (value: number) => void;
+}) {
   const [text, setText] = useState(value ? String(value) : "");
-  return <input inputMode="decimal" placeholder={placeholder} type="text" value={text}
-    onBlur={() => { const numeric = Number(text.replace(",", ".")); setText(Number.isFinite(numeric) && text ? String(numeric) : ""); }}
-    onChange={(event) => { const next = event.target.value; if (!/^\d*(?:[.,]\d{0,2})?$/.test(next)) return; setText(next); const numeric = Number(next.replace(",", ".")); onValueChange(Number.isFinite(numeric) ? numeric : 0); }} />;
+  return (
+    <input
+      inputMode="decimal"
+      placeholder={placeholder}
+      type="text"
+      value={text}
+      onBlur={() => {
+        const numeric = Number(text.replace(",", "."));
+        setText(Number.isFinite(numeric) && text ? String(numeric) : "");
+      }}
+      onChange={(event) => {
+        const next = event.target.value;
+        if (!/^\d*(?:[.,]\d{0,2})?$/.test(next)) return;
+        setText(next);
+        const numeric = Number(next.replace(",", "."));
+        onValueChange(Number.isFinite(numeric) ? numeric : 0);
+      }}
+    />
+  );
 }
 
 function PolicyBar({
