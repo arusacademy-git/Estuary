@@ -176,7 +176,7 @@
   display: none;
 }
 
-.nestedNavigationItems[data-depth='2'] {
+.nestedNavigationItems[data-depth="2"] {
   margin-left: 8px;
 }
 
@@ -187,22 +187,22 @@
 }
 
 /* Sidebar icons are served from public/assets/icons. */
-.navigationItem[data-label='Dashboard']::before,
-.activeNavigationItem[data-label='Dashboard']::before,
-.navigationBranchButton[data-label='Payment Request']::before,
-.navigationItem[data-label='Pending Approvals']::before,
-.activeNavigationItem[data-label='Pending Approvals']::before,
-.navigationItem[data-label='Pending Processing']::before,
-.activeNavigationItem[data-label='Pending Processing']::before,
-.navigationBranchButton[data-label='Petty Cash']::before,
-.navigationItem[data-label='SQL Entry Tracker']::before,
-.activeNavigationItem[data-label='SQL Entry Tracker']::before,
-.navigationItem[data-label='Settings']::before,
-.activeNavigationItem[data-label='Settings']::before,
-.navigationItem[data-label='My Requests']::before,
-.activeNavigationItem[data-label='My Requests']::before,
-.navigationItem[data-label='Payment Records']::before,
-.activeNavigationItem[data-label='Payment Records']::before {
+.navigationItem[data-label="Dashboard"]::before,
+.activeNavigationItem[data-label="Dashboard"]::before,
+.navigationBranchButton[data-label="Payment Request"]::before,
+.navigationItem[data-label="Pending Approvals"]::before,
+.activeNavigationItem[data-label="Pending Approvals"]::before,
+.navigationItem[data-label="Pending Processing"]::before,
+.activeNavigationItem[data-label="Pending Processing"]::before,
+.navigationBranchButton[data-label="Petty Cash"]::before,
+.navigationItem[data-label="SQL Entry Tracker"]::before,
+.activeNavigationItem[data-label="SQL Entry Tracker"]::before,
+.navigationItem[data-label="Settings"]::before,
+.activeNavigationItem[data-label="Settings"]::before,
+.navigationItem[data-label="My Requests"]::before,
+.activeNavigationItem[data-label="My Requests"]::before,
+.navigationItem[data-label="Payment Records"]::before,
+.activeNavigationItem[data-label="Payment Records"]::before {
   display: block;
   width: 18px;
   height: 18px;
@@ -210,107 +210,69 @@
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  content: '';
+  content: "";
 }
 
-.navigationItem[data-label='Dashboard']::before,
-.activeNavigationItem[data-label='Dashboard']::before {
-  background-image: url('/assets/icons/dashboard-light.png');
+.navigationItem[data-label="Dashboard"]::before,
+.activeNavigationItem[data-label="Dashboard"]::before {
+  background-image: url("/assets/icons/dashboard-light.png");
 }
 
-.navigationBranchButton[data-label='Payment Request']::before {
-  background-image: url('/assets/icons/payment-request-light.png');
+.navigationBranchButton[data-label="Payment Request"]::before {
+  background-image: url("/assets/icons/payment-request-light.png");
 }
 
-.navigationItem[data-label='Pending Approvals']::before,
-.activeNavigationItem[data-label='Pending Approvals']::before {
-  background-image: url('/assets/icons/pending-approvals-light.png');
+.navigationItem[data-label="Pending Approvals"]::before,
+.activeNavigationItem[data-label="Pending Approvals"]::before {
+  background-image: url("/assets/icons/pending-approvals-light.png");
 }
 
-.navigationItem[data-label='Pending Processing']::before,
-.activeNavigationItem[data-label='Pending Processing']::before {
-  background-image: url('/assets/icons/pending-processing-light.png');
+.navigationItem[data-label="Pending Processing"]::before,
+.activeNavigationItem[data-label="Pending Processing"]::before {
+  background-image: url("/assets/icons/pending-processing-light.png");
 }
 
-.navigationBranchButton[data-label='Petty Cash']::before {
-  background-image: url('/assets/icons/petty-cash-light.png');
+.navigationBranchButton[data-label="Petty Cash"]::before {
+  background-image: url("/assets/icons/petty-cash-light.png");
 }
 
-.navigationItem[data-label='SQL Entry Tracker']::before,
-.activeNavigationItem[data-label='SQL Entry Tracker']::before {
-  background-image: url('/assets/icons/sql-entry-tracker-light.png');
+.navigationItem[data-label="SQL Entry Tracker"]::before,
+.activeNavigationItem[data-label="SQL Entry Tracker"]::before {
+  background-image: url("/assets/icons/sql-entry-tracker-light.png");
 }
 
-.navigationItem[data-label='Settings']::before,
-.activeNavigationItem[data-label='Settings']::before {
-  background-image: url('/assets/icons/administration-light.png');
+.navigationItem[data-label="Settings"]::before,
+.activeNavigationItem[data-label="Settings"]::before {
+  background-image: url("/assets/icons/administration-light.png");
 }
 
-.navigationItem[data-label='My Requests']::before,
-.activeNavigationItem[data-label='My Requests']::before {
-  background-image: url('/assets/icons/my-requests-light.png');
+.navigationItem[data-label="My Requests"]::before,
+.activeNavigationItem[data-label="My Requests"]::before {
+  background-image: url("/assets/icons/my-requests-light.png");
 }
 
-.navigationItem[data-label='Payment Records']::before,
-.activeNavigationItem[data-label='Payment Records']::before {
-  background-image: url('/assets/icons/payment-records-light.png');
+.navigationItem[data-label="Payment Records"]::before,
+.activeNavigationItem[data-label="Payment Records"]::before {
+  background-image: url("/assets/icons/payment-records-light.png");
 }
 
-.navigationBranchButton[data-label='Payment Request']> :first-child,
-.navigationBranchButton[data-label='Petty Cash']> :first-child,
-.navigationItem[data-label='Dashboard']> :first-child,
-.activeNavigationItem[data-label='Dashboard']> :first-child,
-.navigationItem[data-label='Pending Approvals']> :first-child,
-.activeNavigationItem[data-label='Pending Approvals']> :first-child,
-.navigationItem[data-label='Pending Processing']> :first-child,
-.activeNavigationItem[data-label='Pending Processing']> :first-child,
-.navigationItem[data-label='SQL Entry Tracker']> :first-child,
-.activeNavigationItem[data-label='SQL Entry Tracker']> :first-child,
-.navigationItem[data-label='Settings']> :first-child,
-.activeNavigationItem[data-label='Settings']> :first-child,
-.navigationItem[data-label='My Requests']> :first-child,
-.activeNavigationItem[data-label='My Requests']> :first-child,
-.navigationItem[data-label='Payment Records']> :first-child,
-.activeNavigationItem[data-label='Payment Records']> :first-child {
+.navigationBranchButton[data-label="Payment Request"]> :first-child,
+.navigationBranchButton[data-label="Petty Cash"]> :first-child,
+.navigationItem[data-label="Dashboard"]> :first-child,
+.activeNavigationItem[data-label="Dashboard"]> :first-child,
+.navigationItem[data-label="Pending Approvals"]> :first-child,
+.activeNavigationItem[data-label="Pending Approvals"]> :first-child,
+.navigationItem[data-label="Pending Processing"]> :first-child,
+.activeNavigationItem[data-label="Pending Processing"]> :first-child,
+.navigationItem[data-label="SQL Entry Tracker"]> :first-child,
+.activeNavigationItem[data-label="SQL Entry Tracker"]> :first-child,
+.navigationItem[data-label="Settings"]> :first-child,
+.activeNavigationItem[data-label="Settings"]> :first-child,
+.navigationItem[data-label="My Requests"]> :first-child,
+.activeNavigationItem[data-label="My Requests"]> :first-child,
+.navigationItem[data-label="Payment Records"]> :first-child,
+.activeNavigationItem[data-label="Payment Records"]> :first-child {
   flex: 1;
-}
-
-.nestedNavigationItem[data-label='Payment Voucher']::before,
-.nestedNavigationItem[data-label='Invoice Payment']::before,
-.nestedNavigationItem[data-label='Travel Allowance']::before,
-.nestedNavigationItem[data-label='Cash Advance']::before,
-.nestedNavigationItem[data-label='Petty Cash']::before,
-.nestedNavigationItem[data-label='Claims']::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border-radius: 50%;
-  background: var(--navigation-payment-color, #fff);
-}
-
-.nestedNavigationItem[data-label='Payment Voucher'] {
-  --navigation-payment-color: #07456b;
-}
-
-.nestedNavigationItem[data-label='Invoice Payment'] {
-  --navigation-payment-color: #0c6f50;
-}
-
-.nestedNavigationItem[data-label='Travel Allowance'] {
-  --navigation-payment-color: #f29221;
-}
-
-.nestedNavigationItem[data-label='Cash Advance'] {
-  --navigation-payment-color: #db224a;
-}
-
-.nestedNavigationItem[data-label='Petty Cash'] {
-  --navigation-payment-color: #fff;
-}
-
-.nestedNavigationItem[data-label='Claims'] {
-  --navigation-payment-color: #000;
 }
 
 .navigationItem,
@@ -341,7 +303,10 @@
 .navigationItem,
 .activeNavigationItem,
 .navigationBranchButton {
-  transition: color 150ms ease, background 150ms ease, transform 150ms ease;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .navigationItem:hover,
@@ -359,7 +324,7 @@
 }
 
 .activeNavigationItem::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
@@ -401,68 +366,66 @@
   margin-bottom: 28px;
 }
 
-.main[data-payment-context='payment-voucher'] {
+.main[data-payment-context="payment-voucher"] {
   --payment-context-color: #07456b;
 }
 
-.main[data-payment-context='invoice'] {
+.main[data-payment-context="invoice"] {
   --payment-context-color: #0c6f50;
 }
 
-.main[data-payment-context='travel'] {
+.main[data-payment-context="travel"] {
   --payment-context-color: #f29221;
 }
 
-.main[data-payment-context='cash-advance'] {
+.main[data-payment-context="cash-advance"] {
   --payment-context-color: #db224a;
 }
 
-.main[data-payment-context='claim'] {
+.main[data-payment-context="claim"] {
   --payment-context-color: #000;
 }
 
-.main[data-payment-context='petty-cash'] {
+.main[data-payment-context="petty-cash"] {
   --payment-context-color: #fff;
 }
 
 /* The payment-type indicator belongs to the request card itself. */
-.main[data-payment-context] :is([class*='detailMain'],
-  [class*='reviewCard'],
-  [class*='reviewReceipt'],
-  main[class*='receipt']) {
+.main[data-payment-context] :is([class*="detailMain"],
+  [class*="reviewCard"],
+  [class*="reviewReceipt"],
+  main[class*="receipt"]) {
   border-top: 4px solid var(--payment-context-color);
 }
 
-.main[data-payment-context='petty-cash'] :is([class*='detailMain'],
-  [class*='reviewCard'],
-  [class*='reviewReceipt'],
-  main[class*='receipt']) {
+.main[data-payment-context="petty-cash"] :is([class*="detailMain"],
+  [class*="reviewCard"],
+  [class*="reviewReceipt"],
+  main[class*="receipt"]) {
   box-shadow: inset 0 1px 0 #173a64;
 }
 
-.main[data-payment-context] [class*='pageHeader'] h1 {
+.main[data-payment-context] [class*="pageHeader"] h1 {
   font-size: clamp(22px, 2.3vw, 28px);
 }
 
-.main[data-payment-context] :is([class*='hero'], [class*='detailHero']) h1,
-.main[data-payment-context] :is([class*='hero'], [class*='detailHero']) h2 {
+.main[data-payment-context] :is([class*="hero"], [class*="detailHero"]) h1,
+.main[data-payment-context] :is([class*="hero"], [class*="detailHero"]) h2 {
   font-size: clamp(21px, 2.5vw, 28px);
 }
 
-.main[data-payment-context] [class*='readyBadge'] {
+.main[data-payment-context] [class*="readyBadge"] {
   border-color: color-mix(in srgb, var(--payment-context-color) 28%, #dbe3ee);
   color: var(--payment-context-color);
   background: color-mix(in srgb, var(--payment-context-color) 7%, #fff);
 }
 
-.main[data-payment-context] [class*='readyBadge'] i {
+.main[data-payment-context] [class*="readyBadge"] i {
   background: var(--payment-context-color);
 }
 
 /* Rails and workflow cards stay in the document flow; the page alone scrolls. */
-.main[data-payment-context] :is([class*='detailRail'],
-  [class*='rightRail'],
-  [class*='progressPanel']) {
+.main[data-payment-context] :is([class*="detailRail"], [class*="rightRail"], [class*="progressPanel"]) {
   position: static !important;
   top: auto !important;
   max-height: none !important;

@@ -27,6 +27,7 @@ import { PaymentTypeCard } from "@/features/payment-records/components/payment-t
 import { usePaymentVouchers } from "@/features/payment-voucher/hooks/use-payment-vouchers";
 
 import styles from "@/features/payment-records/components/payment-records.module.css";
+import { MyRequests } from "./my-requests";
 
 function visibleVouchersFor(
   vouchers: PaymentVoucherRecord[],
@@ -229,7 +230,7 @@ function pettyCashNeedsAttention(
   return false;
 }
 
-export default function PaymentRecordsPage() {
+export function PaymentRecords() {
   const router = useRouter();
   const searchParameters = useSearchParams();
   const personalOnly = searchParameters.get("scope") === "mine";
@@ -595,8 +596,7 @@ export default function PaymentRecordsPage() {
               (personalOnly ? manualDraftCountFor("CLAIM") : 0)
             }
             attentionCount={
-              claimAttention +
-              (personalOnly ? manualDraftCountFor("CLAIM") : 0)
+              claimAttention + (personalOnly ? manualDraftCountFor("CLAIM") : 0)
             }
             isLoading={categoryLoading.claim || categoryLoading.drafts}
             href={
@@ -669,5 +669,14 @@ export default function PaymentRecordsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function PaymentRecordsPage() {
+  const searchParameters = useSearchParams();
+  return searchParameters.get("scope") === "mine" ? (
+    <MyRequests />
+  ) : (
+    <PaymentRecords />
   );
 }
