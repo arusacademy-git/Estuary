@@ -24,7 +24,7 @@ const dashboardKpiIcons = [
   "/assets/icons/submitted-doc-icon.png",
   "/assets/icons/in-progress-clock-icon.png",
   "/assets/icons/completed-check-icon.png",
-  "/assets/icons/reconciliation-sync-icon.png",
+  "/assets/icons/reconciliation-sync-white.png",
 ] as const;
 
 type DashboardType = DashboardSummaryPaymentType;
@@ -307,7 +307,8 @@ function detailHref(
   const encoded = encodeURIComponent(id);
   const requesterAction =
     requesterId === account.id && requesterActionStatuses.has(status);
-  if (account.role === "staff" || requesterAction) return myRequestHref(type, id);
+  if (account.role === "staff" || requesterAction)
+    return myRequestHref(type, id);
   if (type === "PAYMENT_VOUCHER") return `/beta/payment-vouchers/${encoded}`;
   if (type === "EXPENSE_CLAIM")
     return account.role === "manager"
@@ -371,7 +372,8 @@ function myRequestRecordHref(record: DashboardRecord) {
 
 function pendingRecordHref(record: DashboardRecord, account: BetaAccount) {
   const isRequesterAction =
-    record.requesterId === account.id && requesterActionStatuses.has(record.status);
+    record.requesterId === account.id &&
+    requesterActionStatuses.has(record.status);
   if (account.role === "staff" || isRequesterAction)
     return myRequestRecordHref(record);
 
@@ -386,13 +388,16 @@ function needsRequesterAction(record: DashboardRecord, userId: string) {
       record.status === "AWAITING_RECIPIENT_SIGNATURE"
     )
       return !record.recipientLinkIssued;
-    if (requesterActionStatuses.has(record.status))
-      return true;
+    if (requesterActionStatuses.has(record.status)) return true;
   }
   return false;
 }
 
-function needsRoleAction(record: DashboardRecord, role: BetaRole, userId: string) {
+function needsRoleAction(
+  record: DashboardRecord,
+  role: BetaRole,
+  userId: string,
+) {
   if (role === "staff") return false;
   if (role === "manager")
     return record.type === "PAYMENT_VOUCHER"
@@ -409,9 +414,9 @@ function needsRoleAction(record: DashboardRecord, role: BetaRole, userId: string
             ? record.approverIds.includes(userId) &&
               !record.managerViewed &&
               !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
-          : ["PENDING_MANAGER_APPROVAL", "PENDING_MANAGER_REVIEW"].includes(
-              record.status,
-            ) && record.currentAssigneeId === userId;
+            : ["PENDING_MANAGER_APPROVAL", "PENDING_MANAGER_REVIEW"].includes(
+                record.status,
+              ) && record.currentAssigneeId === userId;
   if (role === "director")
     return record.type === "EXPENSE_CLAIM"
       ? record.approverIds.includes(userId) &&
@@ -527,6 +532,7 @@ function normalizeSummary(
 export default function BetaDashboardPage() {
   const router = useRouter();
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [now, setNow] = useState(() => new Date());
   const [records, setRecords] = useState<DashboardRecord[]>([]);
   const [analyticsRecords, setAnalyticsRecords] = useState<DashboardRecord[]>(
     [],
@@ -538,6 +544,11 @@ export default function BetaDashboardPage() {
   const [selectedActionType, setSelectedActionType] =
     useState<DashboardType | null>(null);
   const [makePaymentOpen, setMakePaymentOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!account) {
@@ -764,6 +775,11 @@ export default function BetaDashboardPage() {
               note: "Paid or fully closed",
             },
             {
+              label: "Requests needing action",
+              value: summary.attention,
+              note: "Assigned approvals and follow-up",
+            },
+            {
               label: "Advance reconciliation rate",
               value: `${reconciliationRate}%`,
               note: "Cash Advance and Petty Cash",
@@ -819,12 +835,18 @@ export default function BetaDashboardPage() {
     if (option.type === "PAYMENT_VOUCHER") return account.role !== "director";
     return true;
   });
-  const greeting = new Intl.DateTimeFormat("en-MY", {
+  const greetingDate = new Intl.DateTimeFormat("en-MY", {
     weekday: "short",
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date());
+  }).format(now);
+  const greetingPeriod =
+    now.getHours() < 12
+      ? "Good morning"
+      : now.getHours() < 18
+        ? "Good afternoon"
+        : "Good evening";
   const recentCreateType = recent[0]?.type;
   const recentCreateOption = visibleCreateOptions.find(
     (option) => option.type === recentCreateType,
@@ -834,7 +856,9 @@ export default function BetaDashboardPage() {
     <main className={styles.dashboard}>
       <section className={styles.hero}>
         <div>
-          <p>Good afternoon, {account.name.split(" ")[0]} · {greeting}</p>
+          <p>
+            {greetingPeriod}, {account.name.split(" ")[0]} · {greetingDate}
+          </p>
           <h1>{copy.title}</h1>
           <span>{copy.description}</span>
         </div>
@@ -845,7 +869,7 @@ export default function BetaDashboardPage() {
             onClick={() => setMakePaymentOpen((open) => !open)}
             type="button"
           >
-            <span aria-hidden="true">＋</span> Make a payment
+            <span aria-hidden="true">＋</span> Request a payment
           </button>
           <Link
             className={styles.followUpLink}
@@ -938,11 +962,13 @@ export default function BetaDashboardPage() {
             >
               <span className={styles.kpiVisual} aria-hidden="true">
                 {percentage !== null ? (
-                  <svg
-                    className={styles.kpiRing}
-                    viewBox="0 0 36 36"
-                  >
-                    <circle className={styles.kpiRingTrack} cx="18" cy="18" r="15.5" />
+                  <svg className={styles.kpiRing} viewBox="0 0 36 36">
+                    <circle
+                      className={styles.kpiRingTrack}
+                      cx="18"
+                      cy="18"
+                      r="15.5"
+                    />
                     <circle
                       className={styles.kpiRingValue}
                       cx="18"
@@ -957,15 +983,25 @@ export default function BetaDashboardPage() {
                     className={styles.kpiIcon}
                     src={iconPath}
                     alt=""
-                    width={16}
-                    height={16}
+                    width={96}
+                    height={96}
                   />
                 ) : null}
               </span>
               <span>{kpi.label}</span>
               <strong>{kpi.value}</strong>
               <small>{kpi.note}</small>
-              <Link href={account.role === "staff" ? "/beta/payment-records?scope=mine" : "/beta/payment-records"}>View list</Link>
+              <Link
+                href={
+                  account.role === "staff"
+                    ? "/beta/payment-records?scope=mine"
+                    : "/beta/payment-records"
+                }
+              >
+                {kpi.label === "Cash advance pending reconciliation"
+                  ? "Reconcile now"
+                  : "View list"}
+              </Link>
             </article>
           );
         })}
@@ -977,7 +1013,9 @@ export default function BetaDashboardPage() {
         aria-label="Needs your action"
       >
         <header>
-          <span>{summary.attention === 0 ? "✓ All caught up" : "● Action required"}</span>
+          <span>
+            {summary.attention === 0 ? "✓ All caught up" : "● Action required"}
+          </span>
           <h2>
             {summary.attention === 0
               ? "Nothing needs your action right now"
