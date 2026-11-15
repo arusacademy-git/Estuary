@@ -1269,7 +1269,7 @@
   padding: 16px 12px;
   border-bottom: 1px solid #e2e8f0;
   color: #334155;
-  font-size: .82rem;
+  font-size: 0.82rem;
   text-align: left;
   vertical-align: middle;
   overflow-wrap: anywhere;
@@ -1278,9 +1278,9 @@
 .tableWrapper th {
   color: #64748b;
   background: #f8fafc;
-  font-size: .7rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1345,7 +1345,7 @@
   border-radius: 8px;
   color: #1e3a5f;
   background: #fff;
-  font-size: .78rem;
+  font-size: 0.78rem;
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
@@ -1364,7 +1364,7 @@
   width: max-content;
   max-width: 100%;
   justify-content: center;
-  font-size: .68rem;
+  font-size: 0.68rem;
   white-space: nowrap;
 }
 
@@ -1392,6 +1392,72 @@
 .tableWrapper td {
   padding-inline: 9px;
   white-space: normal;
+}
+
+/* Travel-entry details need readable columns inside the request modal. */
+.detailMain .tableWrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-gutter: stable;
+}
+
+.detailMain .tableWrapper table {
+  width: 100%;
+  min-width: 1080px;
+  table-layout: auto;
+}
+
+.detailMain .tableWrapper th,
+.detailMain .tableWrapper td {
+  width: auto;
+  padding: 14px 12px;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+}
+
+.detailMain .tableWrapper th {
+  white-space: nowrap;
+}
+
+.detailMain .tableWrapper th:nth-child(1),
+.detailMain .tableWrapper td:nth-child(1) {
+  min-width: 44px;
+}
+
+.detailMain .tableWrapper th:nth-child(2),
+.detailMain .tableWrapper td:nth-child(2) {
+  min-width: 170px;
+}
+
+.detailMain .tableWrapper th:nth-child(3),
+.detailMain .tableWrapper td:nth-child(3) {
+  min-width: 105px;
+  white-space: nowrap;
+}
+
+.detailMain .tableWrapper th:nth-child(4),
+.detailMain .tableWrapper td:nth-child(4) {
+  min-width: 150px;
+  text-align: left !important;
+}
+
+.detailMain .tableWrapper th:nth-child(5),
+.detailMain .tableWrapper td:nth-child(5) {
+  min-width: 190px;
+}
+
+.detailMain .tableWrapper th:nth-child(6),
+.detailMain .tableWrapper td:nth-child(6) {
+  min-width: 170px;
+}
+
+.detailMain .tableWrapper th:nth-child(7),
+.detailMain .tableWrapper td:nth-child(7),
+.detailMain .tableWrapper th:nth-child(8),
+.detailMain .tableWrapper td:nth-child(8) {
+  min-width: 110px;
+  white-space: nowrap;
 }
 
 .tableWrapper th:nth-child(3),
@@ -1427,106 +1493,4 @@
   line-height: 1.2;
   text-align: center;
   white-space: normal;
-}
-
-/* Record detail: Travel Entries table.
-   Uses its own classes so the records-list `.tableWrapper` rules
-   (fixed layout, list column widths, break-anywhere wrapping) do not apply. */
-.entriesTableWrapper {
-  width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #fff;
-}
-
-.entriesTable {
-  width: 100%;
-  min-width: 880px;
-  table-layout: auto;
-  border-collapse: collapse;
-  background: #fff;
-}
-
-.entriesTable th,
-.entriesTable td {
-  padding: 14px 14px;
-  border-bottom: 1px solid #e2e8f0;
-  color: #334155;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  text-align: left;
-  vertical-align: top;
-  white-space: normal;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-.entriesTable th {
-  color: #64748b;
-  background: #f8fafc;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
-.entriesTable tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.entriesTable tbody tr:hover {
-  background: #f8fbff;
-}
-
-.entriesTable .entryIndex {
-  width: 44px;
-  color: #64748b;
-}
-
-.entriesTable .entryEmployee {
-  min-width: 180px;
-  color: #102a4c;
-  font-weight: 700;
-}
-
-.entriesTable .entryDate {
-  white-space: nowrap;
-}
-
-.entriesTable .entryProject {
-  min-width: 150px;
-}
-
-.entriesTable .entryReason {
-  min-width: 160px;
-}
-
-.entriesTable .entryMeals {
-  min-width: 170px;
-}
-
-.entriesTable .entryAmount {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.entriesTable .entryAmount strong {
-  display: block;
-  color: #0f2f57;
-  font-weight: 800;
-}
-
-.entriesTable .entryAmount small {
-  display: block;
-  max-width: 200px;
-  margin-top: 4px;
-  margin-left: auto;
-  color: #64748b;
-  font-size: 0.74rem;
-  white-space: normal;
-  text-align: right;
 }

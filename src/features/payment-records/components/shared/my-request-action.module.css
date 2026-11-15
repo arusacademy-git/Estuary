@@ -180,11 +180,6 @@
     display: none !important;
 }
 
-.detailContent div:has(> a[href^="/beta/payment-records"]),
-.detailContent p:has(> a[href^="/beta/payment-records"]) {
-    display: none !important;
-}
-
 .deleteModal {
     box-sizing: border-box;
     width: min(540px, 94vw);
