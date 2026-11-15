@@ -1,133 +1,299 @@
-import type { CashAdvanceRecord } from '@/domain/payment-requests/cash-advance/types';
-import { betaAccounts } from '@/lib/auth/beta-accounts';
-import styles from './cash-advance.module.css';
-
-const labels = [
-  'Request Submitted',
-  'Manager Review',
-  'Director Review',
-  'Finance Payment',
-  'Payment transaction proof uploaded',
-  'Reconciliation',
-  'Completed',
-] as const;
-
-type ProgressState = 'done' | 'active' | 'returned' | '';
+import type { CashAdvanceRecord } from "@/domain/payment-requests/cash-advance/types";
+import {
+  businessMinutesBetween,
+  formatBusinessDuration,
+} from "@/features/payment-records/components/shared/payment-progress-duration";
+import { PaymentProgressTimeline } from "@/features/payment-records/components/shared/payment-progress-timeline";
+import type {
+  PaymentProgressStage,
+  PaymentProgressSummary,
+} from "@/features/payment-records/components/shared/payment-progress-types";
+import { betaAccounts } from "@/lib/auth/beta-accounts";
 
 function accountName(id?: string) {
   if (!id) return undefined;
   return betaAccounts.find((account) => account.id === id)?.name ?? id;
 }
 
-function formatDate(value?: string) {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat('en-MY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  }).format(parsed);
+function currentRequestReturnStage(record: CashAdvanceRecord) {
+  if (record.returnedStage !== "REQUEST") return null;
+  if (!record.managerApprovedAt) return "manager-review";
+  if (!record.directorApprovedAt) return "director-review";
+  return "finance-payment";
 }
 
-function currentIndex(record: CashAdvanceRecord) {
-  if (record.status === 'PENDING_MANAGER_APPROVAL') return 1;
-  if (record.status === 'PENDING_DIRECTOR_APPROVAL') return 2;
-  if (record.status === 'PENDING_FINANCE_PROCESSING') return 3;
-  if (record.status === 'TRANSACTION_PROOF_UPLOADED') return 4;
-  if (record.status === 'PENDING_RECONCILIATION' || record.status === 'PENDING_FINANCE_RECONCILIATION') return 5;
-  if (record.status === 'COMPLETED') return 6;
-  if (record.returnedStage === 'RECONCILIATION') return 5;
-  if (record.directorApprovedAt) return 3;
-  if (record.managerApprovedAt) return 2;
-  return 1;
+function createStages(record: CashAdvanceRecord): PaymentProgressStage[] {
+  const completed = record.status === "COMPLETED";
+  const requestReturnStage = currentRequestReturnStage(record);
+  const reconciliationReturned =
+    record.status === "RETURNED_TO_STAFF" &&
+    record.returnedStage === "RECONCILIATION";
+  const proofUploaded =
+    Boolean(record.financeTransactionProof) ||
+    [
+      "TRANSACTION_PROOF_UPLOADED",
+      "PENDING_RECONCILIATION",
+      "PENDING_FINANCE_RECONCILIATION",
+      "COMPLETED",
+    ].includes(record.status) ||
+    reconciliationReturned;
+  const proofUploadedAt =
+    proofUploaded && record.status === "TRANSACTION_PROOF_UPLOADED"
+      ? record.updatedAt
+      : null;
+  const reconciliationSubmittedAt =
+    record.reconciliation && !record.reconciliation.isDraft
+      ? record.reconciliation.submittedAt
+      : null;
+
+  const stages: PaymentProgressStage[] = [
+    {
+      id: "submission",
+      kind: "submission",
+      title: "Cash Advance submitted",
+      description: "The requester signed and submitted the Cash Advance.",
+      actorName: record.requesterName,
+      actorRole: "Staff",
+      state: "complete",
+      receivedAt: record.staffSignedAt,
+      completedAt: record.staffSignedAt,
+    },
+    {
+      id: "manager-review",
+      kind: "approval",
+      title: "Manager review and approval",
+      description:
+        requestReturnStage === "manager-review"
+          ? "The Manager returned the request for correction."
+          : record.managerApprovedAt
+            ? "The Manager approved and forwarded the request to the Director."
+            : "Waiting for the assigned Manager to review and approve.",
+      actorName: accountName(record.managerApproverId),
+      actorRole: "Manager",
+      state:
+        requestReturnStage === "manager-review"
+          ? "returned"
+          : record.managerApprovedAt
+            ? "complete"
+            : record.status === "PENDING_MANAGER_APPROVAL"
+              ? "current"
+              : "pending",
+      receivedAt: record.staffSignedAt,
+      completedAt:
+        requestReturnStage === "manager-review"
+          ? record.returnedAt
+          : record.managerApprovedAt,
+    },
+    {
+      id: "director-review",
+      kind: "approval",
+      title: "Director review and approval",
+      description:
+        requestReturnStage === "director-review"
+          ? "The Director returned the request for correction."
+          : record.directorApprovedAt
+            ? "The Director approved and forwarded the request to Finance."
+            : "Director review begins after Manager approval.",
+      actorName: accountName(record.directorApproverId),
+      actorRole: "Director",
+      state:
+        requestReturnStage === "director-review"
+          ? "returned"
+          : record.directorApprovedAt
+            ? "complete"
+            : record.status === "PENDING_DIRECTOR_APPROVAL"
+              ? "current"
+              : "pending",
+      receivedAt: record.managerApprovedAt,
+      completedAt:
+        requestReturnStage === "director-review"
+          ? record.returnedAt
+          : record.directorApprovedAt,
+    },
+    {
+      id: "finance-payment",
+      kind: "payment",
+      title: "Finance payment release",
+      description:
+        requestReturnStage === "finance-payment"
+          ? "Finance returned the approved request for correction."
+          : record.financePaidAt
+            ? "Finance released the advance to the requester."
+            : "Finance records and releases payment after Director approval.",
+      actorName: accountName(record.financePaidById),
+      actorRole: "Finance",
+      state:
+        requestReturnStage === "finance-payment"
+          ? "returned"
+          : record.financePaidAt
+            ? "complete"
+            : record.status === "PENDING_FINANCE_PROCESSING"
+              ? "current"
+              : "pending",
+      receivedAt: record.directorApprovedAt,
+      completedAt:
+        requestReturnStage === "finance-payment"
+          ? record.returnedAt
+          : record.financePaidAt,
+    },
+    {
+      id: "transaction-proof",
+      kind: "payment",
+      title: "Payment transaction proof uploaded",
+      description: proofUploaded
+        ? "Finance uploaded the payment transaction proof."
+        : "Finance uploads transaction proof after releasing the advance.",
+      actorName: accountName(record.financePaidById),
+      actorRole: "Finance",
+      state: proofUploaded
+        ? "complete"
+        : record.status === "PAYMENT_PROCESSED"
+          ? "current"
+          : "pending",
+      receivedAt: record.financePaidAt,
+      completedAt: proofUploadedAt,
+    },
+    {
+      id: "reconciliation-submission",
+      kind: "reconciliation",
+      title: "Requester reconciliation",
+      description: reconciliationSubmittedAt
+        ? "The requester submitted actual expenses and balance-return evidence."
+        : "The requester must record actual expenses and return any remaining balance.",
+      actorName: record.requesterName,
+      actorRole: "Staff",
+      state: reconciliationSubmittedAt
+        ? "complete"
+        : record.status === "PENDING_RECONCILIATION" ||
+          record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? "current"
+          : "pending",
+      receivedAt: proofUploadedAt ?? record.financePaidAt,
+      completedAt: reconciliationSubmittedAt,
+    },
+    {
+      id: "finance-reconciliation",
+      kind: "reconciliation",
+      title: "Finance reconciliation review",
+      description: reconciliationReturned
+        ? "Finance returned the reconciliation for correction."
+        : completed
+          ? "Finance verified the expenses and returned-balance evidence."
+          : "Finance reviews the submitted reconciliation and supporting evidence.",
+      actorName: accountName(record.completedById ?? record.returnedById),
+      actorRole: "Finance",
+      state: reconciliationReturned
+        ? "returned"
+        : completed
+          ? "complete"
+          : record.status === "PENDING_FINANCE_RECONCILIATION"
+            ? "current"
+            : "pending",
+      receivedAt: reconciliationSubmittedAt,
+      completedAt: reconciliationReturned
+        ? record.returnedAt
+        : record.completedAt,
+    },
+    {
+      id: "completed",
+      kind: "completion",
+      title: "Reconciled and completed",
+      description: completed
+        ? "The Cash Advance is reconciled, closed and locked."
+        : "The record closes after Finance verifies the reconciliation.",
+      actorName: accountName(record.completedById),
+      actorRole: "Finance",
+      state: completed ? "complete" : "pending",
+      receivedAt: record.completedAt,
+      completedAt: record.completedAt,
+    },
+  ];
+
+  if (record.status === "RETURNED_TO_STAFF") {
+    const returnedIndex = stages.findIndex(
+      (stage) => stage.state === "returned",
+    );
+    const correctionIndex = returnedIndex >= 0 ? returnedIndex + 1 : 1;
+    stages.splice(correctionIndex, 0, {
+      id: reconciliationReturned
+        ? "reconciliation-correction"
+        : "request-correction",
+      kind: "correction",
+      title: reconciliationReturned
+        ? "Correct and resubmit reconciliation"
+        : "Correct and resubmit request",
+      description:
+        record.returnRemarks ||
+        "Review the return remarks, make the required corrections and resubmit.",
+      actorName: record.requesterName,
+      actorRole: "Staff",
+      state: "current",
+      receivedAt: record.returnedAt,
+    });
+  }
+
+  return stages;
 }
 
-function actorDate(actor: string | undefined, value?: string) {
-  const formatted = formatDate(value);
-  return actor && formatted ? `${actor} on ${formatted}` : actor ?? formatted;
-}
-
-function stepDetail(record: CashAdvanceRecord, index: number, state: ProgressState) {
-  if (state === 'returned') {
-    const returnedBy = actorDate(accountName(record.returnedById), record.returnedAt) ?? 'An approver';
-    const correction = record.returnedStage === 'RECONCILIATION' ? 'reconciliation' : 'request';
-    return `${returnedBy} returned the ${correction}. The original requester must correct and resubmit it.`;
-  }
-
-  if (index === 0) {
-    return `Signed by ${actorDate(record.requesterName, record.staffSignedAt ?? record.createdAt)} and sent to the assigned Manager.`;
-  }
-
-  if (index === 1) {
-    const manager = accountName(record.managerApproverId) ?? 'the assigned Manager';
-    if (state === 'done') return `Approved by ${actorDate(manager, record.managerApprovedAt)} and forwarded to the Director.`;
-    if (state === 'active') return `Waiting for ${manager} to review, sign, or return the request.`;
-    return 'Starts after the Staff request is submitted.';
-  }
-
-  if (index === 2) {
-    const director = accountName(record.directorApproverId) ?? 'the assigned Director';
-    if (state === 'done') return `Approved by ${actorDate(director, record.directorApprovedAt)} and forwarded to Finance.`;
-    if (state === 'active') return `Waiting for ${director} to review, sign, or return the request.`;
-    return 'Starts after Manager approval.';
-  }
-
-  if (index === 3) {
-    if (state === 'done') return `Payment recorded by ${actorDate(accountName(record.financePaidById) ?? 'Finance', record.financePaidAt)}. Staff can now reconcile the spending.`;
-    if (state === 'active') return 'Finance will record the payment or return the request for correction.';
-    return 'Starts after Director approval.';
-  }
-
-  if (index === 4) {
-    if (state === 'done') return `Finance uploaded the payment transaction proof for ${record.requestNumber}.`;
-    if (state === 'active') return 'The payment was processed. Finance is uploading its transaction proof.';
-    return 'Starts after Finance processes the Cash Advance payment.';
-  }
-
-  if (index === 5) {
-    if (record.reconciliation?.submittedAt && !record.reconciliation.isDraft && state === 'done') return `Submitted by ${actorDate(record.requesterName, record.reconciliation.submittedAt)} and verified by Finance.`;
-    if (record.reconciliation?.submittedAt && !record.reconciliation.isDraft) return `Submitted by ${actorDate(record.requesterName, record.reconciliation.submittedAt)}. Waiting for Finance verification.`;
-    if (state === 'active') return 'The original requester must record actual expenses and provide balance-return proof when required.';
-    return 'Starts after Finance records the Cash Advance payment.';
-  }
-
-  if (state === 'done') return `Closed by ${actorDate(accountName(record.completedById) ?? 'Finance', record.completedAt)}. No further action is required.`;
-  if (state === 'active') return 'Finance will complete the record after verifying the reconciliation.';
-  return 'Completes after Finance verifies the reconciliation.';
+function currentUpdate(record: CashAdvanceRecord) {
+  if (record.status === "RETURNED_TO_STAFF")
+    return record.returnedStage === "RECONCILIATION"
+      ? "Reconciliation correction required"
+      : "Request correction required";
+  const labels: Record<CashAdvanceRecord["status"], string> = {
+    PENDING_MANAGER_APPROVAL: "Waiting for Manager approval",
+    PENDING_DIRECTOR_APPROVAL: "Waiting for Director approval",
+    PENDING_FINANCE_PROCESSING: "Waiting for Finance payment",
+    PAYMENT_PROCESSED: "Waiting for transaction proof",
+    TRANSACTION_PROOF_UPLOADED: "Reconciliation required",
+    PENDING_RECONCILIATION: "Reconciliation required",
+    PENDING_FINANCE_RECONCILIATION: "Finance reviewing reconciliation",
+    RETURNED_TO_STAFF: "Correction required",
+    COMPLETED: "Cash Advance reconciled",
+  };
+  return labels[record.status];
 }
 
 export function CashAdvanceProgress({ record }: { record: CashAdvanceRecord }) {
-  const activeIndex = currentIndex(record);
-  const returned = record.status === 'RETURNED_TO_STAFF';
-  const completed = record.status === 'COMPLETED';
+  const stages = createStages(record);
+  const lifecycleEnd = record.completedAt ?? new Date();
+  const summaries: PaymentProgressSummary[] = [
+    {
+      label: "Current update",
+      value: currentUpdate(record),
+      tone:
+        record.status === "COMPLETED"
+          ? "success"
+          : record.status === "RETURNED_TO_STAFF"
+            ? "warning"
+            : "active",
+    },
+    {
+      label:
+        record.status === "COMPLETED"
+          ? "Total lifecycle time"
+          : "Elapsed lifecycle time",
+      value: formatBusinessDuration(
+        businessMinutesBetween(record.staffSignedAt, lifecycleEnd),
+      ),
+      tone: record.status === "COMPLETED" ? "success" : "neutral",
+    },
+  ];
 
-  return (
-    <section className={styles.sideCard}>
-      <div className={styles.progressHeader}>
-        <strong>Payment progress</strong>
-        <span>Step {activeIndex + 1} of {labels.length}</span>
-      </div>
-      <ol className={styles.progress}>
-        {labels.map((label, index) => {
-          const state: ProgressState = completed
-            ? 'done'
-            : returned && index === activeIndex
-              ? 'returned'
-              : index < activeIndex
-                ? 'done'
-                : index === activeIndex
-                  ? 'active'
-                  : '';
-          return (
-            <li className={state ? styles[state] : undefined} key={label}>
-              <span className={styles.dot}>{state === 'done' ? '✓' : state === 'returned' ? '×' : ''}</span>
-              <span className={styles.stepCopy}>
-                <strong>{label}</strong>
-                <small>{stepDetail(record, index, state)}</small>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
+  if (record.financePaidAt) {
+    summaries.push({
+      label: "Reconciliation period",
+      value: formatBusinessDuration(
+        businessMinutesBetween(record.financePaidAt, lifecycleEnd),
+      ),
+      tone:
+        record.status === "COMPLETED"
+          ? "success"
+          : record.status === "RETURNED_TO_STAFF"
+            ? "warning"
+            : "neutral",
+    });
+  }
+
+  return <PaymentProgressTimeline stages={stages} summaries={summaries} />;
 }

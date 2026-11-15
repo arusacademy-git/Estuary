@@ -735,6 +735,26 @@
     background: #0f315d;
 }
 
+/* Keep the unsubmitted-draft confirmation compact despite the wider
+   submitted-Claim confirmation layout declared later in this module. */
+.confirmationPage.draftConfirmationPage {
+    width: min(520px, 100%);
+    padding: 20px 0 40px;
+}
+
+.confirmationCard.draftConfirmationCard {
+    display: grid;
+    justify-items: center;
+    padding: 34px 32px;
+    text-align: center;
+}
+
+.draftConfirmationCard .draftConfirmationSummary,
+.draftConfirmationCard .confirmationNote,
+.draftConfirmationCard .draftConfirmationActions {
+    width: min(420px, 100%);
+}
+
 @media (max-width: 900px) {
     .typeGrid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2124,291 +2144,6 @@
     text-decoration: none;
 }
 
-/* Google Sheet assisted Claim entry */
-.entryModeTabs {
-    display: flex;
-    width: fit-content;
-    gap: 5px;
-    margin-bottom: 18px;
-    padding: 5px;
-    border: 1px solid #dbe3ec;
-    border-radius: 11px;
-    background: #fff;
-}
-
-.entryModeTabs button {
-    min-height: 38px;
-    padding: 8px 15px;
-    border: 0;
-    border-radius: 7px;
-    color: #536980;
-    background: transparent;
-    font: inherit;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.entryModeTabs .entryModeActive,
-.entryModeTabs button[data-active="true"] {
-    color: #fff;
-    background: #153f70;
-}
-
-.googleSheetCard {
-    display: grid;
-    gap: 20px;
-    padding: 28px 30px;
-    border: 1px solid #dbe3ec;
-    border-radius: 15px;
-    background: #fff;
-}
-
-.googleSheetHeader {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-}
-
-.googleSheetHeader span {
-    color: #2563eb;
-    font-size: 10px;
-    font-weight: 850;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.googleSheetHeader h2 {
-    margin: 7px 0;
-    color: #142f50;
-    font-size: 23px;
-}
-
-.googleSheetHeader p {
-    margin: 0;
-    color: #6c7d92;
-    font-size: 12px;
-}
-
-.claimSheetSteps {
-    display: grid;
-    gap: 14px;
-}
-
-.claimSheetStep {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
-    gap: 16px;
-    padding: 18px;
-    border: 1px solid #dbe7f5;
-    border-radius: 12px;
-    background: #f8fbff;
-}
-
-.claimSheetStepWhite {
-    background: #fff;
-}
-
-.claimSheetStepNumber {
-    display: grid;
-    width: 40px;
-    height: 40px;
-    place-items: center;
-    border-radius: 11px;
-    color: #1d4ed8;
-    background: #e8f1ff;
-    font-size: 14px;
-    font-weight: 850;
-}
-
-.claimSheetStep h3 {
-    margin: 0;
-    color: #142f50;
-    font-size: 15px;
-}
-
-.claimSheetStep p {
-    margin: 5px 0 13px;
-    color: #64748b;
-    font-size: 12px;
-}
-
-.claimSheetStep>div>label,
-.googleSheetFields {
-    width: 100%;
-}
-
-.claimSheetStep>div>label {
-    display: grid;
-    gap: 7px;
-    color: #536980;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.claimSheetStep>div>label select {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 42px;
-    padding: 10px 12px;
-    border: 1px solid #cad7e6;
-    border-radius: 8px;
-    color: #17395f;
-    background: #fff;
-    font: inherit;
-    font-size: 12px;
-    text-transform: none;
-}
-
-.googleSheetFields {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: 13px;
-}
-
-.googleSheetFields label {
-    display: grid;
-    gap: 7px;
-    color: #536980;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.googleSheetFields input,
-.googleSheetFields select {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 42px;
-    border: 1px solid #cad7e6;
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: #17395f;
-    background: #fff;
-    font: inherit;
-    font-size: 12px;
-    text-transform: none;
-}
-
-.googleSheetFields .primaryButton {
-    min-height: 42px;
-}
-
-.googleSheetSummary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    overflow: hidden;
-    border: 1px solid #e0e7ef;
-    border-radius: 10px;
-}
-
-.googleSheetSummary>div {
-    display: grid;
-    gap: 5px;
-    padding: 14px 16px;
-    border-right: 1px solid #e7edf4;
-}
-
-.googleSheetSummary>div:last-child {
-    border-right: 0;
-}
-
-.googleSheetSummary span {
-    color: #7b899b;
-    font-size: 9px;
-    font-weight: 750;
-    text-transform: uppercase;
-}
-
-.googleSheetSummary strong {
-    color: #1a385c;
-    font-size: 12px;
-}
-
-.sheetCompletion {
-    display: grid;
-    gap: 14px;
-    padding: 18px;
-    border: 1px solid #e0e7ef;
-    border-radius: 10px;
-    background: #f8fafc;
-}
-
-.sheetCompletion h3 {
-    margin: 0;
-    color: #1a385c;
-    font-size: 16px;
-}
-
-.sheetCompletion p {
-    margin: 4px 0 0;
-    color: #6c7d92;
-    font-size: 12px;
-}
-
-.sheetCompletionGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.sheetCompletionGrid label {
-    display: grid;
-    gap: 7px;
-    min-width: 0;
-    color: #536980;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.sheetCompletionGrid input:not([type="checkbox"]),
-.sheetCompletionGrid select,
-.sheetCompletionGrid textarea {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 42px;
-    border: 1px solid #cad7e6;
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: #17395f;
-    background: #fff;
-    font: inherit;
-    font-size: 12px;
-    text-transform: none;
-}
-
-.sheetCompletionWide {
-    grid-column: 1 / -1;
-}
-
-.sheetDeclaration {
-    display: flex !important;
-    align-items: center;
-    grid-template-columns: auto 1fr;
-    color: #314b6b !important;
-    font-size: 12px !important;
-    font-weight: 650 !important;
-    text-transform: none !important;
-}
-
-.applySheetButton {
-    justify-self: end;
-    min-height: 41px;
-    border: 1px solid #153f70;
-    border-radius: 8px;
-    padding: 9px 16px;
-    color: #fff;
-    background: #153f70;
-    font: inherit;
-    font-size: 11px;
-    font-weight: 850;
-    cursor: pointer;
-}
-
 .receiptLink {
     display: grid;
     min-width: 150px;
@@ -2439,35 +2174,6 @@
     opacity: 0;
 }
 
-@media (max-width: 760px) {
-    .googleSheetHeader {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .googleSheetFields,
-    .googleSheetSummary {
-        grid-template-columns: 1fr;
-    }
-
-    .sheetCompletionGrid {
-        grid-template-columns: 1fr;
-    }
-
-    .sheetCompletionWide {
-        grid-column: auto;
-    }
-
-    .googleSheetSummary>div {
-        border-right: 0;
-        border-bottom: 1px solid #e7edf4;
-    }
-
-    .googleSheetSummary>div:last-child {
-        border-bottom: 0;
-    }
-}
-
 /* Compact requester review: the summary and submission action remain visible together. */
 .compactReviewPage {
     padding: 20px;
@@ -2481,7 +2187,7 @@
 
 .compactReviewCard {
     display: grid;
-    grid-template-columns: minmax(0, 1.75fr) minmax(280px, .85fr);
+    grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.85fr);
     max-width: 1080px;
     margin: 0 auto;
     overflow: hidden;
@@ -2504,7 +2210,7 @@
 .compactReviewHeader>span:not(.compactTypeBadge) {
     color: #526b89;
     font-size: 9px;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
@@ -2588,7 +2294,7 @@
     color: #60738d;
     background: #f3f6fa;
     font-size: 8px;
-    letter-spacing: .04em;
+    letter-spacing: 0.04em;
     text-align: left;
     text-transform: uppercase;
 }
@@ -2623,7 +2329,7 @@
 .compactNextStep span {
     color: #647a96;
     font-size: 9px;
-    letter-spacing: .06em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 

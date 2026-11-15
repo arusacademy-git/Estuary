@@ -1,7 +1,6 @@
 "use client";
-import { createRuntimeId } from '@/lib/ids/runtime-id';
 
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 
 import {
   createCashAdvance,
@@ -22,14 +21,9 @@ import {
   type CashAdvanceRequestLine,
 } from "@/domain/payment-requests/cash-advance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { projectManagerFor } from "@/features/administration/admin-settings";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 import { BANK_NAME_SELECT_OPTIONS } from "@/shared/constants/payment-options";
 import { CashAdvanceConfirmation } from "./cash-advance-confirmation";
-import {
-  CashAdvanceRequestGoogleSheet,
-  type CashAdvanceRequestSheetData,
-} from "./cash-advance-request-google-sheet";
 import { CashAdvanceRequestLines } from "./cash-advance-request-lines";
 import { CashAdvanceReview } from "./cash-advance-review";
 import styles from "../cash-advance.module.css";
@@ -39,7 +33,7 @@ const today = () =>
     .toISOString()
     .slice(0, 10);
 const makeLine = (): CashAdvanceRequestLine => ({
-  id: createRuntimeId(),
+  id: crypto.randomUUID(),
   description: "",
   purpose: "",
   amount: 0,
@@ -117,10 +111,6 @@ export function CashAdvanceForm({
   const [documents, setDocuments] = useState<CashAdvanceDocument[]>(
     initialRecord?.supportingDocuments ?? [],
   );
-  const [entryMode, setEntryMode] = useState<"MANUAL" | "GOOGLE_SHEET">(
-    "MANUAL",
-  );
-  const [sheetMessage, setSheetMessage] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [stage, setStage] = useState<"FORM" | "REVIEW" | "CONFIRMATION">(
     "FORM",
@@ -134,7 +124,7 @@ export function CashAdvanceForm({
   const draft = useManualFormDraft({
     paymentType: "CASH_ADVANCE",
     requesterId: account?.id,
-    disabled: Boolean(initialRecord) || entryMode !== "MANUAL",
+    disabled: Boolean(initialRecord),
     getSnapshot: () => ({
       requestDate,
       contact,
@@ -185,68 +175,14 @@ export function CashAdvanceForm({
   });
 
   const { signature: activeSignature } = useUserSignature(account?.id);
-  const selectedProject = isOtherProject ? otherProject.trim() : projectName;
-  const assignedManagerId = projectManagerFor(selectedProject);
-  const managers = betaAccounts.filter((item) => item.id === assignedManagerId);
+  const managers = betaAccounts.filter((item) => item.role === "manager");
   const directors = betaAccounts.filter((item) => item.role === "director");
-  useEffect(() => {
-    if (initialRecord) return;
-    queueMicrotask(() => setManagerId(assignedManagerId ?? ""));
-  }, [assignedManagerId, initialRecord]);
   const total = useMemo(() => cashAdvanceRequestedTotal(lines), [lines]);
 
   function updateLine(id: string, patch: Partial<CashAdvanceRequestLine>) {
     setLines((current) =>
       current.map((line) => (line.id === id ? { ...line, ...patch } : line)),
     );
-  }
-
-  function applyGoogleSheet(data: CashAdvanceRequestSheetData) {
-    const nextRequestDate = requestDate || data.requestDate;
-    const nextContact = contact || data.contact;
-    const nextPurpose =
-      purpose.trim() ||
-      Array.from(
-        new Set(data.lines.map((line) => line.purpose.trim()).filter(Boolean)),
-      ).join("; ");
-    if (
-      !nextRequestDate ||
-      !nextContact.trim() ||
-      !managerId ||
-      !directorId ||
-      !nextPurpose
-    ) {
-      setError(
-        "Complete the request date, contact, Manager, Director and purpose on this page.",
-      );
-      return;
-    }
-    if (!(isOtherProject ? otherProject.trim() : projectName)) {
-      setError("Select or enter the Project Name on this page.");
-      return;
-    }
-    const nextAccountHolder = accountHolderName || data.accountHolderName;
-    const nextBankName = normalizeBankName(bankName || data.bankName);
-    const nextBankAccount = bankAccountNumber || data.bankAccountNumber;
-    if (
-      !nextAccountHolder.trim() ||
-      !nextBankName.trim() ||
-      !nextBankAccount.trim()
-    ) {
-      setError("Complete the bank account details on this page.");
-      return;
-    }
-    setRequestDate(nextRequestDate);
-    setContact(nextContact);
-    setAccountHolderName(nextAccountHolder);
-    setBankName(nextBankName);
-    setBankAccountNumber(nextBankAccount);
-    setLines(data.lines);
-    setPurpose(nextPurpose);
-    setError("");
-    setSheetMessage("");
-    setStage("REVIEW");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function selectFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -420,191 +356,13 @@ export function CashAdvanceForm({
           </span>
         </div>
       </header>
-      <nav
-        className={styles.entryModeTabs}
-        aria-label="Cash Advance entry method"
-      >
-        <button
-          className={entryMode === "MANUAL" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("MANUAL")}
-          type="button"
-        >
-          Manual form
-        </button>
-        <button
-          className={entryMode === "GOOGLE_SHEET" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("GOOGLE_SHEET")}
-          type="button"
-        >
-          Google Sheet link
-        </button>
-      </nav>
-      {error && entryMode === "GOOGLE_SHEET" && (
-        <div className={styles.error}>{error}</div>
-      )}
-      {entryMode === "GOOGLE_SHEET" ? (
-        <CashAdvanceRequestGoogleSheet
-          completionFields={
-            <>
-              <div className={styles.field}>
-                <label>
-                  Request date <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  type="date"
-                  value={requestDate}
-                  onChange={(event) => setRequestDate(event.target.value)}
-                />
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Contact <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  value={contact}
-                  onChange={(event) => setContact(event.target.value)}
-                  placeholder="Phone or email"
-                />
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Project Name <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={isOtherProject ? "__OTHER__" : projectName}
-                  onChange={(event) => {
-                    setIsOtherProject(event.target.value === "__OTHER__");
-                    setProjectName(
-                      event.target.value === "__OTHER__"
-                        ? ""
-                        : event.target.value,
-                    );
-                  }}
-                >
-                  <option value="">Choose project</option>
-                  {CASH_ADVANCE_PROJECTS.map((project) => (
-                    <option key={project}>{project}</option>
-                  ))}
-                  <option value="__OTHER__">Other</option>
-                </select>
-              </div>
-              {isOtherProject && (
-                <div className={styles.field}>
-                  <label>
-                    Other Project Name{" "}
-                    <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <input
-                    value={otherProject}
-                    onChange={(event) => setOtherProject(event.target.value)}
-                  />
-                </div>
-              )}
-              <div className={styles.field}>
-                <label>
-                  Manager approver <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={managerId}
-                  onChange={(event) => setManagerId(event.target.value)}
-                >
-                  <option value="">Choose Manager</option>
-                  {managers.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={`${styles.field} ${styles.full}`}>
-                <label>
-                  Director approver{" "}
-                  <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={directorId}
-                  onChange={(event) => setDirectorId(event.target.value)}
-                >
-                  <option value="">Choose Director</option>
-                  {directors.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={`${styles.field} ${styles.full}`}>
-                <label>Purpose</label>
-                <textarea
-                  value={purpose}
-                  onChange={(event) => setPurpose(event.target.value)}
-                  placeholder="Purpose of this Cash Advance"
-                />
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Account holder <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  value={accountHolderName}
-                  onChange={(event) => setAccountHolderName(event.target.value)}
-                />
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Bank name <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={bankName}
-                  onChange={(event) => setBankName(event.target.value)}
-                >
-                  <option value="">Choose a bank</option>
-                  {BANK_NAME_SELECT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Account number <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  value={bankAccountNumber}
-                  onChange={(event) => setBankAccountNumber(event.target.value)}
-                />
-              </div>
-            </>
-          }
-          onApply={applyGoogleSheet}
-          onCancel={() => setEntryMode("MANUAL")}
-          onRetrieved={(data) => {
-            if (data.requestDate) setRequestDate(data.requestDate);
-            if (data.contact) setContact(data.contact);
-            if (data.accountHolderName)
-              setAccountHolderName(data.accountHolderName);
-            if (data.bankName) setBankName(normalizeBankName(data.bankName));
-            if (data.bankAccountNumber)
-              setBankAccountNumber(data.bankAccountNumber);
-            const importedPurpose = Array.from(
-              new Set(
-                data.lines.map((line) => line.purpose.trim()).filter(Boolean),
-              ),
-            ).join("; ");
-            if (importedPurpose) setPurpose(importedPurpose);
-            setError("");
-          }}
-        />
-      ) : (
-        <form className={styles.page} onSubmit={review}>
+      <form className={styles.page} onSubmit={review}>
           {initialRecord?.returnRemarks && (
             <div className={styles.returnNotice}>
               <strong>Changes requested</strong>
               <p>{initialRecord.returnRemarks}</p>
             </div>
           )}
-          {sheetMessage && <div className={styles.notice}>{sheetMessage}</div>}
           {error && <div className={styles.error}>{error}</div>}
           <div className={styles.formReceipt}>
             <section className={styles.receiptSection}>
@@ -848,8 +606,7 @@ export function CashAdvanceForm({
               </div>
             </section>
           </div>
-        </form>
-      )}
+      </form>
     </div>
   );
 }
