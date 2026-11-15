@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { ListPagination } from "@/components/ui/list-pagination/list-pagination";
@@ -76,43 +76,43 @@ const createOptions: Array<{
   description: string;
   href: string;
 }> = [
-  {
-    type: "PAYMENT_VOUCHER",
-    label: "Payment Voucher",
-    description: "Pay a person or vendor",
-    href: "/beta/payment-vouchers/new",
-  },
-  {
-    type: "INVOICE_PAYMENT",
-    label: "Invoice Payment",
-    description: "Pay against a supplier invoice",
-    href: "/beta/payment-requests/invoice-payment/new",
-  },
-  {
-    type: "TRAVEL_ALLOWANCE",
-    label: "Travel Allowance",
-    description: "Submit travel-related allowances",
-    href: "/beta/payment-requests/travel-allowance/new",
-  },
-  {
-    type: "CASH_ADVANCE",
-    label: "Cash Advance",
-    description: "Get money before an activity",
-    href: "/beta/payment-requests/cash-advance/new",
-  },
-  {
-    type: "PETTY_CASH",
-    label: "Petty Cash",
-    description: "Small day-to-day spending",
-    href: "/beta/payment-requests/petty-cash/new",
-  },
-  {
-    type: "CLAIM",
-    label: "Claims",
-    description: "Get reimbursed for an expense",
-    href: "/beta/payment-requests/claims/new",
-  },
-];
+    {
+      type: "PAYMENT_VOUCHER",
+      label: "Payment Voucher",
+      description: "Pay a person or vendor",
+      href: "/beta/payment-vouchers/new",
+    },
+    {
+      type: "INVOICE_PAYMENT",
+      label: "Invoice Payment",
+      description: "Pay against a supplier invoice",
+      href: "/beta/payment-requests/invoice-payment/new",
+    },
+    {
+      type: "TRAVEL_ALLOWANCE",
+      label: "Travel Allowance",
+      description: "Submit travel-related allowances",
+      href: "/beta/payment-requests/travel-allowance/new",
+    },
+    {
+      type: "CASH_ADVANCE",
+      label: "Cash Advance",
+      description: "Get money before an activity",
+      href: "/beta/payment-requests/cash-advance/new",
+    },
+    {
+      type: "PETTY_CASH",
+      label: "Petty Cash",
+      description: "Small day-to-day spending",
+      href: "/beta/payment-requests/petty-cash/new",
+    },
+    {
+      type: "CLAIM",
+      label: "Claims",
+      description: "Get reimbursed for an expense",
+      href: "/beta/payment-requests/claims/new",
+    },
+  ];
 const summaryIcons: Record<Exclude<SummaryFilter, "ALL">, string> = {
   DRAFT: "/assets/icons/submitted-doc-white.png",
   PROGRESS: "/assets/icons/in-progress-clock-white.png",
@@ -408,10 +408,10 @@ const formatDate = (value: string) => {
   return Number.isNaN(parsed.getTime())
     ? value
     : parsed.toLocaleDateString("en-MY", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 };
 const money = (value: number) =>
   new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(
@@ -427,18 +427,33 @@ function actionLabel(row: Row) {
 
 export function MyRequests() {
   const router = useRouter();
+  const searchParameters = useSearchParams();
+  const requestedSummary = searchParameters.get("summary");
+  const requestedType = searchParameters.get("type");
   const [account] = useState(() => readBetaSession());
   const { records: vouchers, isLoading: voucherLoading } = usePaymentVouchers();
   const [otherRows, setOtherRows] = useState<Row[]>([]);
   const [draftRows, setDraftRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [type, setType] = useState<"ALL" | PaymentType>("ALL"),
-    [status, setStatus] = useState("ALL"),
+  const [type, setType] = useState<"ALL" | PaymentType>(() =>
+    types.some((item) => item.value === requestedType)
+      ? (requestedType as PaymentType)
+      : "ALL",
+  ),
+    [status, setStatus] = useState(
+      () => searchParameters.get("status") ?? "ALL",
+    ),
     [search, setSearch] = useState(""),
     [month, setMonth] = useState(""),
     [exactDate, setExactDate] = useState(""),
     [sort, setSort] = useState("UPDATED_DESC"),
-    [summaryFilter, setSummaryFilter] = useState<SummaryFilter>("ALL"),
+    [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() =>
+      ["DRAFT", "PROGRESS", "ACTION", "COMPLETED"].includes(
+        requestedSummary ?? "",
+      )
+        ? (requestedSummary as SummaryFilter)
+        : "ALL",
+    ),
     [paymentMenuOpen, setPaymentMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -964,6 +979,7 @@ export function MyRequests() {
                       className={styles.status}
                       data-action={row.action}
                       data-complete={completed.has(row.status)}
+                      data-status={row.status}
                     >
                       {row.statusLabel}
                     </span>
