@@ -31,7 +31,7 @@
 
 .hero h1 {
     margin: 0;
-    font-size: 30px;
+    font-size: 34px;
 }
 
 .hero span {
@@ -39,7 +39,7 @@
     max-width: 680px;
     margin-top: 6px;
     color: #647b98;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .heroActions {
@@ -59,7 +59,7 @@
     border: 1px solid #173a64;
     border-radius: 9px;
     font: inherit;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 800;
     cursor: pointer;
 }
@@ -222,10 +222,11 @@
 }
 
 .summary button[data-tone="draft"] {
-    --tile: #526071;
+    --tile: #657486;
     --shadow: rgb(82 96 113 / 38%);
-    background: #526071;
+    background: #5f6c7c;
 }
+
 
 .summary button[data-tone="progress"] {
     --tile: #c05b06;
@@ -243,6 +244,32 @@
     --tile: #0e8750;
     --shadow: rgb(14 135 80 / 38%);
     background: #0e8750;
+}
+
+.historySummary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.historySummary button {
+    width: 100%;
+}
+
+.summary button[data-tone="completed"] {
+    --tile: #0e8750;
+    --shadow: rgb(14 135 80 / 38%);
+    background: #0e8750;
+}
+
+.summary button[data-tone="reconciled"] {
+    --tile: #2865e8;
+    --shadow: rgb(40 101 232 / 38%);
+    background: #2865e8;
+}
+
+.summary button[data-tone="inactive"] {
+    --tile: #657486;
+    --shadow: rgb(82 96 113 / 38%);
+    background: #5f6c7c;
 }
 
 .summary button>em {
@@ -468,7 +495,8 @@
     padding: 10px 12px;
     color: #647b98;
     background: #f3f7fc;
-    font-size: 8px;
+    font-size: 11px;
+    font-weight: 700;
     letter-spacing: 0.05em;
     text-align: left;
     text-transform: uppercase;
@@ -478,7 +506,8 @@
     padding: 12px;
     border-top: 1px solid #e7edf4;
     color: #526987;
-    font-size: 10px;
+    font-size: 13px;
+    line-height: 1.45;
 }
 
 .tableWrap td:first-child strong,
@@ -505,7 +534,7 @@
     border-radius: 5px;
     color: #fff;
     background: #07456b;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 850;
 }
 
@@ -537,7 +566,7 @@
     border-radius: 999px;
     color: #1d4ed8;
     background: #dbeafe;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 750;
     white-space: nowrap;
 }
@@ -550,6 +579,34 @@
 .status[data-complete="true"] {
     color: #047857;
     background: #d1fae5;
+}
+
+.status[data-status="AWAITING_RECIPIENT_SIGNATURE"] {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.historyStatus {
+    display: inline-flex;
+    margin-top: 4px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    color: #047857;
+    background: #d1fae5;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.historyStatus[data-group="INACTIVE"] {
+    color: #475569;
+    background: #e2e8f0;
+}
+
+.historyStatus[data-status="REJECTED"],
+.historyStatus[data-status="PAYMENT_REJECTED"],
+.historyStatus[data-status="VOIDED"] {
+    color: #b42318;
+    background: #fee2e2;
 }
 
 .empty,
