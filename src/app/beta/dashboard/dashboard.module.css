@@ -45,7 +45,7 @@
   justify-content: center;
   gap: 8px;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 750;
   text-decoration: none;
 }
@@ -271,11 +271,13 @@
 
 .actionPanel {
   overflow: hidden;
-  padding: 20px 22px;
-  border: 1px solid #f0cf78;
-  border-radius: 15px;
+  padding: 24px 28px;
+  border: 1px solid #f1e0a8;
+  border-radius: 20px;
   background: #fffbeb;
-  box-shadow: 0 8px 22px rgb(146 96 8 / 7%);
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 7%);
 }
 
 .actionPanel[data-empty="true"] {
@@ -333,10 +335,11 @@
   min-width: 0;
   min-height: 68px;
   padding: 12px;
-  border: 1px solid #ead9a7;
-  border-radius: 9px;
+  border: 1px solid #f1e0a8;
+  border-radius: 14px;
   color: #102a4c;
   background: #fff;
+  box-shadow: 0 2px 8px rgb(180 120 10 / 10%);
   text-align: left;
   cursor: pointer;
 }
@@ -409,7 +412,9 @@
 }
 
 .actionTypes strong {
-  font-size: 18px;
+  color: #92580a;
+  font-size: 24px;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -522,23 +527,23 @@
 }
 
 .roleKpis article[data-tone="blue"] {
-  --kpi-card: #2f6bea;
-  --kpi-shadow: rgb(47 107 234 / 48%);
+  --kpi-card: #2563eb;
+  --kpi-shadow: rgb(37 99 235 / 48%);
 }
 
 .roleKpis article[data-tone="amber"] {
-  --kpi-card: #d96300;
-  --kpi-shadow: rgb(217 99 0 / 46%);
+  --kpi-card: #c05b06;
+  --kpi-shadow: rgb(192 91 6 / 46%);
 }
 
 .roleKpis article[data-tone="green"] {
-  --kpi-card: #118b4b;
-  --kpi-shadow: rgb(17 139 75 / 46%);
+  --kpi-card: #0e8750;
+  --kpi-shadow: rgb(14 135 80 / 46%);
 }
 
 .roleKpis article[data-tone="red"] {
-  --kpi-card: #e51f4f;
-  --kpi-shadow: rgb(229 31 79 / 46%);
+  --kpi-card: #db224a;
+  --kpi-shadow: rgb(219 34 74 / 46%);
 }
 
 .roleKpis article[data-tone="red"] .kpiVisual {
@@ -559,13 +564,13 @@
 }
 
 .roleKpis article[data-tone="reconciliation"] {
-  --kpi-color: #173f70;
+  --kpi-color: #1f3a5f;
   --kpi-card: #eef2f8;
   --kpi-soft: #eef2f8;
-  --kpi-border: #d9e4f1;
-  --kpi-shadow: rgb(23 63 112 / 10%);
-  border-color: #dbe5f1;
-  color: #102a4c;
+  --kpi-border: #d3deec;
+  --kpi-shadow: rgb(31 58 95 / 10%);
+  border-color: #d3deec;
+  color: #1f3a5f;
 }
 
 .roleKpis article[data-tone="reconciliation"] .kpiVisual {
@@ -665,16 +670,16 @@
 }
 
 .roleKpis article[data-tone="reconciliation"] span,
-.roleKpis article[data-tone="reconciliation"] small {
-  color: #647b98;
+.roleKpis article[data-tone="reconciliation"] strong {
+  color: #1f3a5f;
 }
 
-.roleKpis article[data-tone="reconciliation"] strong {
-  color: #102a4c;
+.roleKpis article[data-tone="reconciliation"] small {
+  color: #475569;
 }
 
 .roleKpis article[data-tone="reconciliation"] a {
-  color: #173f70;
+  color: #1f3a5f;
 }
 
 .roleKpis article[data-tone="reconciliation"]:hover .kpiVisual,
@@ -1428,6 +1433,11 @@
 .status[data-tone="gray"] {
   color: #526987;
   background: #edf2f7;
+}
+
+.status[data-status="AWAITING_RECIPIENT_SIGNATURE"] {
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .empty {
