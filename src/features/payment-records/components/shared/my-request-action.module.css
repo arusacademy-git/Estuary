@@ -100,6 +100,8 @@
     padding: 32px;
     background: rgb(15 34 64 / 58%);
     backdrop-filter: blur(2px);
+    direction: ltr;
+    text-align: left;
     white-space: normal;
 }
 
