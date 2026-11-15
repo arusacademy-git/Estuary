@@ -14,16 +14,20 @@ import type {
 } from "@/domain/payment-requests/travel-allowance/types";
 import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import {
-  travelAllowanceProgress,
-  travelAllowanceStageTitle,
-  type TravelAllowanceProgressStage,
-} from "@/domain/payment-requests/travel-allowance/types";
-import {
   getBetaAccount,
   readBetaSession,
   type BetaAccount,
 } from "@/lib/auth/beta-accounts";
 import { PaymentRecordActionCard } from "../shared/payment-record-action-card";
+import { PaymentProgressTimeline } from "../shared/payment-progress-timeline";
+import {
+  businessMinutesBetween,
+  formatBusinessDuration,
+} from "../shared/payment-progress-duration";
+import type {
+  PaymentProgressStage,
+  PaymentProgressSummary,
+} from "../shared/payment-progress-types";
 
 import styles from "./travel-allowance-records.module.css";
 
@@ -74,13 +78,14 @@ export function TravelAllowanceRecordDetail({
       .then((value) => {
         if (!cancelled) setRecord(value);
       })
-      .catch((caught: unknown) =>
-        !cancelled &&
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "The record could not be loaded.",
-        ),
+      .catch(
+        (caught: unknown) =>
+          !cancelled &&
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "The record could not be loaded.",
+          ),
       )
       .finally(() => {
         if (!cancelled) setChecked(true);
@@ -217,40 +222,40 @@ export function TravelAllowanceRecordDetail({
             </div>
           </Section>
           <Section title="Travel Entries">
-            <div className={styles.entriesTableWrapper}>
-              <table className={styles.entriesTable}>
+            <div className={styles.tableWrapper}>
+              <table>
                 <thead>
                   <tr>
-                    <th className={styles.entryIndex}>#</th>
-                    <th className={styles.entryEmployee}>Employee</th>
-                    <th className={styles.entryDate}>Date</th>
-                    <th className={styles.entryProject}>Project</th>
-                    <th className={styles.entryReason}>Reason</th>
-                    <th className={styles.entryMeals}>Meals</th>
-                    <th className={styles.entryAmount}>Special</th>
-                    <th className={styles.entryAmount}>Total</th>
+                    <th>#</th>
+                    <th>Employee</th>
+                    <th>Date</th>
+                    <th>Project</th>
+                    <th>Reason</th>
+                    <th>Meals</th>
+                    <th>Special</th>
+                    <th>Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {record.lines.map((line, index) => (
                     <tr key={line.id}>
-                      <td className={styles.entryIndex}>{index + 1}</td>
-                      <td className={styles.entryEmployee}>{line.employeeName}</td>
-                      <td className={styles.entryDate}>{date(line.travelDate)}</td>
-                      <td className={styles.entryProject}>{line.projectName}</td>
-                      <td className={styles.entryReason}>{line.reason || "—"}</td>
-                      <td className={styles.entryMeals}>
+                      <td>{index + 1}</td>
+                      <td>{line.employeeName}</td>
+                      <td>{date(line.travelDate)}</td>
+                      <td>{line.projectName}</td>
+                      <td>{line.reason}</td>
+                      <td>
                         {line.meals
                           .map((meal) => `${meal} RM${TRAVEL_MEAL_RATES[meal]}`)
                           .join(", ") || "—"}
                       </td>
-                      <td className={styles.entryAmount}>
+                      <td>
                         {money(line.specialAllowance)}
                         {line.specialAllowanceReason && (
                           <small>{line.specialAllowanceReason}</small>
                         )}
                       </td>
-                      <td className={styles.entryAmount}>
+                      <td>
                         <strong>{money(travelLineTotal(line))}</strong>
                       </td>
                     </tr>
@@ -275,18 +280,6 @@ export function TravelAllowanceRecordDetail({
                   value={record.financeRemarks ?? "None"}
                 />
               </dl>
-            </Section>
-          )}
-          {record.financeTransactionProof && (
-            <Section title="Payment transaction proof">
-              <div className={styles.documents}>
-                <a
-                  download={record.financeTransactionProof.fileName}
-                  href={record.financeTransactionProof.dataUrl}
-                >
-                  Download {record.financeTransactionProof.fileName}
-                </a>
-              </div>
             </Section>
           )}
           <Section title="Supporting Documents">
@@ -320,13 +313,29 @@ export function TravelAllowanceRecordDetail({
           {returnRemarks && (
             <div className={styles.returnNotice}>
               <div className={styles.returnNoticeHeader}>
-                <strong><i />Action required</strong>
-                <span>Returned by <b>{returnActor}</b>{returnedAt ? ` · ${date(returnedAt)}` : ""}</span>
+                <strong>
+                  <i />
+                  Action required
+                </strong>
+                <span>
+                  Returned by <b>{returnActor}</b>
+                  {returnedAt ? ` · ${date(returnedAt)}` : ""}
+                </span>
               </div>
               <small>Changes requested by {returnRole}</small>
               <blockquote>{returnRemarks}</blockquote>
-              <p>Please review and update the meals, amounts, or justification notes before resubmitting.</p>
-              {canCorrect && <Link className={styles.returnNoticeAction} href={`/beta/payment-requests/travel-allowance/${record.id}/edit`}>Start Corrections <b aria-hidden="true">→</b></Link>}
+              <p>
+                Please review and update the meals, amounts, or justification
+                notes before resubmitting.
+              </p>
+              {canCorrect && (
+                <Link
+                  className={styles.returnNoticeAction}
+                  href={`/beta/payment-requests/travel-allowance/${record.id}/edit`}
+                >
+                  Start Corrections <b aria-hidden="true">→</b>
+                </Link>
+              )}
             </div>
           )}
           <Progress record={record} manager={manager} director={director} />
@@ -345,86 +354,197 @@ function Progress({
   manager: string;
   director: string;
 }) {
-  const progress = travelAllowanceProgress(record);
+  const managerPath = record.requesterRole === "staff";
+  const managerReturned =
+    record.status === "RETURNED_TO_STAFF" && Boolean(record.managerReturnedAt);
+  const directorReturned =
+    record.status === "RETURNED_TO_STAFF" && Boolean(record.directorReturnedAt);
+  const financeReturned =
+    record.status === "RETURNED_TO_STAFF" && Boolean(record.financeReturnedAt);
+  const proofUploaded =
+    Boolean(record.financeTransactionProof) ||
+    ["TRANSACTION_PROOF_UPLOADED", "COMPLETED"].includes(record.status);
+  const completed = record.status === "COMPLETED";
   const financeName = record.financeVerifiedById
     ? (getBetaAccount(record.financeVerifiedById)?.name ??
       record.financeVerifiedById)
     : "Finance";
-  const stepDetail: Record<
-    TravelAllowanceProgressStage,
-    { copy: string; time?: string }
-  > = {
-    SUBMITTED: {
-      copy: `Submitted by ${record.requesterName}`,
-      time: record.createdAt,
+  const stages: PaymentProgressStage[] = [
+    {
+      id: "submission",
+      kind: "submission",
+      title: managerPath ? "Request submitted" : "Manager request submitted",
+      description: managerPath
+        ? "Staff submitted the Travel Allowance for Manager review."
+        : "The Manager submitted the Travel Allowance directly for Director review.",
+      actorName: record.requesterName,
+      actorRole: managerPath ? "Staff" : "Manager",
+      state: "complete",
+      receivedAt: record.createdAt,
+      completedAt: record.createdAt,
     },
-    MANAGER_REVIEW: {
-      copy: `Reviewed and approved by ${manager}`,
-      time: record.managerReviewedAt,
+  ];
+
+  if (managerPath) {
+    stages.push({
+      id: "manager-review",
+      kind: "approval",
+      title: "Manager review",
+      description: managerReturned
+        ? "The Manager returned this allowance for correction."
+        : record.managerReviewedAt
+          ? "The Manager reviewed and approved the allowance."
+          : "Waiting for Manager review and approval.",
+      actorName: manager,
+      actorRole: "Manager",
+      state: managerReturned
+        ? "returned"
+        : record.status === "PENDING_MANAGER_REVIEW"
+          ? "current"
+          : record.managerReviewedAt
+            ? "complete"
+            : "pending",
+      receivedAt: record.createdAt,
+      completedAt: record.managerReturnedAt ?? record.managerReviewedAt,
+    });
+  }
+
+  stages.push(
+    {
+      id: "director-review",
+      kind: "approval",
+      title: "Director review",
+      description: directorReturned
+        ? "The Director returned this allowance for correction."
+        : record.directorReviewedAt
+          ? "The Director reviewed and approved the allowance."
+          : "Director review begins after submission or Manager approval.",
+      actorName: director,
+      actorRole: "Director",
+      state: directorReturned
+        ? "returned"
+        : record.status === "PENDING_DIRECTOR_APPROVAL"
+          ? "current"
+          : record.directorReviewedAt
+            ? "complete"
+            : "pending",
+      receivedAt: managerPath ? record.managerReviewedAt : record.createdAt,
+      completedAt: record.directorReturnedAt ?? record.directorReviewedAt,
     },
-    DIRECTOR_REVIEW: {
-      copy: `Reviewed and approved by ${director}`,
-      time: record.directorReviewedAt,
+    {
+      id: "finance-verification",
+      kind: "processing",
+      title: "Finance verification and payment",
+      description: financeReturned
+        ? "Finance returned this allowance for correction."
+        : record.financeVerifiedAt
+          ? "Finance verified the allowance and recorded its payment."
+          : "Finance verifies the allowance and records payment details.",
+      actorName: financeName,
+      actorRole: "Finance",
+      state: financeReturned
+        ? "returned"
+        : record.status === "PENDING_FINANCE_VERIFICATION"
+          ? "current"
+          : record.financeVerifiedAt
+            ? "complete"
+            : "pending",
+      receivedAt: record.directorReviewedAt,
+      completedAt: record.financeReturnedAt ?? record.financeVerifiedAt,
     },
-    FINANCE_VERIFICATION: {
-      copy: record.financeVerifiedAt
-        ? `Allowance verified by ${financeName}`
-        : "Awaiting Finance verification",
-      time: record.financeVerifiedAt,
+    {
+      id: "transaction-proof",
+      kind: "payment",
+      title: "Payment transaction proof uploaded",
+      description: proofUploaded
+        ? "Finance uploaded the payment transaction proof for the requester."
+        : "Finance uploads transaction proof after verifying the payment.",
+      actorName: financeName,
+      actorRole: "Finance",
+      state: proofUploaded
+        ? "complete"
+        : record.status === "PAYMENT_PROCESSED"
+          ? "current"
+          : "pending",
+      receivedAt: record.financeVerifiedAt,
+      completedAt:
+        record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? record.updatedAt
+          : null,
     },
-    TRANSACTION_PROOF: {
-      copy: record.financeTransactionProof
-        ? "Finance uploaded the payment transaction proof for the requester"
-        : "Awaiting transaction proof upload",
-      time: record.financeProofUploadedAt,
-    },
-    COMPLETED: {
-      copy: record.status === "COMPLETED"
+    {
+      id: "completed",
+      kind: "completion",
+      title: "Travel Allowance completed",
+      description: completed
         ? record.financePaymentReference
-          ? `Payment completed · Ref ${record.financePaymentReference}`
-          : "Payment completed and request closed"
-        : "Awaiting completion",
-      time: record.completedAt,
+          ? `Payment completed under reference ${record.financePaymentReference}.`
+          : "Payment completed and the request was closed."
+        : "The request closes after Finance records transaction proof.",
+      state: completed ? "complete" : "pending",
+      receivedAt:
+        record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? record.updatedAt
+          : null,
+      completedAt: completed ? record.updatedAt : null,
     },
-  };
-  return (
-    <section className={styles.progressPanel}>
-      <header>
-        <p>Payment progress</p>
-        <span>
-          Step {progress.active} of {progress.total}
-        </span>
-      </header>
-      <ol>
-        {progress.stages.map((stage, index) => {
-          const state = progress.stateOf(index + 1);
-          const complete = state === "complete";
-          const detail = stepDetail[stage];
-          return (
-            <li
-              className={styles.progressStep}
-              data-state={state}
-              key={stage}
-            >
-              <i>{complete ? "✓" : ""}</i>
-              <div>
-                <strong>
-                  {travelAllowanceStageTitle(stage, record)}
-                  {state === "returned" && (
-                    <em className={styles.returnedTag}>Returned</em>
-                  )}
-                </strong>
-                <small>
-                  {detail.copy}
-                  {complete && detail.time ? ` · ${date(detail.time)}` : ""}
-                </small>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
   );
+
+  if (record.status === "RETURNED_TO_STAFF") {
+    const returnedAt =
+      record.financeReturnedAt ??
+      record.directorReturnedAt ??
+      record.managerReturnedAt;
+    const returnedIndex = stages.findIndex(
+      (stage) => stage.state === "returned",
+    );
+    stages.splice(returnedIndex >= 0 ? returnedIndex + 1 : 1, 0, {
+      id: "requester-correction",
+      kind: "correction",
+      title: "Correct and resubmit Travel Allowance",
+      description:
+        record.financeReturnRemarks ??
+        record.directorReturnRemarks ??
+        record.managerReturnRemarks ??
+        "Review the return remarks, correct the allowance and resubmit it.",
+      actorName: record.requesterName,
+      actorRole: managerPath ? "Staff" : "Manager",
+      state: "current",
+      receivedAt: returnedAt,
+    });
+  }
+
+  const summaries: PaymentProgressSummary[] = [
+    {
+      label: "Current update",
+      value: standardPaymentStatusLabel(record.status),
+      tone: completed
+        ? "success"
+        : record.status === "RETURNED_TO_STAFF"
+          ? "warning"
+          : "active",
+    },
+    {
+      label: completed ? "Total processing time" : "Elapsed processing time",
+      value: formatBusinessDuration(
+        businessMinutesBetween(
+          record.createdAt,
+          completed ? record.updatedAt : new Date(),
+        ),
+      ),
+      tone: completed ? "success" : "neutral",
+    },
+  ];
+
+  if (record.financePaymentDate) {
+    summaries.push({
+      label: "Paid on",
+      value: date(record.financePaymentDate),
+      tone: "success",
+    });
+  }
+
+  return <PaymentProgressTimeline stages={stages} summaries={summaries} />;
 }
 function Status({ status }: { status: TravelAllowanceStatus }) {
   return (
