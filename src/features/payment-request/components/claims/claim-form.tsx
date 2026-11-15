@@ -29,7 +29,6 @@ import {
   type CreateClaimInput,
 } from "@/domain/payment-requests/claims/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { projectManagerFor } from "@/features/administration/admin-settings";
 
 import { ClaimConfirmation } from "./claim-confirmation";
 import { ManualDraftConfirmation } from "../shared/manual-draft-confirmation";
@@ -73,6 +72,15 @@ const makeLine = (): ClaimLine => ({
 const RECEIPT_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 const RECEIPT_MAX_SIZE = 10 * 1024 * 1024;
 
+function claimEntryLabel(type: ClaimType) {
+  if (type === "INTERNET_COMMUTE") return "internet / commute expense";
+  if (type === "MEDICAL") return "medical expense";
+  if (type === "MILEAGE") return "mileage trip";
+  if (type === "PD") return "PD expense";
+  if (type === "TECH") return "tech expense";
+  return "expense";
+}
+
 export function ClaimForm({
   initialRecord,
   resumeDraft = false,
@@ -97,10 +105,13 @@ export function ClaimForm({
   const [techExtended, setTechExtended] = useState(
     initialRecord?.techExtended ?? false,
   );
-  const [lines, setLines] = useState<ClaimLine[]>(
-    initialRecord?.lines?.length ? initialRecord.lines : [makeLine()],
-  );
+  const [lines, setLines] = useState<ClaimLine[]>(initialRecord?.lines ?? []);
   const [receiptFiles, setReceiptFiles] = useState<Record<string, File>>({});
+  const [entryModal, setEntryModal] = useState<{
+    line: ClaimLine;
+    mode: "ADD" | "EDIT";
+  } | null>(null);
+  const [entryReceipt, setEntryReceipt] = useState<File | undefined>();
   const [notes, setNotes] = useState(initialRecord?.notes ?? "");
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -132,7 +143,7 @@ export function ClaimForm({
       setLines(
         snapshot.lines?.length
           ? snapshot.lines.map((line) => ({ ...line }))
-          : [makeLine()],
+          : [],
       );
       setNotes(snapshot.notes ?? "");
       setReceiptFiles({});
@@ -169,18 +180,6 @@ export function ClaimForm({
   }, [account, claimDate]);
 
   const total = useMemo(() => claimTotal(claimType, lines), [claimType, lines]);
-  const assignedManagerIds = useMemo(
-    () => [
-      ...new Set(
-        lines
-          .map((line) => projectManagerFor(line.division))
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ],
-    [lines],
-  );
-  const managerApproverId =
-    assignedManagerIds.length === 1 ? assignedManagerIds[0] : undefined;
   const limit = claimLimit({ claimType, techExtended }, context);
   const type = claimTypeDetails(claimType);
   const limitExceeded = limit !== null && total > limit;
@@ -195,7 +194,6 @@ export function ClaimForm({
       requesterPosition: currentAccount.position,
       requesterRole: currentAccount.role,
       requesterContact: contact.trim(),
-      managerApproverId,
       directorApproverId: directorId,
       claimDate,
       claimType,
@@ -209,36 +207,90 @@ export function ClaimForm({
     if (next === claimType) return;
     setClaimType(next);
     setTechExtended(false);
-    setLines([makeLine()]);
+    setLines([]);
     setReceiptFiles({});
     setConfirmed(false);
     setError("");
   }
 
-  function updateLine(id: string, patch: Partial<ClaimLine>) {
-    setLines((current) =>
-      current.map((line) => (line.id === id ? { ...line, ...patch } : line)),
-    );
+  function openNewEntry() {
+    setEntryReceipt(undefined);
+    setEntryModal({ line: makeLine(), mode: "ADD" });
   }
 
-  function selectReceipt(lineId: string, file?: File) {
-    if (!file) return;
-    if (!RECEIPT_TYPES.includes(file.type)) {
-      setError("Upload receipts as PDF, JPG or PNG files.");
-      return;
-    }
-    if (file.size > RECEIPT_MAX_SIZE) {
-      setError("Each receipt must be 10 MB or smaller.");
+  function openEditEntry(line: ClaimLine) {
+    setEntryReceipt(receiptFiles[line.id]);
+    setEntryModal({ line: { ...line }, mode: "EDIT" });
+  }
+
+  function closeEntryModal() {
+    setEntryModal(null);
+    setEntryReceipt(undefined);
+  }
+
+  function saveEntry(addAnother = false) {
+    if (!entryModal) return;
+    const line = entryModal.line;
+    const hasReceipt = Boolean(
+      entryReceipt ||
+      line.receiptDocumentId ||
+      line.receiptLink?.trim() ||
+      (line.receiptFileName.trim() && line.receiptFileSize > 0),
+    );
+    const incomplete =
+      !line.expenseDate ||
+      !line.details.trim() ||
+      (claimType === "MILEAGE"
+        ? !line.division.trim() ||
+        !line.from.trim() ||
+        !line.to.trim() ||
+        line.kilometers <= 0
+        : !line.supplier.trim() ||
+        !hasReceipt ||
+        line.amount <= 0 ||
+        (claimType === "EXPENSE" &&
+          (!line.accountType.trim() || !line.division.trim())));
+    if (incomplete) {
+      setError(
+        claimType === "MILEAGE"
+          ? "Complete the date, purpose, division, route and distance before saving this trip."
+          : "Complete every required expense field and attach a receipt before saving.",
+      );
       return;
     }
     setError("");
-    setReceiptFiles((current) => ({ ...current, [lineId]: file }));
-    updateLine(lineId, {
-      receiptLink: undefined,
-      receiptFileName: file.name,
-      receiptMimeType: file.type,
-      receiptFileSize: file.size,
-    });
+    setLines((current) =>
+      entryModal.mode === "EDIT"
+        ? current.map((item) => (item.id === line.id ? line : item))
+        : [...current, line],
+    );
+    if (entryReceipt) {
+      setReceiptFiles((current) => ({
+        ...current,
+        [line.id]: entryReceipt,
+      }));
+    } else if (line.receiptLink?.trim()) {
+      setReceiptFiles((current) => {
+        const next = { ...current };
+        delete next[line.id];
+        return next;
+      });
+    }
+    if (addAnother) {
+      setEntryReceipt(undefined);
+      setEntryModal({ line: makeLine(), mode: "ADD" });
+      return;
+    }
+    closeEntryModal();
+  }
+
+  function duplicateLine(line: ClaimLine) {
+    const copy = { ...line, id: makeLine().id };
+    setLines((current) => [...current, copy]);
+    const receipt = receiptFiles[line.id];
+    if (receipt) {
+      setReceiptFiles((current) => ({ ...current, [copy.id]: receipt }));
+    }
   }
 
   function removeLine(id: string) {
@@ -254,10 +306,6 @@ export function ClaimForm({
     event.preventDefault();
     if (!account) return setError("Sign in before creating a claim.");
     const input = buildInput(account);
-    if (!input.managerApproverId)
-      return setError(
-        "Assign one project manager to every Claim division. Split Claims that have different project managers.",
-      );
     const validation = validateClaimInput(input, context);
     if (validation) return setError(validation);
     if (!confirmed)
@@ -340,7 +388,7 @@ export function ClaimForm({
           setCreated(null);
           setClaimType("EXPENSE");
           setTechExtended(false);
-          setLines([makeLine()]);
+          setLines([]);
           setReceiptFiles({});
           setNotes("");
           setConfirmed(false);
@@ -482,6 +530,9 @@ export function ClaimForm({
     <div className={styles.page}>
       <header className={styles.hero}>
         <div>
+          <span className={styles.claimEyebrow}>
+            <b>CL</b> Claims
+          </span>
           <h1>{resumeDraft ? "Continue Claim draft" : "New claim request"}</h1>
           <p>
             {resumeDraft
@@ -489,49 +540,47 @@ export function ClaimForm({
               : "Submit claims and itemized expenses with automatic policy checks."}
           </p>
         </div>
-        <span className={styles.heroPill}>
-          {resumeDraft ? "Saved draft" : "Draft"}
-        </span>
       </header>
-      <form className={styles.page} onSubmit={review}>
+      <form className={styles.claimForm} onSubmit={review}>
         {error && (
           <div className={styles.error} role="alert">
             {error}
           </div>
         )}
 
-        <article className={styles.sheet}>
-          <header className={styles.documentBar}>
-            <div>
-              <strong>Official {type.label} sheet</strong>
-              <span>Reference assigned after submission</span>
-            </div>
-          </header>
-
-          <section className={styles.section}>
-            <SectionHeading
-              number="1"
-              title="Select claim type & policy matrix"
-            />
-            <div className={styles.policyMatrix}>
-              <label className={styles.claimTypeField}>
-                <span>Claim type</span>
-                <select
-                  value={claimType}
-                  onChange={(event) =>
-                    chooseType(event.target.value as ClaimType)
-                  }
-                >
-                  {CLAIM_TYPES.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-                <small>
-                  Form fields adjust automatically based on the selected type.
-                </small>
-              </label>
+        <div className={styles.claimFormLayout}>
+          <article className={styles.sheet}>
+            <section className={styles.section}>
+              <SectionHeading
+                number="1"
+                title="Claim type"
+                copy="Choose what you are claiming. The entry form changes automatically."
+              />
+              <div
+                className={styles.claimTypeTabs}
+                role="group"
+                aria-label="Claim type"
+              >
+                {CLAIM_TYPES.map((item) => (
+                  <button
+                    aria-pressed={claimType === item.value}
+                    key={item.value}
+                    onClick={() => chooseType(item.value)}
+                    type="button"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.selectedPolicy}>
+                <strong>{type.label}</strong>
+                <span>{type.description}</span>
+                <b>
+                  {limit === null
+                    ? "No monetary cap"
+                    : `RM ${limit.toFixed(2)} limit`}
+                </b>
+              </div>
               <div
                 className={`${styles.policyChoice} ${context.techExtendedLockedUntil && claimType === "TECH" ? styles.policyLocked : ""}`}
               >
@@ -571,205 +620,708 @@ export function ClaimForm({
                   </>
                 )}
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className={styles.section}>
-            <div className={styles.headingRow}>
-              <SectionHeading number="2" title="Claimant information" />
-              <span>Signed-in profile verified</span>
-            </div>
-            <div className={styles.fieldGrid}>
-              <label>
-                <span>Staff name</span>
-                <input disabled value={account?.name ?? ""} />
-              </label>
-              <label>
-                <span>Position & title</span>
-                <input disabled value={account?.position ?? ""} />
-              </label>
-              <label>
-                <span>Role</span>
-                <input
-                  disabled
-                  value={account ? roleLabel(account.role) : ""}
-                />
-              </label>
-              <label>
-                <span>Claim date</span>
-                <input
-                  required
-                  type="date"
-                  value={claimDate}
-                  onChange={(event) => setClaimDate(event.target.value)}
-                />
-              </label>
-              <label className={styles.halfField}>
-                <span>
-                  Contact details (notification & audit trail){" "}
-                  <em className={styles.requiredMark}>*</em>
-                </span>
-                <input
-                  required
-                  value={contact}
-                  onChange={(event) => setContact(event.target.value)}
-                  placeholder="Phone number or email"
-                />
-              </label>
-              {account && (
+            <section className={styles.section}>
+              <div className={styles.headingRow}>
+                <SectionHeading number="2" title="Claimant & approver" />
+                <span>Signed-in profile verified</span>
+              </div>
+              <div className={styles.fieldGrid}>
+                <label>
+                  <span>Staff name</span>
+                  <input disabled value={account?.name ?? ""} />
+                </label>
+                <label>
+                  <span>Position & title</span>
+                  <input disabled value={account?.position ?? ""} />
+                </label>
+                <label>
+                  <span>Role</span>
+                  <input
+                    disabled
+                    value={account ? roleLabel(account.role) : ""}
+                  />
+                </label>
+                <label>
+                  <span>Claim date</span>
+                  <input
+                    required
+                    type="date"
+                    value={claimDate}
+                    onChange={(event) => setClaimDate(event.target.value)}
+                  />
+                </label>
                 <label className={styles.halfField}>
                   <span>
-                    Final approving Director{" "}
+                    Contact details (notification & audit trail){" "}
                     <em className={styles.requiredMark}>*</em>
                   </span>
-                  <select
+                  <input
                     required
-                    value={directorId}
-                    onChange={(event) => setDirectorId(event.target.value)}
-                  >
-                    <option value="">Choose a Director</option>
-                    {betaAccounts
-                      .filter(
-                        (item) =>
-                          item.role === "director" && item.id !== account.id,
-                      )
-                      .map((director) => (
-                        <option key={director.id} value={director.id}>
-                          {director.name} — {director.position}
-                        </option>
-                      ))}
-                  </select>
+                    value={contact}
+                    onChange={(event) => setContact(event.target.value)}
+                    placeholder="Phone number or email"
+                  />
                 </label>
-              )}
-            </div>
-          </section>
+                {account && (
+                  <label className={styles.halfField}>
+                    <span>
+                      Final approving Director{" "}
+                      <em className={styles.requiredMark}>*</em>
+                    </span>
+                    <select
+                      required
+                      value={directorId}
+                      onChange={(event) => setDirectorId(event.target.value)}
+                    >
+                      <option value="">Choose a Director</option>
+                      {betaAccounts
+                        .filter(
+                          (item) =>
+                            item.role === "director" && item.id !== account.id,
+                        )
+                        .map((director) => (
+                          <option key={director.id} value={director.id}>
+                            {director.name} — {director.position}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+            </section>
 
-          <section className={styles.section}>
-            <div className={styles.itemsHeading}>
-              <SectionHeading
-                number="3"
-                title={
-                  claimType === "MILEAGE"
-                    ? "Itemized trips"
-                    : "Itemized expenses"
-                }
-                copy={
-                  claimType === "MILEAGE"
-                    ? "Enter the route and distance for every trip."
-                    : "Attach a merchant receipt and state the operational purpose for each line item."
-                }
-              />
-              <button
-                className={styles.secondaryButton}
-                onClick={() => setLines((current) => [...current, makeLine()])}
-                type="button"
-              >
-                + Add {claimType === "MILEAGE" ? "trip" : "expense item"}
-              </button>
-            </div>
-            <div className={styles.tableWrap}>
-              {claimType === "MILEAGE" ? (
-                <MileageTable
-                  lines={lines}
-                  updateLine={updateLine}
-                  removeLine={removeLine}
+            <section className={styles.section}>
+              <div className={styles.itemsHeading}>
+                <SectionHeading
+                  number="3"
+                  title={
+                    claimType === "MILEAGE"
+                      ? "Itemized trips"
+                      : "Itemized expenses"
+                  }
+                  copy={
+                    claimType === "MILEAGE"
+                      ? "Enter the route and distance for every trip."
+                      : "Attach a merchant receipt and state the operational purpose for each line item."
+                  }
                 />
-              ) : (
-                <ExpenseTable
+                <button
+                  className={styles.secondaryButton}
+                  onClick={openNewEntry}
+                  type="button"
+                >
+                  + Add {claimEntryLabel(claimType)}
+                </button>
+              </div>
+              {lines.length ? (
+                <ClaimEntriesTable
                   claimType={claimType}
                   lines={lines}
-                  receiptFiles={receiptFiles}
-                  selectReceipt={selectReceipt}
-                  updateLine={updateLine}
-                  removeLine={removeLine}
+                  onDuplicate={duplicateLine}
+                  onEdit={openEditEntry}
+                  onRemove={removeLine}
                 />
+              ) : (
+                <div className={styles.emptyEntries}>
+                  <strong>No {claimEntryLabel(claimType)} added yet</strong>
+                  <span>
+                    Add your first {claimEntryLabel(claimType)} and attach its
+                    supporting information.
+                  </span>
+                  <button onClick={openNewEntry} type="button">
+                    + Add {claimEntryLabel(claimType)}
+                  </button>
+                </div>
               )}
-            </div>
-            <PolicyBar
-              claimType={claimType}
-              context={context}
-              limit={limit}
-              limitExceeded={limitExceeded}
-              loading={loadingPolicy}
-              techExtended={techExtended}
-              total={total}
-            />
-          </section>
-
-          <section className={styles.section}>
-            <SectionHeading
-              number="4"
-              title="Purpose & context justification"
-            />
-            <label className={styles.notesField}>
-              <textarea
-                rows={4}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Add clear operational context that will help the reviewer understand this claim"
+              <PolicyBar
+                claimType={claimType}
+                context={context}
+                limit={limit}
+                limitExceeded={limitExceeded}
+                loading={loadingPolicy}
+                techExtended={techExtended}
+                total={total}
               />
-              <small>
-                Explain the business purpose to support Manager review and
-                Finance verification.
-              </small>
-            </label>
-          </section>
+            </section>
 
-          <footer className={styles.submitSection}>
-            {!initialRecord && (
-              <ManualDraftStatus message={draft.draftMessage} />
-            )}
-            <label className={styles.declaration}>
-              <input
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-                type="checkbox"
+            <section className={styles.section}>
+              <SectionHeading
+                number="4"
+                title="Purpose & context justification"
               />
-              <span>
-                I confirm that this claim is accurate, complies with Estuary
-                policies, and all uploaded documents relate directly to the
-                expenses listed.
-              </span>
-            </label>
-            <div className={styles.actions}>
-              <button
-                className={styles.draftButton}
-                disabled={saving || draft.isSavingDraft}
-                onClick={saveDraft}
-                type="button"
-              >
-                {saving || draft.isSavingDraft
-                  ? "Saving…"
-                  : initialRecord
-                    ? "Save draft changes"
-                    : "Save as draft"}
-              </button>
-              <button
-                className={styles.primaryButton}
-                disabled={
-                  saving ||
-                  loadingPolicy ||
-                  Boolean(
-                    context.techExtendedLockedUntil && claimType === "TECH",
-                  )
-                }
-                type="submit"
-              >
-                {saving
-                  ? "Submitting…"
-                  : loadingPolicy
-                    ? "Checking policy…"
-                    : "Continue to review →"}
-              </button>
+              <label className={styles.notesField}>
+                <textarea
+                  rows={4}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Add clear operational context that will help the reviewer understand this claim"
+                />
+                <small>
+                  Explain the business purpose to support Director review and
+                  Finance verification.
+                </small>
+              </label>
+            </section>
+
+            <footer className={styles.submitSection}>
+              {!initialRecord && (
+                <ManualDraftStatus message={draft.draftMessage} />
+              )}
+              <label className={styles.declaration}>
+                <input
+                  checked={confirmed}
+                  onChange={(event) => setConfirmed(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  I confirm that this claim is accurate, complies with Estuary
+                  policies, and all uploaded documents relate directly to the
+                  expenses listed.
+                </span>
+              </label>
+              <div className={styles.actions}>
+                <button
+                  className={styles.draftButton}
+                  disabled={saving || draft.isSavingDraft}
+                  onClick={saveDraft}
+                  type="button"
+                >
+                  {saving || draft.isSavingDraft
+                    ? "Saving…"
+                    : initialRecord
+                      ? "Save draft changes"
+                      : "Save as draft"}
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  disabled={
+                    saving ||
+                    loadingPolicy ||
+                    Boolean(
+                      context.techExtendedLockedUntil && claimType === "TECH",
+                    )
+                  }
+                  type="submit"
+                >
+                  {saving
+                    ? "Submitting…"
+                    : loadingPolicy
+                      ? "Checking policy…"
+                      : "Continue to review →"}
+                </button>
+              </div>
+            </footer>
+          </article>
+          <aside className={styles.claimSummaryCard}>
+            <span>Claim total</span>
+            <strong>RM {total.toFixed(2)}</strong>
+            <dl>
+              <div>
+                <dt>Claim type</dt>
+                <dd>{type.label}</dd>
+              </div>
+              <div>
+                <dt>Items</dt>
+                <dd>{lines.length}</dd>
+              </div>
+              <div>
+                <dt>Missing receipts</dt>
+                <dd>
+                  {claimType === "MILEAGE"
+                    ? 0
+                    : lines.filter(
+                      (line) =>
+                        !line.receiptFileName &&
+                        !line.receiptLink &&
+                        !line.receiptDocumentId,
+                    ).length}
+                </dd>
+              </div>
+              <div>
+                <dt>Limit</dt>
+                <dd>{limit === null ? "No cap" : `RM ${limit.toFixed(2)}`}</dd>
+              </div>
+            </dl>
+            <div className={styles.summaryPolicy}>
+              <b>Policy check</b>
+              <p>
+                {limitExceeded
+                  ? "The current total is above the available policy limit."
+                  : type.description}
+              </p>
             </div>
-          </footer>
-        </article>
+          </aside>
+        </div>
       </form>
+      {entryModal && (
+        <ClaimEntryModal
+          claimType={claimType}
+          line={entryModal.line}
+          mode={entryModal.mode}
+          receipt={entryReceipt}
+          onCancel={closeEntryModal}
+          onChange={(patch) =>
+            setEntryModal((current) =>
+              current
+                ? { ...current, line: { ...current.line, ...patch } }
+                : current,
+            )
+          }
+          onReceipt={(file) => {
+            if (!file) {
+              setEntryReceipt(undefined);
+              setEntryModal((current) =>
+                current
+                  ? {
+                    ...current,
+                    line: {
+                      ...current.line,
+                      receiptDocumentId: undefined,
+                      receiptFileName: "",
+                      receiptMimeType: "",
+                      receiptFileSize: 0,
+                    },
+                  }
+                  : current,
+              );
+              return;
+            }
+            if (!RECEIPT_TYPES.includes(file.type)) {
+              setError("Upload receipts as PDF, JPG or PNG files.");
+              return;
+            }
+            if (file.size > RECEIPT_MAX_SIZE) {
+              setError("Each receipt must be 10 MB or smaller.");
+              return;
+            }
+            setError("");
+            setEntryReceipt(file);
+            setEntryModal((current) =>
+              current
+                ? {
+                  ...current,
+                  line: {
+                    ...current.line,
+                    receiptLink: undefined,
+                    receiptFileName: file.name,
+                    receiptMimeType: file.type,
+                    receiptFileSize: file.size,
+                  },
+                }
+                : current,
+            );
+          }}
+          onSave={saveEntry}
+        />
+      )}
     </div>
   );
 }
 
-function ExpenseTable({
+function ClaimEntriesTable({
+  claimType,
+  lines,
+  onDuplicate,
+  onEdit,
+  onRemove,
+}: {
+  claimType: ClaimType;
+  lines: ClaimLine[];
+  onDuplicate: (line: ClaimLine) => void;
+  onEdit: (line: ClaimLine) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className={styles.entriesTableWrap}>
+      <table className={styles.entriesTable}>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>{claimType === "MILEAGE" ? "Trip" : "Expense"}</th>
+            <th>{claimType === "MILEAGE" ? "Distance" : "Receipt"}</th>
+            <th>Amount</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr key={line.id}>
+              <td>{displayDate(line.expenseDate)}</td>
+              <td>
+                <strong>{line.details}</strong>
+                <span>
+                  {claimType === "MILEAGE"
+                    ? `${line.from} → ${line.to}`
+                    : line.supplier}
+                </span>
+              </td>
+              <td>
+                {claimType === "MILEAGE" ? (
+                  `${line.kilometers} km`
+                ) : (
+                  <span className={styles.uploadedBadge}>Uploaded</span>
+                )}
+              </td>
+              <td>
+                <strong>
+                  RM {claimLineAmount(claimType, line).toFixed(2)}
+                </strong>
+              </td>
+              <td>
+                <div className={styles.entryActions}>
+                  <button onClick={() => onEdit(line)} type="button">
+                    Edit
+                  </button>
+                  <button onClick={() => onDuplicate(line)} type="button">
+                    Duplicate
+                  </button>
+                  <button
+                    aria-label={`Remove ${line.details}`}
+                    className={styles.entryRemove}
+                    onClick={() => onRemove(line.id)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ClaimEntryModal({
+  claimType,
+  line,
+  mode,
+  receipt,
+  onCancel,
+  onChange,
+  onReceipt,
+  onSave,
+}: {
+  claimType: ClaimType;
+  line: ClaimLine;
+  mode: "ADD" | "EDIT";
+  receipt?: File;
+  onCancel: () => void;
+  onChange: (patch: Partial<ClaimLine>) => void;
+  onReceipt: (file?: File) => void;
+  onSave: (addAnother?: boolean) => void;
+}) {
+  const mileage = claimType === "MILEAGE";
+  const generalExpense = claimType === "EXPENSE";
+  const entryLabel = claimEntryLabel(claimType);
+  const [proofMode, setProofMode] = useState<"UPLOAD" | "DRIVE">(() =>
+    line.receiptLink ? "DRIVE" : "UPLOAD",
+  );
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onCancel]);
+
+  return (
+    <div
+      aria-labelledby="claim-entry-title"
+      aria-modal="true"
+      className={styles.entryModalBackdrop}
+      role="dialog"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onCancel();
+      }}
+    >
+      <section className={styles.entryModal}>
+        <header>
+          <div>
+            <span>{mode === "EDIT" ? "Edit entry" : "New entry"}</span>
+            <h2 id="claim-entry-title">
+              {mode === "EDIT" ? `Edit ${entryLabel}` : `Add ${entryLabel}`}
+            </h2>
+            <p>
+              {mileage
+                ? "Add one journey and its distance."
+                : `Add one ${entryLabel} and attach its proof.`}
+            </p>
+          </div>
+          <button
+            aria-label="Close entry form"
+            onClick={onCancel}
+            type="button"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className={styles.entryModalFields}>
+          <label>
+            <span>
+              Date <em>*</em>
+            </span>
+            <input
+              required
+              type="date"
+              value={line.expenseDate}
+              onChange={(event) =>
+                onChange({ expenseDate: event.target.value })
+              }
+            />
+          </label>
+          {mileage ? (
+            <>
+              <label>
+                <span>
+                  Total distance (km) <em>*</em>
+                </span>
+                <DecimalInput
+                  placeholder="0.0"
+                  value={line.kilometers}
+                  onValueChange={(kilometers) => onChange({ kilometers })}
+                />
+              </label>
+              <label>
+                <span>
+                  From <em>*</em>
+                </span>
+                <input
+                  value={line.from}
+                  onChange={(event) => onChange({ from: event.target.value })}
+                  placeholder="Starting point"
+                />
+              </label>
+              <label>
+                <span>
+                  To <em>*</em>
+                </span>
+                <input
+                  value={line.to}
+                  onChange={(event) => onChange({ to: event.target.value })}
+                  placeholder="Destination"
+                />
+              </label>
+              <label className={styles.modalFullField}>
+                <span>
+                  Division <em>*</em>
+                </span>
+                <select
+                  value={line.division}
+                  onChange={(event) =>
+                    onChange({ division: event.target.value })
+                  }
+                >
+                  <option value="">Choose division</option>
+                  {CLAIM_DIVISION_TYPES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : (
+            <>
+              <label>
+                <span>
+                  Amount (RM) <em>*</em>
+                </span>
+                <DecimalInput
+                  placeholder="0.00"
+                  value={line.amount}
+                  onValueChange={(amount) => onChange({ amount })}
+                />
+              </label>
+              <label className={styles.modalFullField}>
+                <span>
+                  Supplier / merchant <em>*</em>
+                </span>
+                <input
+                  value={line.supplier}
+                  onChange={(event) =>
+                    onChange({ supplier: event.target.value })
+                  }
+                  placeholder="Where was it bought?"
+                />
+              </label>
+              {generalExpense && (
+                <>
+                  <label>
+                    <span>
+                      Type of account <em>*</em>
+                    </span>
+                    <select
+                      value={line.accountType}
+                      onChange={(event) =>
+                        onChange({ accountType: event.target.value })
+                      }
+                    >
+                      <option value="">Choose account</option>
+                      {CLAIM_ACCOUNT_TYPES.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>
+                      Division <em>*</em>
+                    </span>
+                    <select
+                      value={line.division}
+                      onChange={(event) =>
+                        onChange({ division: event.target.value })
+                      }
+                    >
+                      <option value="">Choose division</option>
+                      {CLAIM_DIVISION_TYPES.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+            </>
+          )}
+          <label className={styles.modalFullField}>
+            <span>
+              Description & purpose <em>*</em>
+            </span>
+            <input
+              value={line.details}
+              onChange={(event) => onChange({ details: event.target.value })}
+              placeholder={
+                mileage
+                  ? "Why was this journey required?"
+                  : "What was purchased and why?"
+              }
+            />
+          </label>
+          {!mileage && (
+            <div className={styles.modalFullField}>
+              <span>
+                Receipt / proof <em>*</em>
+              </span>
+              <div
+                aria-label="Proof method"
+                className={styles.proofMethodTabs}
+                role="group"
+              >
+                <button
+                  aria-pressed={proofMode === "UPLOAD"}
+                  onClick={() => {
+                    setProofMode("UPLOAD");
+                    onChange({ receiptLink: undefined });
+                  }}
+                  type="button"
+                >
+                  Upload file
+                </button>
+                <button
+                  aria-pressed={proofMode === "DRIVE"}
+                  onClick={() => {
+                    setProofMode("DRIVE");
+                    onReceipt(undefined);
+                  }}
+                  type="button"
+                >
+                  Google Drive link
+                </button>
+              </div>
+              {proofMode === "UPLOAD" ? (
+                <label className={styles.modalReceiptUpload}>
+                  <input
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                    onChange={(event) => onReceipt(event.target.files?.[0])}
+                    type="file"
+                  />
+                  <b>Choose file</b>
+                  <small>
+                    {receipt?.name ??
+                      line.receiptFileName ??
+                      "PDF, JPG or PNG · max 10 MB"}
+                  </small>
+                </label>
+              ) : (
+                <div className={styles.driveProofField}>
+                  <p>
+                    Paste a Google Drive link to the receipt, invoice or
+                    e-receipt for this expense.
+                  </p>
+                  <div>
+                    <input
+                      inputMode="url"
+                      placeholder="https://drive.google.com/file/d/.../view"
+                      type="url"
+                      value={line.receiptLink ?? ""}
+                      onChange={(event) =>
+                        onChange({ receiptLink: event.target.value })
+                      }
+                    />
+                    {line.receiptLink?.trim() && <b>Link added</b>}
+                  </div>
+                  <small>
+                    Share the file with Finance, or set it to “Anyone with the
+                    link can view”.
+                  </small>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <footer>
+          <span>
+            {mode === "EDIT"
+              ? "Update this entry"
+              : "Add this entry to the claim"}
+          </span>
+          <div>
+            <button
+              className={styles.modalCancel}
+              onClick={onCancel}
+              type="button"
+            >
+              Cancel
+            </button>
+            {mode === "ADD" && (
+              <button
+                className={styles.modalSecondary}
+                onClick={() => onSave(true)}
+                type="button"
+              >
+                Save & add another
+              </button>
+            )}
+            <button
+              className={styles.modalPrimary}
+              onClick={() => onSave(false)}
+              type="button"
+            >
+              Save {entryLabel}
+            </button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+export function ExpenseTable({
   claimType,
   lines,
   receiptFiles,
@@ -934,7 +1486,7 @@ function ExpenseTable({
   );
 }
 
-function MileageTable({
+export function MileageTable({
   lines,
   updateLine,
   removeLine,

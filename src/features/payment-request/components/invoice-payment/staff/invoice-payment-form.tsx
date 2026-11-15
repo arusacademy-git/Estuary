@@ -19,7 +19,10 @@ import { notifyManagerInvoicePaymentSubmitted } from "@/features/payment-request
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
-import { projectManagerFor } from "@/features/administration/admin-settings";
+import {
+  activeProjectManagerAccounts,
+  projectManagerFor,
+} from "@/features/administration/admin-settings";
 
 import { InvoicePaymentReview } from "./invoice-payment-review";
 import { InvoicePaymentConfirmation } from "./invoice-payment-confirmation";
@@ -198,7 +201,9 @@ export function InvoicePaymentForm({
 
   useEffect(() => {
     if (initialRecord) return;
-    setManagerApproverId(projectManagerFor(projectName) ?? "");
+    const assignedManager = projectManagerFor(projectName);
+    const fallbackManager = activeProjectManagerAccounts()[0]?.id;
+    setManagerApproverId(assignedManager ?? fallbackManager ?? "");
   }, [initialRecord, projectName]);
 
   const requestedAmount = useMemo(() => {
@@ -388,7 +393,9 @@ export function InvoicePaymentForm({
         onCreateAnother={() =>
           initialRecord
             ? window.location.assign("/beta/payment-records/invoice-payments")
-            : window.location.assign("/beta/payment-requests/invoice-payment/new")
+            : window.location.assign(
+                "/beta/payment-requests/invoice-payment/new",
+              )
         }
       />
     );
@@ -724,7 +731,12 @@ export function InvoicePaymentForm({
             <Field label="Project manager" required>
               <input
                 disabled
-                value={managerApproverId ? getBetaAccount(managerApproverId)?.name ?? managerApproverId : "No manager assigned to this project"}
+                value={
+                  managerApproverId
+                    ? (getBetaAccount(managerApproverId)?.name ??
+                      managerApproverId)
+                    : "No manager assigned to this project"
+                }
               />
             </Field>
             <Field label="Director reviewer" required>

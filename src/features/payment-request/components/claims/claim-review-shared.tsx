@@ -6,16 +6,17 @@ import {
 import { standardPaymentStatusLabel } from "@/domain/payment-requests/standard-payment-status";
 import { getBetaAccount } from "@/lib/auth/beta-accounts";
 import { DocumentReferenceChip } from "@/shared/document-reference-chip";
+import { PaymentProgressTimeline } from "@/features/payment-records/components/shared/payment-progress-timeline";
+import {
+  businessMinutesBetween,
+  formatBusinessDuration,
+} from "@/features/payment-records/components/shared/payment-progress-duration";
+import type {
+  PaymentProgressStage,
+  PaymentProgressSummary,
+} from "@/features/payment-records/components/shared/payment-progress-types";
 
 import styles from "./claim-workflow.module.css";
-
-type Stage =
-  | "submitted"
-  | "financeReview"
-  | "director"
-  | "financePayment"
-  | "transactionProof"
-  | "completed";
 
 export function claimDate(value?: string) {
   if (!value) return "—";
@@ -195,149 +196,243 @@ export function ClaimReviewDetails({
 }
 
 export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
-  const stages = workflowStages();
-  const current = currentStage(record);
-  const currentIndex = Math.max(0, stages.indexOf(current));
-  return (
-    <section className={styles.progress}>
-      <header>
-        <p>Payment progress</p>
-        <span>
-          Step {currentIndex + 1} of {stages.length}
-        </span>
-      </header>
-      <ol>
-        {stages.map((stage, index) => {
-          const returned =
-            record.status === "RETURNED_TO_CLAIMANT" && stage === current;
-          const explicitlyComplete =
-            stage === "director" ? Boolean(record.directorReviewedAt) : false;
-          const complete =
-            explicitlyComplete ||
-            record.status === "COMPLETED" ||
-            index < currentIndex;
-          const state = returned
-            ? "returned"
-            : complete
-              ? "complete"
-              : index === currentIndex
-                ? "active"
-                : "pending";
-          return (
-            <li data-state={state} key={stage}>
-              <i>
-                {state === "complete"
-                  ? "✓"
-                  : state === "returned"
-                    ? "!"
-                    : index + 1}
-              </i>
-              <div>
-                <strong>{stageTitle(stage, record)}</strong>
-                <small>{stageDescription(stage, state, record)}</small>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
+  const status = String(record.status);
+  const returned = record.status === "RETURNED_TO_CLAIMANT";
+  const rejected = record.status === "PAYMENT_REJECTED";
+  const completed = record.status === "COMPLETED";
+  const proofComplete = ["TRANSACTION_PROOF_UPLOADED", "COMPLETED"].includes(
+    status,
   );
-}
-
-function workflowStages(): Stage[] {
-  return [
-    "submitted",
-    "financeReview",
-    "director",
-    "financePayment",
-    "transactionProof",
-    "completed",
+  const managerName = record.managerApproverId
+    ? (getBetaAccount(record.managerApproverId)?.name ??
+      record.managerApproverId)
+    : "Manager";
+  const directorName =
+    getBetaAccount(
+      record.directorReviewedById ?? record.directorApproverId ?? null,
+    )?.name ?? "the assigned Director";
+  const financeName =
+    getBetaAccount(record.financeProcessedById ?? null)?.name ?? "Finance";
+  const returnedStage = returned
+    ? record.returnedFromStage === "DIRECTOR"
+      ? "director"
+      : record.returnedFromStage === "MANAGER"
+        ? "manager"
+        : "finance-review"
+    : null;
+  const stages: PaymentProgressStage[] = [
+    {
+      id: "submission",
+      kind: "submission",
+      title: `Claim submitted by ${roleLabel(record.requesterRole)}`,
+      description: "The claimant submitted the Claim and supporting receipts.",
+      actorName: record.requesterName,
+      actorRole: roleLabel(record.requesterRole),
+      state: record.status === "DRAFT" ? "current" : "complete",
+      receivedAt: record.createdAt,
+      completedAt: record.status === "DRAFT" ? null : record.createdAt,
+    },
   ];
-}
 
-function currentStage(record: ClaimRecord): Stage {
-  if (record.status === "PENDING_FINANCE_VERIFICATION") return "financeReview";
-  if (record.status === "PENDING_DIRECTOR_APPROVAL") return "director";
-  if (["APPROVED_FOR_PAYMENT", "PAYMENT_PROCESSED"].includes(record.status))
-    return "financePayment";
-  if (record.status === "TRANSACTION_PROOF_UPLOADED") return "transactionProof";
-  if (record.status === "COMPLETED") return "completed";
-  if (record.status === "RETURNED_TO_CLAIMANT")
-    return record.returnedFromStage === "DIRECTOR" ? "director" : "financeReview";
-  if (record.status === "PAYMENT_REJECTED") return "director";
-  return "submitted";
-}
-
-function stageTitle(stage: Stage, record: ClaimRecord) {
-  if (stage === "submitted")
-    return record.requesterRole === "manager"
-      ? "Claim Submitted by Manager"
-      : record.requesterRole === "director"
-        ? "Claim Submitted by Director"
-        : record.requesterRole === "finance"
-          ? "Claim Submitted by Finance"
-          : "Claim Submitted";
-  if (stage === "financeReview") return "Finance Verification";
-  if (stage === "director") return "Director Decision";
-  if (stage === "financePayment") return "Finance Payment";
-  if (stage === "transactionProof")
-    return "Payment transaction proof uploaded";
-  return "Completed";
-}
-
-function stageDescription(
-  stage: Stage,
-  state: "returned" | "complete" | "active" | "pending" | "informational",
-  record: ClaimRecord,
-) {
-  if (state === "returned") return "Returned to the claimant for correction";
-
-  if (stage === "submitted") {
-    return `Submitted by ${record.requesterName} · ${claimDate(record.createdAt)}`;
+  if (record.managerApproverId) {
+    stages.push({
+      id: "manager",
+      kind: "approval",
+      title: "Manager review",
+      description:
+        returnedStage === "manager"
+          ? "The Manager returned the Claim for correction."
+          : record.managerApprovedAt
+            ? "The Manager reviewed the Claim."
+            : "Manager review is available while Finance verifies the Claim.",
+      actorName: managerName,
+      actorRole: "Manager",
+      informational: true,
+      state:
+        returnedStage === "manager"
+          ? "returned"
+          : record.managerApprovedAt
+            ? "complete"
+            : status === "PENDING_MANAGER_APPROVAL"
+              ? "current"
+              : "pending",
+      receivedAt: record.createdAt,
+      completedAt:
+        returnedStage === "manager"
+          ? record.returnedAt
+          : record.managerApprovedAt,
+    });
   }
 
-  if (stage === "director") {
-    const name =
-      getBetaAccount(
-        record.directorReviewedById ?? record.directorApproverId ?? null,
-      )?.name ?? "the assigned Director";
-    if (state === "complete")
-      return `Decision recorded by ${name}${record.directorReviewedAt ? ` · ${claimDate(record.directorReviewedAt)}` : ""}`;
-    return state === "active"
-      ? `Awaiting final decision by ${name}`
-      : "Waiting for Director decision";
+  const afterFinanceReview = [
+    "PENDING_DIRECTOR_APPROVAL",
+    "APPROVED_FOR_PAYMENT",
+    "PAYMENT_PROCESSED",
+    "TRANSACTION_PROOF_UPLOADED",
+    "COMPLETED",
+    "PAYMENT_REJECTED",
+  ].includes(status);
+  stages.push(
+    {
+      id: "finance-review",
+      kind: "processing",
+      title: "Finance verification",
+      description:
+        returnedStage === "finance-review"
+          ? "Finance returned the Claim for correction."
+          : afterFinanceReview
+            ? "Finance verified the Claim and supporting receipts."
+            : "Finance verifies the Claim, receipts and policy eligibility.",
+      actorRole: "Finance",
+      state:
+        returnedStage === "finance-review"
+          ? "returned"
+          : afterFinanceReview
+            ? "complete"
+            : [
+                  "CLAIM_SUBMITTED",
+                  "PENDING_FINANCE_VERIFICATION",
+                  "PENDING_MANAGER_APPROVAL",
+                ].includes(status)
+              ? "current"
+              : "pending",
+      receivedAt: record.createdAt,
+    },
+    {
+      id: "director",
+      kind: "approval",
+      title: "Director decision",
+      description:
+        returnedStage === "director"
+          ? "The Director returned the Claim for correction."
+          : rejected
+            ? "The Director rejected the Claim."
+            : record.directorReviewedAt
+              ? "The Director approved the Claim for payment."
+              : "The Director makes the final approval decision.",
+      actorName: directorName,
+      actorRole: "Director",
+      state: rejected
+        ? "rejected"
+        : returnedStage === "director"
+          ? "returned"
+          : record.directorReviewedAt
+            ? "complete"
+            : record.status === "PENDING_DIRECTOR_APPROVAL"
+              ? "current"
+              : "pending",
+      completedAt:
+        returnedStage === "director" || rejected
+          ? (record.returnedAt ?? record.updatedAt)
+          : record.directorReviewedAt,
+    },
+    {
+      id: "finance-payment",
+      kind: "payment",
+      title: "Finance payment",
+      description: record.financeProcessedAt
+        ? "Finance recorded and processed the Claim payment."
+        : "Finance records the payment after Director approval.",
+      actorName: financeName,
+      actorRole: "Finance",
+      state: record.financeProcessedAt
+        ? "complete"
+        : ["APPROVED_FOR_PAYMENT", "PAYMENT_PROCESSED"].includes(status)
+          ? "current"
+          : "pending",
+      receivedAt: record.directorReviewedAt,
+      completedAt: record.financeProcessedAt,
+    },
+    {
+      id: "transaction-proof",
+      kind: "payment",
+      title: "Payment transaction proof uploaded",
+      description: proofComplete
+        ? "Finance uploaded the payment transaction proof."
+        : "Finance uploads transaction proof after processing payment.",
+      actorName: financeName,
+      actorRole: "Finance",
+      state: proofComplete
+        ? "complete"
+        : record.status === "PAYMENT_PROCESSED"
+          ? "current"
+          : "pending",
+      receivedAt: record.financeProcessedAt,
+      completedAt:
+        record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? record.updatedAt
+          : null,
+    },
+    {
+      id: "completed",
+      kind: "completion",
+      title: "Claim completed",
+      description: completed
+        ? record.paymentReference
+          ? `Payment completed under reference ${record.paymentReference}.`
+          : "Payment completed and the Claim was closed."
+        : rejected
+          ? "The rejected Claim is retained as a final non-payment record."
+          : "The Claim closes after transaction proof is recorded.",
+      state: completed ? "complete" : rejected ? "rejected" : "pending",
+      receivedAt:
+        record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? record.updatedAt
+          : null,
+      completedAt: completed || rejected ? record.updatedAt : null,
+    },
+  );
+
+  if (returned) {
+    const returnedIndex = stages.findIndex(
+      (stage) => stage.state === "returned",
+    );
+    stages.splice(returnedIndex >= 0 ? returnedIndex + 1 : 1, 0, {
+      id: "claimant-correction",
+      kind: "correction",
+      title: "Correct and resubmit Claim",
+      description:
+        record.returnRemarks ||
+        "Review the return remarks, correct the Claim and resubmit it.",
+      actorName: record.requesterName,
+      actorRole: roleLabel(record.requesterRole),
+      state: "current",
+      receivedAt: record.returnedAt,
+    });
   }
 
-  if (stage === "financeReview")
-    return state === "active"
-      ? "Finance is verifying the Claim and receipts"
-      : "Waiting for Finance verification";
-
-  if (stage === "financePayment") {
-    const name =
-      getBetaAccount(record.financeProcessedById ?? null)?.name ?? "Finance";
-    if (state === "complete")
-      return `Payment processed by ${name}${record.financeProcessedAt ? ` · ${claimDate(record.financeProcessedAt)}` : ""}`;
-    return state === "active"
-      ? "Finance is recording and verifying payment"
-      : "Waiting for Finance processing";
+  const summaries: PaymentProgressSummary[] = [
+    {
+      label: "Current update",
+      value: claimStatusLabel(record.status),
+      tone: completed
+        ? "success"
+        : returned
+          ? "warning"
+          : rejected
+            ? "danger"
+            : "active",
+    },
+    {
+      label: completed ? "Total processing time" : "Elapsed processing time",
+      value: formatBusinessDuration(
+        businessMinutesBetween(
+          record.createdAt,
+          completed || rejected ? record.updatedAt : new Date(),
+        ),
+      ),
+      tone: completed ? "success" : rejected ? "danger" : "neutral",
+    },
+  ];
+  if (record.paymentDate) {
+    summaries.push({
+      label: "Paid on",
+      value: claimDate(record.paymentDate),
+      tone: "success",
+    });
   }
 
-  if (stage === "transactionProof") {
-    return state === "complete"
-      ? "Finance uploaded the payment transaction proof"
-      : "Waiting for Finance to upload the payment transaction proof";
-  }
-
-  if (state === "complete") {
-    return record.paymentReference
-      ? `Payment completed · Ref ${record.paymentReference}${record.paymentDate ? ` · ${claimDate(record.paymentDate)}` : ""}`
-      : "Payment completed and claim closed";
-  }
-
-  return state === "active"
-    ? "Final payment recorded and claim closed"
-    : "Waiting for payment completion";
+  return <PaymentProgressTimeline stages={stages} summaries={summaries} />;
 }
 
 function roleLabel(role: ClaimRecord["requesterRole"]) {
