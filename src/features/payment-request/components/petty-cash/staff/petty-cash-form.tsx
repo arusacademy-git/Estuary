@@ -1,5 +1,4 @@
 "use client";
-import { createRuntimeId } from '@/lib/ids/runtime-id';
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
@@ -22,7 +21,7 @@ import {
   type PettyCashRequestLine,
 } from "@/domain/payment-requests/petty-cash/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { projectManagerFor } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 import { notifyPettyCashSubmitted } from "@/features/payment-request/notifications/petty-cash-notifications";
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
@@ -35,7 +34,7 @@ const today = () =>
     .toISOString()
     .slice(0, 10);
 const makeLine = (): PettyCashRequestLine => ({
-  id: createRuntimeId(),
+  id: crypto.randomUUID(),
   expenseDate: today(),
   supplier: "",
   details: "",
@@ -83,23 +82,17 @@ export function PettyCashForm({
   const [stage, setStage] = useState<"FORM" | "REVIEW">("FORM");
 
   useEffect(() => setAccount(readBetaSession()), []);
-  const assignedManagerIds = useMemo(
-    () => [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))],
-    [lines],
+  const managers = betaAccounts.filter(
+    (item) => item.role === "manager" || isProjectManagerAccount(item),
   );
-  const assignedManagerId = assignedManagerIds.length === 1 ? assignedManagerIds[0] : undefined;
-  const managers = betaAccounts.filter((item) => item.id === assignedManagerId);
   const directors = betaAccounts.filter((item) => item.role === "director");
   const financeReviewers = betaAccounts.filter(
     (item) =>
       ["manager", "director"].includes(item.role) ||
+      isProjectManagerAccount(item) ||
       (item.role === "finance" && item.id !== account?.id),
   );
   const total = useMemo(() => pettyCashTotal(lines), [lines]);
-  useEffect(() => {
-    if (initialRecord) return;
-    setManagerId(assignedManagerId ?? "");
-  }, [assignedManagerId, initialRecord]);
   const draft = useManualFormDraft({
     paymentType: "PETTY_CASH",
     requesterId: account?.id,
@@ -186,11 +179,6 @@ export function PettyCashForm({
     if (!account) {
       return setError("Sign in before submitting a Petty Cash request.");
     }
-    if (assignedManagerIds.length !== 1) {
-      return setError(assignedManagerIds.length > 1
-        ? "The selected projects have different managers. Submit separate requests per project manager."
-        : "Assign a manager to the selected project in Settings first.");
-    }
     const input = buildInput(account);
     const validation = validatePettyCashInput(input);
     if (validation) return setError(validation);
@@ -241,7 +229,10 @@ export function PettyCashForm({
       <PettyCashConfirmation
         request={created}
         onCreateAnother={() => {
-          window.location.assign("/beta/payment-requests/petty-cash/new");
+          setCreated(null);
+          setLines([makeLine()]);
+          setNotes("");
+          setConfirmed(false);
         }}
       />
     );
@@ -249,50 +240,127 @@ export function PettyCashForm({
   if (stage === "REVIEW")
     return (
       <main className={styles.compactReviewPage}>
-        <header className={styles.compactPageEyebrow}>Payment Requests / Petty Cash <strong>Review</strong></header>
-        {error && <div className={styles.error} role="alert">{error}</div>}
+        <header className={styles.compactPageEyebrow}>
+          Payment Requests / Petty Cash <strong>Review</strong>
+        </header>
+        {error && (
+          <div className={styles.error} role="alert">
+            {error}
+          </div>
+        )}
         <article className={styles.compactReviewCard}>
           <div className={styles.compactReviewMain}>
             <header className={styles.compactReviewHeader}>
-              <span className={styles.compactTypeBadge}>PC</span><span>Petty Cash request</span>
+              <span className={styles.compactTypeBadge}>PC</span>
+              <span>Petty Cash request</span>
               <h1>Review Petty Cash Request</h1>
-              <p>Check the request before submitting it into the approval workflow.</p>
+              <p>
+                Check the request before submitting it into the approval
+                workflow.
+              </p>
             </header>
             <section className={styles.compactReviewSection}>
               <h2>Request summary</h2>
               <dl className={styles.compactSummaryGrid}>
-                <div><dt>Requester</dt><dd>{account?.name}</dd></div>
-                <div><dt>Request date</dt><dd>{requestDate}</dd></div>
-                <div><dt>Location</dt><dd>{location.replace("_", " ")}</dd></div>
-                <div><dt>Entries</dt><dd>{lines.length}</dd></div>
-                <div><dt>Notes</dt><dd>{notes || "—"}</dd></div>
+                <div>
+                  <dt>Requester</dt>
+                  <dd>{account?.name}</dd>
+                </div>
+                <div>
+                  <dt>Request date</dt>
+                  <dd>{requestDate}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{location.replace("_", " ")}</dd>
+                </div>
+                <div>
+                  <dt>Entries</dt>
+                  <dd>{lines.length}</dd>
+                </div>
+                <div>
+                  <dt>Notes</dt>
+                  <dd>{notes || "—"}</dd>
+                </div>
               </dl>
             </section>
             <section className={styles.compactReviewSection}>
-              <h2>Petty Cash entries <small>{lines.length} {lines.length === 1 ? "entry" : "entries"}</small></h2>
+              <h2>
+                Petty Cash entries{" "}
+                <small>
+                  {lines.length} {lines.length === 1 ? "entry" : "entries"}
+                </small>
+              </h2>
               <div className={styles.compactTableWrap}>
                 <table className={styles.compactReviewTable}>
-                  <thead><tr><th>#</th><th>Description</th><th>Purpose / account</th><th>Division</th><th>Amount</th></tr></thead>
-                  <tbody>{lines.map((line, index) => <tr key={line.id}><td>{index + 1}</td><td>{line.details}</td><td>{line.accountType}</td><td>{line.division}</td><td><strong>RM {Number(line.amount).toFixed(2)}</strong></td></tr>)}</tbody>
-                  <tfoot><tr><td colSpan={4}>Total requested</td><td>RM {total.toFixed(2)}</td></tr></tfoot>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Description</th>
+                      <th>Purpose / account</th>
+                      <th>Division</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((line, index) => (
+                      <tr key={line.id}>
+                        <td>{index + 1}</td>
+                        <td>{line.details}</td>
+                        <td>{line.accountType}</td>
+                        <td>{line.division}</td>
+                        <td>
+                          <strong>RM {Number(line.amount).toFixed(2)}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={4}>Total requested</td>
+                      <td>RM {total.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </section>
           </div>
           <aside className={styles.compactReviewAside}>
-            <span>Total requested</span><strong>RM {total.toFixed(2)}</strong>
-            <small>{lines.length} {lines.length === 1 ? "entry" : "entries"} · Petty Cash</small>
-            <div className={styles.compactNextStep}><span>What happens next</span><p>After submission, the request enters its role-aware approval workflow. Receipts and any unused balance are recorded during reconciliation.</p></div>
+            <span>Total requested</span>
+            <strong>RM {total.toFixed(2)}</strong>
+            <small>
+              {lines.length} {lines.length === 1 ? "entry" : "entries"} · Petty
+              Cash
+            </small>
+            <div className={styles.compactNextStep}>
+              <span>What happens next</span>
+              <p>
+                After submission, the request enters its role-aware approval
+                workflow. Receipts and any unused balance are recorded during
+                reconciliation.
+              </p>
+            </div>
             <div className={styles.compactReviewActions}>
-              <button className={styles.primaryButton} disabled={saving} type="button" onClick={submit}>{saving ? "Submitting…" : initialRecord ? "Resubmit request" : "Submit request"}</button>
-            <button
-              className={styles.secondaryButton}
-              disabled={saving}
-              type="button"
-              onClick={() => setStage("FORM")}
-            >
-              Back to edit
-            </button>
+              <button
+                className={styles.primaryButton}
+                disabled={saving}
+                type="button"
+                onClick={submit}
+              >
+                {saving
+                  ? "Submitting…"
+                  : initialRecord
+                    ? "Resubmit request"
+                    : "Submit request"}
+              </button>
+              <button
+                className={styles.secondaryButton}
+                disabled={saving}
+                type="button"
+                onClick={() => setStage("FORM")}
+              >
+                Back to edit
+              </button>
             </div>
           </aside>
         </article>
@@ -458,16 +526,24 @@ export function PettyCashForm({
                   <option value="">
                     Choose another Finance user, Manager or Director
                   </option>
-                  {financeReviewers.map((item) => (
-                    <option key={item.id} value={`${item.role}:${item.id}`}>
-                      {item.name} ·{" "}
-                      {item.role === "finance"
-                        ? "Finance"
-                        : item.role === "manager"
-                          ? "Manager"
-                          : "Director"}
-                    </option>
-                  ))}
+                  {financeReviewers.map((item) => {
+                    const reviewerRole = isProjectManagerAccount(item)
+                      ? "manager"
+                      : item.role;
+                    return (
+                      <option
+                        key={item.id}
+                        value={`${reviewerRole}:${item.id}`}
+                      >
+                        {item.name} ·{" "}
+                        {reviewerRole === "finance"
+                          ? "Finance"
+                          : reviewerRole === "manager"
+                            ? "Manager"
+                            : "Director"}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
             )}
@@ -561,7 +637,12 @@ export function PettyCashForm({
                       </select>
                     </td>
                     <td>
-                      <DecimalInput value={line.amount} onValueChange={(amount) => updateLine(line.id, { amount })} />
+                      <DecimalInput
+                        value={line.amount}
+                        onValueChange={(amount) =>
+                          updateLine(line.id, { amount })
+                        }
+                      />
                     </td>
                     <td>
                       <button
@@ -664,9 +745,31 @@ export function PettyCashForm({
   );
 }
 
-function DecimalInput({ value, onValueChange }: { value: number; onValueChange: (value: number) => void }) {
+function DecimalInput({
+  value,
+  onValueChange,
+}: {
+  value: number;
+  onValueChange: (value: number) => void;
+}) {
   const [text, setText] = useState(value ? String(value) : "");
-  return <input inputMode="decimal" placeholder="0.00" type="text" value={text}
-    onBlur={() => { const numeric = Number(text.replace(",", ".")); setText(Number.isFinite(numeric) && text ? String(numeric) : ""); }}
-    onChange={(event) => { const next = event.target.value; if (!/^\d*(?:[.,]\d{0,2})?$/.test(next)) return; setText(next); const numeric = Number(next.replace(",", ".")); onValueChange(Number.isFinite(numeric) ? numeric : 0); }} />;
+  return (
+    <input
+      inputMode="decimal"
+      placeholder="0.00"
+      type="text"
+      value={text}
+      onBlur={() => {
+        const numeric = Number(text.replace(",", "."));
+        setText(Number.isFinite(numeric) && text ? String(numeric) : "");
+      }}
+      onChange={(event) => {
+        const next = event.target.value;
+        if (!/^\d*(?:[.,]\d{0,2})?$/.test(next)) return;
+        setText(next);
+        const numeric = Number(next.replace(",", "."));
+        onValueChange(Number.isFinite(numeric) ? numeric : 0);
+      }}
+    />
+  );
 }

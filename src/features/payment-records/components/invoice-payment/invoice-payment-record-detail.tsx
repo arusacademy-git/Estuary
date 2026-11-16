@@ -16,6 +16,15 @@ import {
   type BetaAccount,
 } from "@/lib/auth/beta-accounts";
 import { PaymentRecordActionCard } from "../shared/payment-record-action-card";
+import { PaymentProgressTimeline } from "../shared/payment-progress-timeline";
+import {
+  businessMinutesBetween,
+  formatBusinessDuration,
+} from "../shared/payment-progress-duration";
+import type {
+  PaymentProgressStage,
+  PaymentProgressSummary,
+} from "../shared/payment-progress-types";
 
 import styles from "./invoice-payment-records.module.css";
 
@@ -66,9 +75,15 @@ export function InvoicePaymentRecordDetail({
     if (!account) return;
     let cancelled = false;
     fetchInvoicePayment(requestId)
-      .then((value) => { if (!cancelled) setRecord(value); })
-      .finally(() => { if (!cancelled) setChecked(true); });
-    return () => { cancelled = true; };
+      .then((value) => {
+        if (!cancelled) setRecord(value);
+      })
+      .finally(() => {
+        if (!cancelled) setChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [account, requestId]);
   if (!checked)
     return (
@@ -224,13 +239,29 @@ export function InvoicePaymentRecordDetail({
           {returnRemarks && (
             <div className={styles.returnNotice}>
               <div className={styles.returnNoticeHeader}>
-                <strong><i />Action required</strong>
-                <span>Returned by <b>{returnActor}</b>{returnedAt ? ` · ${date(returnedAt)}` : ""}</span>
+                <strong>
+                  <i />
+                  Action required
+                </strong>
+                <span>
+                  Returned by <b>{returnActor}</b>
+                  {returnedAt ? ` · ${date(returnedAt)}` : ""}
+                </span>
               </div>
               <small>Changes requested by {returnRole}</small>
               <blockquote>{returnRemarks}</blockquote>
-              <p>Please review and update the e-invoice link, amounts, or justification notes before resubmitting.</p>
-              {canCorrect && <Link className={styles.returnNoticeAction} href={`/beta/payment-requests/invoice-payment/${record.id}/edit`}>Start Corrections <b aria-hidden="true">→</b></Link>}
+              <p>
+                Please review and update the e-invoice link, amounts, or
+                justification notes before resubmitting.
+              </p>
+              {canCorrect && (
+                <Link
+                  className={styles.returnNoticeAction}
+                  href={`/beta/payment-requests/invoice-payment/${record.id}/edit`}
+                >
+                  Start Corrections <b aria-hidden="true">→</b>
+                </Link>
+              )}
             </div>
           )}
           <Progress record={record} manager={manager} director={director} />
@@ -249,91 +280,186 @@ function Progress({
   manager: string;
   director: string;
 }) {
-  const active = stageFor(record);
-  const steps = [
+  const managerReturned =
+    record.status === "RETURNED_TO_STAFF" && Boolean(record.managerReturnedAt);
+  const directorReturned =
+    record.status === "RETURNED_TO_STAFF" && Boolean(record.directorReturnedAt);
+  const financeReturned =
+    record.status === "RETURNED_TO_STAFF" && Boolean(record.financeReturnedAt);
+  const managerComplete = Boolean(record.managerReviewedAt);
+  const directorComplete = Boolean(record.directorReviewedAt);
+  const financeComplete = Boolean(record.financeVerifiedAt);
+  const proofComplete = ["TRANSACTION_PROOF_UPLOADED", "COMPLETED"].includes(
+    record.status,
+  );
+  const completed = record.status === "COMPLETED";
+  const financeName = record.financeVerifiedById
+    ? (getBetaAccount(record.financeVerifiedById)?.name ??
+      record.financeVerifiedById)
+    : "Finance";
+
+  const stages: PaymentProgressStage[] = [
     {
+      id: "submission",
+      kind: "submission",
       title: "Request Submitted",
-      copy: `Submitted by ${record.staffName}`,
-      date: record.createdAt,
+      description: "Invoice Payment submitted for review.",
+      actorName: record.staffName,
+      actorRole: "Staff",
+      state: record.status === "DRAFT" ? "current" : "complete",
+      receivedAt: record.createdAt,
+      completedAt: record.status === "DRAFT" ? null : record.createdAt,
     },
-    { title: "Manager Review", copy: `Reviewed and approved by ${manager}`, date: record.managerReviewedAt },
     {
+      id: "manager-review",
+      kind: "approval",
+      title: "Manager Review",
+      description: managerReturned
+        ? "The Manager returned this request for correction."
+        : managerComplete
+          ? "The Manager reviewed and approved this request."
+          : "Waiting for Manager review and approval.",
+      actorName: manager,
+      actorRole: "Manager",
+      state: managerReturned
+        ? "returned"
+        : record.status === "PENDING_MANAGER_REVIEW"
+          ? "current"
+          : managerComplete
+            ? "complete"
+            : "pending",
+      receivedAt: record.createdAt,
+      completedAt: record.managerReturnedAt ?? record.managerReviewedAt,
+    },
+    {
+      id: "director-review",
+      kind: "approval",
       title: "Director Review",
-      copy: `Reviewed and approved by ${director}`,
-      date: record.directorReviewedAt,
+      description: directorReturned
+        ? "The Director returned this request for correction."
+        : directorComplete
+          ? "The Director reviewed and approved this request."
+          : "Director review begins after Manager approval.",
+      actorName: director,
+      actorRole: "Director",
+      state: directorReturned
+        ? "returned"
+        : record.status === "PENDING_DIRECTOR_REVIEW"
+          ? "current"
+          : directorComplete
+            ? "complete"
+            : "pending",
+      receivedAt: record.managerReviewedAt,
+      completedAt: record.directorReturnedAt ?? record.directorReviewedAt,
     },
     {
+      id: "finance-verification",
+      kind: "processing",
       title: "Finance Verification",
-      copy: `Payment details verified by ${record.financeVerifiedById
-        ? (getBetaAccount(record.financeVerifiedById)?.name ??
-          record.financeVerifiedById)
-        : "Finance"}`,
-      date: record.financeVerifiedAt,
+      description: financeReturned
+        ? "Finance returned this request for correction."
+        : financeComplete
+          ? "Finance verified the payment details."
+          : "Finance verifies the approved invoice and payment details.",
+      actorName: financeName,
+      actorRole: "Finance",
+      state: financeReturned
+        ? "returned"
+        : record.status === "PENDING_FINANCE_REVIEW"
+          ? "current"
+          : financeComplete
+            ? "complete"
+            : "pending",
+      receivedAt: record.directorReviewedAt,
+      completedAt: record.financeReturnedAt ?? record.financeVerifiedAt,
     },
     {
+      id: "transaction-proof",
+      kind: "payment",
       title: "Payment transaction proof uploaded",
-      copy: "Finance uploaded the payment transaction proof for the requester",
-      date: record.financeVerifiedAt,
+      description: proofComplete
+        ? "Finance uploaded the payment transaction proof for the requester."
+        : "Transaction proof is uploaded after Finance verification.",
+      actorRole: "Finance",
+      state:
+        record.status === "PAYMENT_PROCESSED"
+          ? "current"
+          : proofComplete
+            ? "complete"
+            : "pending",
+      receivedAt: record.financeVerifiedAt,
+      completedAt:
+        record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? record.updatedAt
+          : null,
     },
     {
+      id: "completed",
+      kind: "completion",
       title: "Completed",
-      copy: "Payment verified and request successfully closed",
-      date: record.financeVerifiedAt,
+      description: completed
+        ? "Payment verified and request successfully closed."
+        : "The request closes after transaction proof is recorded.",
+      state: completed ? "complete" : "pending",
+      receivedAt:
+        record.status === "TRANSACTION_PROOF_UPLOADED"
+          ? record.updatedAt
+          : null,
+      completedAt: completed ? record.updatedAt : null,
     },
   ];
-  return (
-    <section className={styles.progressPanel}>
-      <header>
-        <p>Payment progress</p>
-        <span>Step {active} of 6</span>
-      </header>
-      <ol>
-        {steps.map((step, index) => {
-          const number = index + 1;
-          const completed =
-            number < active || (record.status === "COMPLETED" && number === 6);
-          const state = completed
-            ? "complete"
-            : number === active
-              ? record.status === "RETURNED_TO_STAFF"
-                ? "returned"
-                : "active"
-              : "pending";
-          return (
-            <li
-              className={styles.progressStep}
-              data-state={state}
-              key={step.title}
-            >
-              <i>{completed ? "✓" : ""}</i>
-              <div>
-                <strong>
-                  {step.title}
-                  {state === "returned" && (
-                    <em className={styles.returnedTag}>Returned</em>
-                  )}
-                </strong>
-                <small>
-                  {step.copy}
-                  {step.date ? ` · ${date(step.date)}` : ""}
-                </small>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
-}
-function stageFor(record: InvoicePaymentRequestRecord) {
-  if (record.status === "PENDING_MANAGER_REVIEW") return 2;
-  if (record.status === "PENDING_DIRECTOR_REVIEW") return 3;
-  if (record.status === "PENDING_FINANCE_REVIEW") return 4;
-  if (record.status === "TRANSACTION_PROOF_UPLOADED") return 5;
-  if (record.status === "COMPLETED") return 6;
-  if (record.status === "RETURNED_TO_STAFF")
-    return record.financeReturnedAt ? 4 : record.directorReturnedAt ? 3 : 2;
-  return 1;
+
+  if (record.status === "RETURNED_TO_STAFF") {
+    const returnedAt =
+      record.financeReturnedAt ??
+      record.directorReturnedAt ??
+      record.managerReturnedAt;
+    const returnedIndex = stages.findIndex(
+      (stage) => stage.state === "returned",
+    );
+    const correctionIndex = returnedIndex >= 0 ? returnedIndex + 1 : 1;
+    stages.splice(correctionIndex, 0, {
+      id: "requester-correction",
+      kind: "correction",
+      title: "Requester correction and resubmission",
+      description:
+        "The requester must amend the returned Invoice Payment and resubmit it.",
+      actorName: record.staffName,
+      actorRole: "Staff",
+      state: "current",
+      receivedAt: returnedAt,
+    });
+  }
+
+  const lifecycleEnd = completed ? record.updatedAt : new Date();
+  const summaries: PaymentProgressSummary[] = [
+    {
+      label: "Current update",
+      value: standardPaymentStatusLabel(record.status),
+      tone: completed
+        ? "success"
+        : record.status === "RETURNED_TO_STAFF"
+          ? "warning"
+          : "active",
+    },
+    {
+      label: completed ? "Total processing time" : "Elapsed processing time",
+      value: formatBusinessDuration(
+        businessMinutesBetween(record.createdAt, lifecycleEnd),
+      ),
+      tone: completed ? "success" : "neutral",
+    },
+  ];
+
+  if (record.financePaymentDate) {
+    summaries.push({
+      label: "Paid on",
+      value: date(record.financePaymentDate),
+      tone: "success",
+    });
+  }
+
+  return <PaymentProgressTimeline stages={stages} summaries={summaries} />;
 }
 function Status({ status }: { status: PaymentRequestStatus }) {
   return (

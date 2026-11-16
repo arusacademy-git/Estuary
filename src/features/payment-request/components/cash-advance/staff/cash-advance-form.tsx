@@ -1,7 +1,6 @@
 "use client";
-import { createRuntimeId } from '@/lib/ids/runtime-id';
 
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 
 import {
   createCashAdvance,
@@ -22,14 +21,10 @@ import {
   type CashAdvanceRequestLine,
 } from "@/domain/payment-requests/cash-advance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { projectManagerFor } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 import { BANK_NAME_SELECT_OPTIONS } from "@/shared/constants/payment-options";
 import { CashAdvanceConfirmation } from "./cash-advance-confirmation";
-import {
-  CashAdvanceRequestGoogleSheet,
-  type CashAdvanceRequestSheetData,
-} from "./cash-advance-request-google-sheet";
 import { CashAdvanceRequestLines } from "./cash-advance-request-lines";
 import { CashAdvanceReview } from "./cash-advance-review";
 import styles from "../cash-advance.module.css";
@@ -39,7 +34,7 @@ const today = () =>
     .toISOString()
     .slice(0, 10);
 const makeLine = (): CashAdvanceRequestLine => ({
-  id: createRuntimeId(),
+  id: crypto.randomUUID(),
   description: "",
   purpose: "",
   amount: 0,
@@ -85,8 +80,7 @@ export function CashAdvanceForm({
   );
   const [contact, setContact] = useState(initialRecord?.requesterContact ?? "");
   const [accountHolderName, setAccountHolderName] = useState(
-    initialRecord?.accountHolderName ??
-      account?.name ?? "",
+    initialRecord?.accountHolderName ?? account?.name ?? "",
   );
   const [bankName, setBankName] = useState(
     normalizeBankName(initialRecord?.bankName),
@@ -117,10 +111,6 @@ export function CashAdvanceForm({
   const [documents, setDocuments] = useState<CashAdvanceDocument[]>(
     initialRecord?.supportingDocuments ?? [],
   );
-  const [entryMode, setEntryMode] = useState<"MANUAL" | "GOOGLE_SHEET">(
-    "MANUAL",
-  );
-  const [sheetMessage, setSheetMessage] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [stage, setStage] = useState<"FORM" | "REVIEW" | "CONFIRMATION">(
     "FORM",
@@ -134,7 +124,7 @@ export function CashAdvanceForm({
   const draft = useManualFormDraft({
     paymentType: "CASH_ADVANCE",
     requesterId: account?.id,
-    disabled: Boolean(initialRecord) || entryMode !== "MANUAL",
+    disabled: Boolean(initialRecord),
     getSnapshot: () => ({
       requestDate,
       contact,
@@ -185,68 +175,16 @@ export function CashAdvanceForm({
   });
 
   const { signature: activeSignature } = useUserSignature(account?.id);
-  const selectedProject = isOtherProject ? otherProject.trim() : projectName;
-  const assignedManagerId = projectManagerFor(selectedProject);
-  const managers = betaAccounts.filter((item) => item.id === assignedManagerId);
+  const managers = betaAccounts.filter(
+    (item) => item.role === "manager" || isProjectManagerAccount(item),
+  );
   const directors = betaAccounts.filter((item) => item.role === "director");
-  useEffect(() => {
-    if (initialRecord) return;
-    queueMicrotask(() => setManagerId(assignedManagerId ?? ""));
-  }, [assignedManagerId, initialRecord]);
   const total = useMemo(() => cashAdvanceRequestedTotal(lines), [lines]);
 
   function updateLine(id: string, patch: Partial<CashAdvanceRequestLine>) {
     setLines((current) =>
       current.map((line) => (line.id === id ? { ...line, ...patch } : line)),
     );
-  }
-
-  function applyGoogleSheet(data: CashAdvanceRequestSheetData) {
-    const nextRequestDate = requestDate || data.requestDate;
-    const nextContact = contact || data.contact;
-    const nextPurpose =
-      purpose.trim() ||
-      Array.from(
-        new Set(data.lines.map((line) => line.purpose.trim()).filter(Boolean)),
-      ).join("; ");
-    if (
-      !nextRequestDate ||
-      !nextContact.trim() ||
-      !managerId ||
-      !directorId ||
-      !nextPurpose
-    ) {
-      setError(
-        "Complete the request date, contact, Manager, Director and purpose on this page.",
-      );
-      return;
-    }
-    if (!(isOtherProject ? otherProject.trim() : projectName)) {
-      setError("Select or enter the Project Name on this page.");
-      return;
-    }
-    const nextAccountHolder = accountHolderName || data.accountHolderName;
-    const nextBankName = normalizeBankName(bankName || data.bankName);
-    const nextBankAccount = bankAccountNumber || data.bankAccountNumber;
-    if (
-      !nextAccountHolder.trim() ||
-      !nextBankName.trim() ||
-      !nextBankAccount.trim()
-    ) {
-      setError("Complete the bank account details on this page.");
-      return;
-    }
-    setRequestDate(nextRequestDate);
-    setContact(nextContact);
-    setAccountHolderName(nextAccountHolder);
-    setBankName(nextBankName);
-    setBankAccountNumber(nextBankAccount);
-    setLines(data.lines);
-    setPurpose(nextPurpose);
-    setError("");
-    setSheetMessage("");
-    setStage("REVIEW");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function selectFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -420,13 +358,25 @@ export function CashAdvanceForm({
           </span>
         </div>
       </header>
-      {error && entryMode === "GOOGLE_SHEET" && (
-        <div className={styles.error}>{error}</div>
-      )}
-      {entryMode === "GOOGLE_SHEET" ? (
-        <CashAdvanceRequestGoogleSheet
-          completionFields={
-            <>
+      <form className={styles.page} onSubmit={review}>
+        {initialRecord?.returnRemarks && (
+          <div className={styles.returnNotice}>
+            <strong>Changes requested</strong>
+            <p>{initialRecord.returnRemarks}</p>
+          </div>
+        )}
+        {error && <div className={styles.error}>{error}</div>}
+        <div className={styles.formReceipt}>
+          <section className={styles.receiptSection}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <div>
+                  <h2>Request information</h2>
+                  <p>Staff, project and approval assignment</p>
+                </div>
+              </div>
+            </div>
+            <div className={styles.grid}>
               <div className={styles.field}>
                 <label>
                   Request date <em className={styles.requiredMark}>*</em>
@@ -434,7 +384,7 @@ export function CashAdvanceForm({
                 <input
                   type="date"
                   value={requestDate}
-                  onChange={(event) => setRequestDate(event.target.value)}
+                  onChange={(e) => setRequestDate(e.target.value)}
                 />
               </div>
               <div className={styles.field}>
@@ -442,9 +392,9 @@ export function CashAdvanceForm({
                   Contact <em className={styles.requiredMark}>*</em>
                 </label>
                 <input
+                  placeholder="e.g. +60 12-345 6789"
                   value={contact}
-                  onChange={(event) => setContact(event.target.value)}
-                  placeholder="Phone or email"
+                  onChange={(e) => setContact(e.target.value)}
                 />
               </div>
               <div className={styles.field}>
@@ -453,12 +403,10 @@ export function CashAdvanceForm({
                 </label>
                 <select
                   value={isOtherProject ? "__OTHER__" : projectName}
-                  onChange={(event) => {
-                    setIsOtherProject(event.target.value === "__OTHER__");
+                  onChange={(e) => {
+                    setIsOtherProject(e.target.value === "__OTHER__");
                     setProjectName(
-                      event.target.value === "__OTHER__"
-                        ? ""
-                        : event.target.value,
+                      e.target.value === "__OTHER__" ? "" : e.target.value,
                     );
                   }}
                 >
@@ -477,7 +425,7 @@ export function CashAdvanceForm({
                   </label>
                   <input
                     value={otherProject}
-                    onChange={(event) => setOtherProject(event.target.value)}
+                    onChange={(e) => setOtherProject(e.target.value)}
                   />
                 </div>
               )}
@@ -487,7 +435,7 @@ export function CashAdvanceForm({
                 </label>
                 <select
                   value={managerId}
-                  onChange={(event) => setManagerId(event.target.value)}
+                  onChange={(e) => setManagerId(e.target.value)}
                 >
                   <option value="">Choose Manager</option>
                   {managers.map((item) => (
@@ -499,12 +447,11 @@ export function CashAdvanceForm({
               </div>
               <div className={`${styles.field} ${styles.full}`}>
                 <label>
-                  Director approver{" "}
-                  <em className={styles.requiredMark}>*</em>
+                  Director approver <em className={styles.requiredMark}>*</em>
                 </label>
                 <select
                   value={directorId}
-                  onChange={(event) => setDirectorId(event.target.value)}
+                  onChange={(e) => setDirectorId(e.target.value)}
                 >
                   <option value="">Choose Director</option>
                   {directors.map((item) => (
@@ -515,20 +462,39 @@ export function CashAdvanceForm({
                 </select>
               </div>
               <div className={`${styles.field} ${styles.full}`}>
-                <label>Purpose</label>
+                <label>
+                  Purpose of Cash Advance{" "}
+                  <em className={styles.requiredMark}>*</em>
+                </label>
                 <textarea
+                  placeholder="Explain the main project requirement or context necessitating this Cash Advance…"
                   value={purpose}
-                  onChange={(event) => setPurpose(event.target.value)}
-                  placeholder="Purpose of this Cash Advance"
+                  onChange={(e) => setPurpose(e.target.value)}
                 />
               </div>
+            </div>
+          </section>
+          <section className={styles.receiptSection}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <div>
+                  <h2>Payment account</h2>
+                  <p>
+                    Use the Staff requester’s bank account that will receive
+                    this Cash Advance.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className={styles.grid3}>
               <div className={styles.field}>
                 <label>
-                  Account holder <em className={styles.requiredMark}>*</em>
+                  Account holder name <em className={styles.requiredMark}>*</em>
                 </label>
                 <input
+                  placeholder="Name as registered with the bank"
                   value={accountHolderName}
-                  onChange={(event) => setAccountHolderName(event.target.value)}
+                  onChange={(e) => setAccountHolderName(e.target.value)}
                 />
               </div>
               <div className={styles.field}>
@@ -537,7 +503,7 @@ export function CashAdvanceForm({
                 </label>
                 <select
                   value={bankName}
-                  onChange={(event) => setBankName(event.target.value)}
+                  onChange={(e) => setBankName(e.target.value)}
                 >
                   <option value="">Choose a bank</option>
                   {BANK_NAME_SELECT_OPTIONS.map((option) => (
@@ -552,285 +518,95 @@ export function CashAdvanceForm({
                   Account number <em className={styles.requiredMark}>*</em>
                 </label>
                 <input
+                  inputMode="numeric"
+                  placeholder="Bank account number"
                   value={bankAccountNumber}
-                  onChange={(event) => setBankAccountNumber(event.target.value)}
+                  onChange={(e) => setBankAccountNumber(e.target.value)}
                 />
               </div>
-            </>
-          }
-          onApply={applyGoogleSheet}
-          onCancel={() => setEntryMode("MANUAL")}
-          onRetrieved={(data) => {
-            if (data.requestDate) setRequestDate(data.requestDate);
-            if (data.contact) setContact(data.contact);
-            if (data.accountHolderName)
-              setAccountHolderName(data.accountHolderName);
-            if (data.bankName) setBankName(normalizeBankName(data.bankName));
-            if (data.bankAccountNumber)
-              setBankAccountNumber(data.bankAccountNumber);
-            const importedPurpose = Array.from(
-              new Set(
-                data.lines.map((line) => line.purpose.trim()).filter(Boolean),
-              ),
-            ).join("; ");
-            if (importedPurpose) setPurpose(importedPurpose);
-            setError("");
-          }}
-        />
-      ) : (
-        <form className={styles.page} onSubmit={review}>
-          {initialRecord?.returnRemarks && (
-            <div className={styles.returnNotice}>
-              <strong>Changes requested</strong>
-              <p>{initialRecord.returnRemarks}</p>
             </div>
-          )}
-          {sheetMessage && <div className={styles.notice}>{sheetMessage}</div>}
-          {error && <div className={styles.error}>{error}</div>}
-          <div className={styles.formReceipt}>
-            <section className={styles.receiptSection}>
-              <div className={styles.sectionHeading}>
+          </section>
+          <CashAdvanceRequestLines
+            lines={lines}
+            onAdd={() => setLines((current) => [...current, makeLine()])}
+            onChange={updateLine}
+            onRemove={(id) =>
+              setLines((current) => current.filter((item) => item.id !== id))
+            }
+            total={total}
+          />
+          <section className={styles.receiptSection}>
+            <div className={styles.sectionHeading}>
+              <div>
                 <div>
-                  <div>
-                    <h2>Request information</h2>
-                    <p>Staff, project and approval assignment</p>
-                  </div>
+                  <h2>Documents and remarks</h2>
+                  <p>Add any supporting information available now.</p>
                 </div>
               </div>
-              <div className={styles.grid}>
-                <div className={styles.field}>
-                  <label>
-                    Request date <em className={styles.requiredMark}>*</em>
-                  </label>
+            </div>
+            <div className={styles.grid}>
+              <div className={styles.field}>
+                <label>Supporting documents</label>
+                <label className={styles.uploadWell}>
+                  <strong>Choose files</strong>
+                  <span>or drag and drop</span>
+                  <small>PDF, PNG or JPG up to 3 MB combined</small>
                   <input
-                    type="date"
-                    value={requestDate}
-                    onChange={(e) => setRequestDate(e.target.value)}
+                    accept="application/pdf,image/png,image/jpeg"
+                    multiple
+                    onChange={selectFiles}
+                    type="file"
                   />
-                </div>
-                <div className={styles.field}>
-                  <label>
-                    Contact <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <input
-                    placeholder="e.g. +60 12-345 6789"
-                    value={contact}
-                    onChange={(e) => setContact(e.target.value)}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label>
-                    Project Name <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <select
-                    value={isOtherProject ? "__OTHER__" : projectName}
-                    onChange={(e) => {
-                      setIsOtherProject(e.target.value === "__OTHER__");
-                      setProjectName(
-                        e.target.value === "__OTHER__" ? "" : e.target.value,
-                      );
-                    }}
-                  >
-                    <option value="">Choose project</option>
-                    {CASH_ADVANCE_PROJECTS.map((project) => (
-                      <option key={project}>{project}</option>
-                    ))}
-                    <option value="__OTHER__">Other</option>
-                  </select>
-                </div>
-                {isOtherProject && (
-                  <div className={styles.field}>
-                    <label>
-                      Other Project Name{" "}
-                      <em className={styles.requiredMark}>*</em>
-                    </label>
-                    <input
-                      value={otherProject}
-                      onChange={(e) => setOtherProject(e.target.value)}
-                    />
-                  </div>
-                )}
-                <div className={styles.field}>
-                  <label>
-                    Manager approver <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <select
-                    value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
-                  >
-                    <option value="">Choose Manager</option>
-                    {managers.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className={`${styles.field} ${styles.full}`}>
-                  <label>
-                    Director approver{" "}
-                    <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <select
-                    value={directorId}
-                    onChange={(e) => setDirectorId(e.target.value)}
-                  >
-                    <option value="">Choose Director</option>
-                    {directors.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className={`${styles.field} ${styles.full}`}>
-                  <label>
-                    Purpose of Cash Advance{" "}
-                    <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <textarea
-                    placeholder="Explain the main project requirement or context necessitating this Cash Advance…"
-                    value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
-                  />
-                </div>
+                </label>
+                {documents.map((document) => (
+                  <small key={document.id}>{document.fileName}</small>
+                ))}
               </div>
-            </section>
-            <section className={styles.receiptSection}>
-              <div className={styles.sectionHeading}>
-                <div>
-                  <div>
-                    <h2>Payment account</h2>
-                    <p>
-                      Use the Staff requester’s bank account that will receive
-                      this Cash Advance.
-                    </p>
-                  </div>
-                </div>
+              <div className={styles.field}>
+                <label>Additional remarks</label>
+                <textarea
+                  placeholder="Include any timeline urgency, supplier requirements, or relevant notes…"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                />
               </div>
-              <div className={styles.grid3}>
-                <div className={styles.field}>
-                  <label>
-                    Account holder name{" "}
-                    <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <input
-                    placeholder="Name as registered with the bank"
-                    value={accountHolderName}
-                    onChange={(e) => setAccountHolderName(e.target.value)}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label>
-                    Bank name <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <select
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                  >
-                    <option value="">Choose a bank</option>
-                    {BANK_NAME_SELECT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className={styles.field}>
-                  <label>
-                    Account number <em className={styles.requiredMark}>*</em>
-                  </label>
-                  <input
-                    inputMode="numeric"
-                    placeholder="Bank account number"
-                    value={bankAccountNumber}
-                    onChange={(e) => setBankAccountNumber(e.target.value)}
-                  />
-                </div>
+            </div>
+            <div className={styles.footerActions}>
+              {draft.draftMessage ? (
+                <ManualDraftStatus message={draft.draftMessage} />
+              ) : (
+                <span className={styles.muted}>
+                  You will review and sign on the next step.
+                </span>
+              )}
+              <div className={styles.draftActions}>
+                <button
+                  className={styles.secondary}
+                  disabled={draft.isSavingDraft}
+                  type="button"
+                  onClick={() =>
+                    draft
+                      .saveDraft()
+                      .then(() => setDraftSaved(true))
+                      .catch((caught) =>
+                        setError(
+                          caught instanceof Error
+                            ? caught.message
+                            : "The draft could not be saved.",
+                        ),
+                      )
+                  }
+                >
+                  {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
+                </button>
+                <button className={styles.primary} type="submit">
+                  Continue to review →
+                </button>
               </div>
-            </section>
-            <CashAdvanceRequestLines
-              lines={lines}
-              onAdd={() => setLines((current) => [...current, makeLine()])}
-              onChange={updateLine}
-              onRemove={(id) =>
-                setLines((current) => current.filter((item) => item.id !== id))
-              }
-              total={total}
-            />
-            <section className={styles.receiptSection}>
-              <div className={styles.sectionHeading}>
-                <div>
-                  <div>
-                    <h2>Documents and remarks</h2>
-                    <p>Add any supporting information available now.</p>
-                  </div>
-                </div>
-              </div>
-              <div className={styles.grid}>
-                <div className={styles.field}>
-                  <label>Supporting documents</label>
-                  <label className={styles.uploadWell}>
-                    <strong>Choose files</strong>
-                    <span>or drag and drop</span>
-                    <small>PDF, PNG or JPG up to 3 MB combined</small>
-                    <input
-                      accept="application/pdf,image/png,image/jpeg"
-                      multiple
-                      onChange={selectFiles}
-                      type="file"
-                    />
-                  </label>
-                  {documents.map((document) => (
-                    <small key={document.id}>{document.fileName}</small>
-                  ))}
-                </div>
-                <div className={styles.field}>
-                  <label>Additional remarks</label>
-                  <textarea
-                    placeholder="Include any timeline urgency, supplier requirements, or relevant notes…"
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className={styles.footerActions}>
-                {draft.draftMessage ? (
-                  <ManualDraftStatus message={draft.draftMessage} />
-                ) : (
-                  <span className={styles.muted}>
-                    You will review and sign on the next step.
-                  </span>
-                )}
-                <div className={styles.draftActions}>
-                  <button
-                    className={styles.secondary}
-                    disabled={draft.isSavingDraft}
-                    type="button"
-                    onClick={() =>
-                      draft
-                        .saveDraft()
-                        .then(() => setDraftSaved(true))
-                        .catch((caught) =>
-                          setError(
-                            caught instanceof Error
-                              ? caught.message
-                              : "The draft could not be saved.",
-                          ),
-                        )
-                    }
-                  >
-                    {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
-                  </button>
-                  <button className={styles.primary} type="submit">
-                    Continue to review →
-                  </button>
-                </div>
-              </div>
-            </section>
-          </div>
-        </form>
-      )}
+            </div>
+          </section>
+        </div>
+      </form>
     </div>
   );
 }

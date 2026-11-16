@@ -1,0 +1,345 @@
+.root {
+    position: relative;
+    display: grid;
+}
+
+.trigger {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    border: 1px solid #1f3a5f;
+    border-radius: 9px;
+    color: #1f3a5f;
+    background: #fff;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.trigger:hover {
+    background: #eef3fb;
+    box-shadow: 0 4px 12px rgb(31 58 95 / 14%);
+}
+
+.trigger:active {
+    background: #dbe5f1;
+    box-shadow: none;
+}
+
+.panel {
+    position: absolute;
+    z-index: 50;
+    top: 48px;
+    right: 0;
+    display: grid;
+    width: min(380px, 88vw);
+    gap: 13px;
+    padding: 18px;
+    border: 1px solid #dbe5f1;
+    border-radius: 14px;
+    color: #102a4c;
+    background: #fff;
+    box-shadow: 0 24px 52px rgb(15 42 76 / 22%);
+}
+
+.panel header {
+    display: grid;
+    gap: 4px;
+}
+
+.panel header p,
+.panel legend {
+    margin: 0;
+    color: #647b98;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.panel header span {
+    color: #71849c;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.panel header b {
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: #08765b;
+    background: #dcfce7;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.panel fieldset {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.types button {
+    --type-color: #07456b;
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 9px;
+    border: 1px solid #dbe5f1;
+    border-radius: 999px;
+    color: #647b98;
+    background: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.types button span {
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: 1;
+}
+
+.types button i {
+    width: 7px;
+    height: 7px;
+    border-radius: 3px;
+    background: var(--type-color);
+}
+
+.types button[data-type="INVOICE_PAYMENT"] {
+    --type-color: #0c6f50;
+}
+
+.types button[data-type="TRAVEL_ALLOWANCE"] {
+    --type-color: #f29221;
+}
+
+.types button[data-type="CASH_ADVANCE"] {
+    --type-color: #db224a;
+}
+
+.types button[data-type="PETTY_CASH"] {
+    --type-color: #fff;
+}
+
+.types button[data-type="CLAIM"] {
+    --type-color: #000;
+}
+
+.types button[data-active="true"] {
+    border-color: var(--type-color);
+    color: #fff;
+    background: var(--type-color);
+}
+
+.types button[data-type="PETTY_CASH"][data-active="true"] {
+    border-color: #173a64;
+    color: #173a64;
+    background: #fff;
+}
+
+.types button[data-active="true"] i {
+    background: #fff;
+}
+
+.types button[data-type="PETTY_CASH"] i {
+    border: 1px solid #173a64;
+}
+
+.periods {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    overflow: hidden;
+    border-radius: 8px;
+    background: #eef2f8;
+}
+
+.periods button {
+    min-height: 32px;
+    border: 0;
+    color: #526987;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.periods button[data-active="true"] {
+    border: 1px solid #dbe5f1;
+    border-radius: 7px;
+    color: #173a64;
+    background: #fff;
+    box-shadow: 0 2px 5px rgb(15 42 76 / 10%);
+}
+
+.panel fieldset>input,
+.range input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #dbe5f1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #173a64;
+    background: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+}
+
+.panel fieldset>label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 25px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.panel fieldset>label input {
+    accent-color: #173a64;
+}
+
+.panel fieldset>label span {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.panel fieldset>label small {
+    color: #8191a6;
+    font-size: 12.5px;
+    font-weight: 400;
+}
+
+.preview {
+    display: grid;
+    gap: 3px;
+    padding: 10px;
+    border: 1px solid #cfe0f5;
+    border-radius: 8px;
+    background: #f3f7fc;
+}
+
+.preview strong {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.preview span {
+    color: #a16207;
+    font-size: 12.5px;
+    font-weight: 400;
+}
+
+.message {
+    margin: 0;
+    color: #526987;
+    font-size: 12.5px;
+}
+
+.panel footer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+}
+
+.panel footer button {
+    min-height: 40px;
+    border: 0;
+    border-radius: 8px;
+    color: #fff;
+    background: #1f3a5f;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.panel footer button:first-child:hover:not(:disabled) {
+    background: #2a4a78;
+    box-shadow: 0 6px 16px rgb(31 58 95 / 28%);
+}
+
+.panel footer button:first-child:active:not(:disabled) {
+    background: #0f2240;
+    box-shadow: none;
+}
+
+.panel footer button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.panel footer button+button {
+    padding: 0 10px;
+    color: #2563eb;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.panel footer button+button:hover {
+    background: #eef4ff;
+    box-shadow: none;
+    text-decoration: underline;
+}
+
+.panel footer button+button:active {
+    background: #dbe7ff;
+    box-shadow: none;
+}
+
+.panel>small {
+    overflow: hidden;
+    color: #8191a6;
+    font-size: 8px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+    .panel {
+        right: auto;
+        left: 0;
+    }
+
+    .periods {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .range {
+        grid-template-columns: 1fr;
+    }
+}
