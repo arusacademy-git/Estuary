@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getBetaAccount } from '@/lib/auth/beta-accounts';
 import {
   createDefaultAdminSettings,
+  effectiveClaimPolicy,
   isProjectManagerAccount,
   managedProgrammesFor,
   projectManagerFor,
@@ -43,5 +44,20 @@ describe('project-scoped manager settings', () => {
 
     expect(travelProjectCodesFor(getBetaAccount('nadia-hassan'), settings)).toEqual(['PROJECT-A']);
     expect(travelProjectCodesFor(getBetaAccount('daniel-lee'), settings)).toEqual(['PROJECT-A', 'PROJECT-B']);
+  });
+});
+
+describe('claim entitlement overrides', () => {
+  it('uses organization defaults unless a per-person value overrides them', () => {
+    const settings = createDefaultAdminSettings();
+    settings.claimPolicy.medicalAnnualLimit = 1000;
+    settings.claimPolicy.pdAnnualLimit = 500;
+    settings.claimOverrides['afiq-rahman'] = { medicalAnnualLimit: 1400 };
+
+    expect(effectiveClaimPolicy('afiq-rahman', settings)).toMatchObject({
+      medicalAnnualLimit: 1400,
+      pdAnnualLimit: 500,
+    });
+    expect(effectiveClaimPolicy('nadia-hassan', settings).medicalAnnualLimit).toBe(1000);
   });
 });

@@ -6,7 +6,9 @@ import { prisma } from '@/lib/db/prisma';
 import type { SignatureMimeType, UserSignatureRecord } from '@/domain/signatures/types';
 
 const MAX_SIZE = 300 * 1024;
-const PRIVATE_ROOT = path.resolve(process.cwd(), 'runtime', 'private');
+const PRIVATE_ROOT = path.resolve(
+    process.env.ESTUARY_PRIVATE_STORAGE_ROOT ?? path.join(process.cwd(), 'runtime', 'private'),
+);
 const extensions: Record<SignatureMimeType, string> = {
     'image/png': 'png',
     'image/jpeg': 'jpg',

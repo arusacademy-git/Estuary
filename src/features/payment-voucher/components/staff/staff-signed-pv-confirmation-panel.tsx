@@ -22,6 +22,7 @@ import {
 } from '@/lib/auth/beta-accounts';
 
 import {
+  downloadDataUrlFile,
   downloadPaymentVoucherPdf,
 } from '@/features/payment-voucher/pdf/download-payment-voucher-pdf';
 
@@ -142,13 +143,7 @@ export function StaffSignedPvConfirmationPanel({
         currentVoucher.signedPvDataUrl &&
         currentVoucher.signedPvFileName
       ) {
-        const link = document.createElement('a');
-        link.href = currentVoucher.signedPvDataUrl;
-        link.download = currentVoucher.signedPvFileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        downloadDataUrlFile(currentVoucher.signedPvDataUrl, currentVoucher.signedPvFileName);
 
         setSuccessMessage(
           'The manually signed Payment Voucher was downloaded.',

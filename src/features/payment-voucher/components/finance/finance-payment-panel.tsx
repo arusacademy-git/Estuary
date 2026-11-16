@@ -17,7 +17,7 @@ import {
   notifyStaffPvInactive,
   notifyStaffSignedPvReturned,
 } from "@/features/payment-voucher/notifications/payment-voucher-notifications";
-import { previewPaymentVoucherPdf } from "@/features/payment-voucher/pdf/download-payment-voucher-pdf";
+import { downloadDataUrlFile, downloadPaymentVoucherPdf, previewPaymentVoucherPdf } from "@/features/payment-voucher/pdf/download-payment-voucher-pdf";
 import { betaAccounts, type BetaAccount } from "@/lib/auth/beta-accounts";
 
 import styles from "./finance-payment.module.css";
@@ -289,17 +289,22 @@ export function FinanceProcessingPanel({
     }
   }
 
-  function downloadSignedPaymentVoucher() {
-    if (!voucher.signedPvDataUrl) {
-      void previewSignedPaymentVoucher();
-      return;
+  async function downloadSignedPaymentVoucher() {
+    setProcessing(true);
+    setMessage("");
+    setError("");
+    try {
+      if (voucher.signedPvDataUrl) {
+        downloadDataUrlFile(voucher.signedPvDataUrl, voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`);
+      } else {
+        await downloadPaymentVoucherPdf(voucher);
+      }
+      setMessage("Signed PV downloaded.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The signed Payment Voucher could not be downloaded.");
+    } finally {
+      setProcessing(false);
     }
-
-    const link = document.createElement("a");
-    link.href = voucher.signedPvDataUrl;
-    link.download =
-      voucher.signedPvFileName || `${voucher.voucherNumber}-signed.pdf`;
-    link.click();
   }
 
   return (

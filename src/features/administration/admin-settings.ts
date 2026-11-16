@@ -25,7 +25,8 @@ export type AdminClaimPolicy = {
   techExtendedLimit: number;
   techExtendedLockYears: number;
 };
-export type AdminSettings = { programmes: AdminProgramme[]; accountingCodes: AdminAccountingCode[]; employees: AdminEmployee[]; claimPolicy: AdminClaimPolicy };
+export type AdminClaimOverride = Partial<AdminClaimPolicy>;
+export type AdminSettings = { programmes: AdminProgramme[]; accountingCodes: AdminAccountingCode[]; employees: AdminEmployee[]; claimPolicy: AdminClaimPolicy; claimOverrides: Record<string, AdminClaimOverride> };
 
 export function canAccessAdministration(account: BetaAccount | null | undefined) {
   return account?.isAdministrator === true;
@@ -59,6 +60,7 @@ export function createDefaultAdminSettings(): AdminSettings {
       techExtendedLimit: TECH_EXTENDED_LIMIT,
       techExtendedLockYears: TECH_EXTENDED_LOCK_YEARS,
     },
+    claimOverrides: {},
   };
 }
 
@@ -82,10 +84,15 @@ export function readAdminSettings(): AdminSettings {
       accountingCodes: Array.isArray(parsed.accountingCodes) ? parsed.accountingCodes : defaults.accountingCodes,
       employees,
       claimPolicy: parsed.claimPolicy && typeof parsed.claimPolicy === 'object' ? { ...defaults.claimPolicy, ...parsed.claimPolicy } : defaults.claimPolicy,
+      claimOverrides: parsed.claimOverrides && typeof parsed.claimOverrides === 'object' ? parsed.claimOverrides : defaults.claimOverrides,
     };
   } catch {
     return defaults;
   }
+}
+
+export function effectiveClaimPolicy(employeeId: string, settings = readAdminSettings()): AdminClaimPolicy {
+  return { ...settings.claimPolicy, ...(settings.claimOverrides[employeeId] ?? {}) };
 }
 
 export function managedProgrammesFor(accountId: string, settings = readAdminSettings()) {

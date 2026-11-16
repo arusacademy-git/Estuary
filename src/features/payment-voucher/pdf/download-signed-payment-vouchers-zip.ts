@@ -28,19 +28,24 @@ function dataUrlBytes(dataUrl: string) {
 }
 
 async function directorSignature(voucher: PaymentVoucherRecord) {
+  if (voucher.directorSignatureDataUrl) return voucher.directorSignatureDataUrl;
   if (!voucher.directorSignatureKey) return null;
   try {
     return await fetchSignatureImageDataUrl(
       voucher.directorSignatureKey,
       voucher.directorId,
     );
-  } catch (originalError) {
+  } catch {
     const current = await fetchUserSignature(
       voucher.organizationId,
       voucher.directorId,
     );
-    if (!current) throw originalError;
-    return fetchSignatureImageDataUrl(current.documentId, voucher.directorId);
+    if (!current) return null;
+    try {
+      return await fetchSignatureImageDataUrl(current.documentId, voucher.directorId);
+    } catch {
+      return null;
+    }
   }
 }
 

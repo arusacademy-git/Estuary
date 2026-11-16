@@ -245,6 +245,11 @@ export function mapStoredPaymentVoucher(
     typeof approvedMetadata.signatureKey === 'string'
       ? approvedMetadata.signatureKey
       : undefined;
+  const directorSignatureDataUrl =
+    isRecord(approvedMetadata) &&
+    typeof approvedMetadata.signatureDataUrl === 'string'
+      ? approvedMetadata.signatureDataUrl
+      : undefined;
   const paymentRemarks =
     isRecord(financeMetadata) &&
     typeof financeMetadata.paymentRemarks === 'string'
@@ -299,6 +304,7 @@ export function mapStoredPaymentVoucher(
     amount: Number(voucher.total_amount),
     rejectionRemarks: rejectedTransition?.reason_text ?? undefined,
     directorSignatureKey,
+    directorSignatureDataUrl,
     directorApprovedAt: approvedTransition?.created_at.toISOString(),
     financeReviewedAt:
       financeStartedTransition?.created_at.toISOString(),
@@ -2451,6 +2457,7 @@ export async function approvePaymentVoucherInDatabase(
   id: string,
   directorId: string,
   signatureKey: string,
+  signatureDataUrl?: string,
 ) {
   return prisma.$transaction(async (transaction) => {
     const voucher = await transaction.submission.findFirst({
@@ -2532,6 +2539,7 @@ export async function approvePaymentVoucherInDatabase(
         actor_membership_id: membership.id,
         metadata_json: {
           signatureKey,
+          ...(signatureDataUrl ? { signatureDataUrl } : {}),
         },
       },
     });
