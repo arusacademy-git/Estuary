@@ -543,28 +543,6 @@ export function TravelAllowanceForm({
           {error}
         </div>
       )}
-      {!initialRecord && (
-        <div
-          className={styles.entryModeTabs}
-          role="group"
-          aria-label="Travel Allowance entry method"
-        >
-          <button
-            data-active={entryMode === "MANUAL"}
-            type="button"
-            onClick={() => setEntryMode("MANUAL")}
-          >
-            Manual form
-          </button>
-          <button
-            data-active={entryMode === "GOOGLE_SHEET"}
-            type="button"
-            onClick={() => setEntryMode("GOOGLE_SHEET")}
-          >
-            Google Sheet Link
-          </button>
-        </div>
-      )}
       {sheetImportMessage && entryMode === "MANUAL" && (
         <div className={styles.sheetSuccess} role="status">
           {sheetImportMessage}

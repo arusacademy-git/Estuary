@@ -420,25 +420,6 @@ export function CashAdvanceForm({
           </span>
         </div>
       </header>
-      <nav
-        className={styles.entryModeTabs}
-        aria-label="Cash Advance entry method"
-      >
-        <button
-          className={entryMode === "MANUAL" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("MANUAL")}
-          type="button"
-        >
-          Manual form
-        </button>
-        <button
-          className={entryMode === "GOOGLE_SHEET" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("GOOGLE_SHEET")}
-          type="button"
-        >
-          Google Sheet link
-        </button>
-      </nav>
       {error && entryMode === "GOOGLE_SHEET" && (
         <div className={styles.error}>{error}</div>
       )}

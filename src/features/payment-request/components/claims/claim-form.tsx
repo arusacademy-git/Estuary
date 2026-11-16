@@ -45,7 +45,6 @@ type ClaimDraftSnapshot = {
   directorId: string;
   techExtended: boolean;
   lines: ClaimLine[];
-  entryMode: "MANUAL" | "GOOGLE_SHEET";
   notes: string;
 };
 
@@ -126,7 +125,6 @@ export function ClaimForm({
       directorId,
       techExtended,
       lines: lines.map((line) => ({ ...line })),
-      entryMode,
       notes,
     }),
     restoreSnapshot: (snapshot) => {
@@ -140,7 +138,6 @@ export function ClaimForm({
           ? snapshot.lines.map((line) => ({ ...line }))
           : [makeLine()],
       );
-      setEntryMode(snapshot.entryMode ?? "MANUAL");
       setNotes(snapshot.notes ?? "");
       setReceiptFiles({});
       setConfirmed(false);
@@ -476,22 +473,6 @@ export function ClaimForm({
         </div>
         <span className={styles.heroPill}>{resumeDraft ? "Saved draft" : "Draft"}</span>
       </header>
-      <nav className={styles.entryModeTabs} aria-label="Claim entry method">
-        <button
-          className={entryMode === "MANUAL" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("MANUAL")}
-          type="button"
-        >
-          Manual form
-        </button>
-        <button
-          className={entryMode === "GOOGLE_SHEET" ? styles.entryModeActive : ""}
-          onClick={() => setEntryMode("GOOGLE_SHEET")}
-          type="button"
-        >
-          Google Sheet link
-        </button>
-      </nav>
       {error && entryMode === "GOOGLE_SHEET" && (
         <div className={styles.error} role="alert">
           {error}
