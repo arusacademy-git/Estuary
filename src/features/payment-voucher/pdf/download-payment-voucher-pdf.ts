@@ -47,7 +47,29 @@ function createSafeArrayBuffer(bytes: Uint8Array) {
   return buffer;
 }
 
+export function dataUrlToBlob(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;,]+)(;base64)?,([\s\S]*)$/);
+  if (!match) throw new Error('The signed Payment Voucher file is invalid.');
+  const bytes = match[2]
+    ? Uint8Array.from(atob(match[3]), (character) => character.charCodeAt(0))
+    : new TextEncoder().encode(decodeURIComponent(match[3]));
+  return new Blob([createSafeArrayBuffer(bytes)], { type: match[1] });
+}
+
+export function downloadDataUrlFile(dataUrl: string, fileName: string) {
+  const url = URL.createObjectURL(dataUrlToBlob(dataUrl));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = sanitizeFileName(fileName) || 'signed-payment-voucher.pdf';
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 async function getDirectorSignatureDataUrl(voucher: PaymentVoucherRecord) {
+  if (voucher.directorSignatureDataUrl) return voucher.directorSignatureDataUrl;
   if (!voucher.directorSignatureKey) return null;
 
   try {
@@ -74,10 +96,17 @@ async function getDirectorSignatureDataUrl(voucher: PaymentVoucherRecord) {
       throw originalError;
     }
 
-    return fetchSignatureImageDataUrl(
-      activeSignature.documentId,
-      voucher.directorId,
-    );
+    try {
+      return await fetchSignatureImageDataUrl(
+        activeSignature.documentId,
+        voucher.directorId,
+      );
+    } catch {
+      // Historical beta approvals may reference a signature file lost before
+      // persistent storage was mounted. Keep the signed PV downloadable; new
+      // approvals carry an immutable signature snapshot in their audit data.
+      return null;
+    }
   }
 }
 

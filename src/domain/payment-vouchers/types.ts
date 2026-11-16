@@ -86,6 +86,7 @@ export type PaymentVoucherRecord = {
    */
   rejectionRemarks?: string;
   directorSignatureKey?: string;
+  directorSignatureDataUrl?: string;
   directorApprovedAt?: string;
 
   /*
@@ -238,6 +239,7 @@ export type CreatePaymentVoucherInput =
      */
     | 'rejectionRemarks'
     | 'directorSignatureKey'
+    | 'directorSignatureDataUrl'
     | 'directorApprovedAt'
 
     /*

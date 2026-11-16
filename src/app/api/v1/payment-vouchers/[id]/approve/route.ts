@@ -4,6 +4,7 @@ import {
   approvePaymentVoucherInDatabase,
 } from '@/data/payment-vouchers/prisma-payment-voucher-repository';
 import { dataResponse } from '@/lib/api/response';
+import { readSignatureDocument } from '@/data/signatures/prisma-signature-repository';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +34,15 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
+    const signature = await readSignatureDocument(parsed.data.signatureKey, parsed.data.directorId);
+    if (!signature) throw new Error('The selected Director signature file could not be found. Upload it again in Settings.');
+    const mimeType = signature.document.mime_type ?? 'image/png';
+    const signatureDataUrl = `data:${mimeType};base64,${Buffer.from(signature.bytes).toString('base64')}`;
     const voucher = await approvePaymentVoucherInDatabase(
       decodeURIComponent(id),
       parsed.data.directorId,
       parsed.data.signatureKey,
+      signatureDataUrl,
     );
 
     return dataResponse(voucher);
