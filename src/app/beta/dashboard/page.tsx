@@ -193,10 +193,10 @@ function date(value: string) {
   return Number.isNaN(parsed.getTime())
     ? value
     : parsed.toLocaleDateString("en-MY", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
 }
 
 function monthKey(value: Date) {
@@ -295,18 +295,20 @@ const requesterActionStatuses = new Set([
   "PROCESSED_PENDING_RECONCILIATION",
 ]);
 
-function myRequestHref(type: DashboardType, id: string) {
-  const encoded = encodeURIComponent(id);
-  if (type === "PAYMENT_VOUCHER") return `/beta/payment-vouchers/${encoded}`;
-  if (type === "INVOICE_PAYMENT")
-    return `/beta/payment-records/invoice-payments/${encoded}`;
-  if (type === "TRAVEL_ALLOWANCE")
-    return `/beta/payment-records/travel-allowances/${encoded}`;
-  if (type === "EXPENSE_CLAIM")
-    return `/beta/payment-records/claims/${encoded}`;
-  if (type === "PETTY_CASH")
-    return `/beta/payment-records/petty-cash/${encoded}`;
-  return `/beta/payment-records/cash-advances/${encoded}`;
+function myRequestsHref(
+  type: DashboardType,
+  options: { requestId?: string; actionOnly?: boolean } = {},
+) {
+  const parameters = new URLSearchParams({
+    scope: "mine",
+    type: modalPaymentType(type),
+  });
+  if (options.actionOnly) parameters.set("summary", "ACTION");
+  if (options.requestId) {
+    parameters.set("request", options.requestId);
+    parameters.set("open", "1");
+  }
+  return `/beta/payment-records?${parameters.toString()}`;
 }
 
 function detailHref(
@@ -320,7 +322,7 @@ function detailHref(
   const requesterAction =
     requesterId === account.id && requesterActionStatuses.has(status);
   if (account.role === "staff" || requesterAction)
-    return myRequestHref(type, id);
+    return myRequestsHref(type, { requestId: id, actionOnly: requesterAction });
   if (type === "PAYMENT_VOUCHER") return `/beta/payment-vouchers/${encoded}`;
   if (type === "EXPENSE_CLAIM")
     return account.role === "manager"
@@ -363,30 +365,28 @@ function typeHref(type: DashboardType, role: BetaRole) {
     return `/beta/finance/pending-processing?type=${pendingType}`;
   }
 
-  if (type === "PAYMENT_VOUCHER") return "/beta/payment-vouchers";
-  if (type === "EXPENSE_CLAIM") return "/beta/payment-records/claims";
-
-  const staffRecords: Record<
-    Exclude<DashboardType, "PAYMENT_VOUCHER" | "EXPENSE_CLAIM">,
-    string
-  > = {
-    INVOICE_PAYMENT: "/beta/payment-records/invoice-payments",
-    TRAVEL_ALLOWANCE: "/beta/payment-records/travel-allowances",
-    CASH_ADVANCE: "/beta/payment-records/cash-advances",
-    PETTY_CASH: "/beta/payment-records/petty-cash",
-  };
-  return staffRecords[type as keyof typeof staffRecords];
+  return myRequestsHref(type);
 }
 
 function myRequestRecordHref(record: DashboardRecord) {
-  return myRequestHref(record.type, record.id);
+  return myRequestsHref(record.type, {
+    requestId: record.id,
+    actionOnly: true,
+  });
+}
+
+function isRequesterActionRecord(
+  record: DashboardRecord,
+  account: BetaAccount,
+) {
+  return (
+    record.requesterId === account.id &&
+    requesterActionStatuses.has(record.status)
+  );
 }
 
 function pendingRecordHref(record: DashboardRecord, account: BetaAccount) {
-  const isRequesterAction =
-    record.requesterId === account.id &&
-    requesterActionStatuses.has(record.status);
-  if (account.role === "staff" || isRequesterAction)
+  if (account.role === "staff" || isRequesterActionRecord(record, account))
     return myRequestRecordHref(record);
 
   const categoryHref = typeHref(record.type, account.role);
@@ -414,33 +414,33 @@ function needsRoleAction(
   if (role === "manager")
     return record.type === "PAYMENT_VOUCHER"
       ? record.status === "APPROVED_FOR_PAYMENT" &&
-      record.approverIds.includes(userId) &&
-      !record.managerViewed
+          record.approverIds.includes(userId) &&
+          !record.managerViewed
       : record.type === "EXPENSE_CLAIM"
         ? false
         : record.type === "PETTY_CASH"
           ? record.approverIds.includes(userId) &&
-          !record.claimManagerPreviewed &&
-          !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
+            !record.claimManagerPreviewed &&
+            !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
           : record.type === "CASH_ADVANCE"
             ? record.approverIds.includes(userId) &&
-            !record.managerViewed &&
-            !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
+              !record.managerViewed &&
+              !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
             : ["PENDING_MANAGER_APPROVAL", "PENDING_MANAGER_REVIEW"].includes(
-              record.status,
-            ) && record.currentAssigneeId === userId;
+                record.status,
+              ) && record.currentAssigneeId === userId;
   if (role === "director")
     return record.type === "EXPENSE_CLAIM"
       ? record.approverIds.includes(userId) &&
-      record.status === "PENDING_DIRECTOR_APPROVAL" &&
-      record.currentAssigneeId === userId
+          record.status === "PENDING_DIRECTOR_APPROVAL" &&
+          record.currentAssigneeId === userId
       : record.type === "PETTY_CASH"
         ? record.approverIds.includes(userId) &&
-        !record.claimDirectorPreviewed &&
-        !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
+          !record.claimDirectorPreviewed &&
+          !["DRAFT", "RETURNED_TO_STAFF"].includes(record.status)
         : ["PENDING_DIRECTOR_APPROVAL", "PENDING_DIRECTOR_REVIEW"].includes(
-          record.status,
-        ) && record.currentAssigneeId === userId;
+            record.status,
+          ) && record.currentAssigneeId === userId;
   if (record.type === "PAYMENT_VOUCHER")
     return [
       "APPROVED_FOR_PAYMENT",
@@ -520,8 +520,8 @@ function normalizeSummary(
     statusLabel:
       record.paymentType === "PAYMENT_VOUCHER"
         ? getPaymentVoucherStatusLabel(
-          record.status as PaymentVoucherRecord["status"],
-        )
+            record.status as PaymentVoucherRecord["status"],
+          )
         : titleCase(record.status),
     amount: record.amount,
     updatedAt: record.updatedAt,
@@ -584,10 +584,10 @@ export default function BetaDashboardPage() {
       }),
       organizationAnalytics
         ? fetchDashboardSummary({
-          role: signedInAccount.role,
-          userId: signedInAccount.id,
-          view: "ORGANIZATION_COMPLETED",
-        })
+            role: signedInAccount.role,
+            userId: signedInAccount.id,
+            view: "ORGANIZATION_COMPLETED",
+          })
         : Promise.resolve([]),
     ])
       .then(([items, analyticsItems]) => {
@@ -641,7 +641,7 @@ export default function BetaDashboardPage() {
 
   const summary = useMemo(() => {
     const attention = records.filter(
-      (record) => account && needsAction(record, account.role, account.id),
+      (record) => account && needsAction(record, effectiveRole, account.id),
     ).length;
     const completed = records.filter((record) =>
       completedStatuses.has(record.status),
@@ -656,7 +656,7 @@ export default function BetaDashboardPage() {
         !inactiveStatuses.has(record.status),
     ).length;
     return { attention, completed, returned, inProgress };
-  }, [account, records]);
+  }, [account, effectiveRole, records]);
   const recent = useMemo(
     () =>
       [...records]
@@ -671,13 +671,13 @@ export default function BetaDashboardPage() {
     () =>
       records
         .filter(
-          (record) => account && needsAction(record, account.role, account.id),
+          (record) => account && needsAction(record, effectiveRole, account.id),
         )
         .sort(
           (a, b) =>
             new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
         ),
-    [account, records],
+    [account, effectiveRole, records],
   );
   const actionCounts = useMemo(
     () =>
@@ -716,10 +716,20 @@ export default function BetaDashboardPage() {
     return (
       <div className={styles.loading}>Loading your Estuary workspace…</div>
     );
+  const routingAccount: BetaAccount =
+    effectiveRole === account.role
+      ? account
+      : { ...account, role: effectiveRole };
   const copy = roleCopy[effectiveRole];
   const selectedActions = selectedActionType
     ? actionRecords.filter((record) => record.type === selectedActionType)
     : [];
+  const selectedRequesterActions = selectedActions.filter((record) =>
+    isRequesterActionRecord(record, account),
+  );
+  const selectedRoleActions = selectedActions.filter(
+    (record) => !isRequesterActionRecord(record, account),
+  );
   const resolved = summary.completed + summary.returned;
   const completionRate =
     resolved > 0 ? Math.round((summary.completed / resolved) * 100) : 0;
@@ -734,11 +744,11 @@ export default function BetaDashboardPage() {
   );
   const reconciliationRate = reconciliations.length
     ? Math.round(
-      (reconciliations.filter((record) => record.status === "RECONCILED")
-        .length /
-        reconciliations.length) *
-      100,
-    )
+        (reconciliations.filter((record) => record.status === "RECONCILED")
+          .length /
+          reconciliations.length) *
+          100,
+      )
     : 0;
   const pendingReconciliations = records.filter(
     (record) =>
@@ -772,71 +782,43 @@ export default function BetaDashboardPage() {
   const kpis =
     account.role === "staff" && !projectManager
       ? [
-        {
-          label: "My requests submitted",
-          value: records.length,
-          note: "Across all payment types",
-        },
-        {
-          label: "My requests in progress",
-          value: summary.inProgress,
-          note: "Moving through the workflow",
-        },
-        {
-          label: "My requests completed",
-          value: summary.completed,
-          note: "Paid or fully closed",
-        },
-        {
-          label: "Cash advance pending reconciliation",
-          value: pendingReconciliations,
-          note: "Advance waiting for your action",
-        },
-        {
-          label: "Completion rate",
-          value: `${completionRate}%`,
-          note: "Completed versus returned",
-        },
-      ]
-      : projectManager || account.role === "manager"
-        ? [
           {
-            label: "Records visible to Manager",
+            label: "My requests submitted",
             value: records.length,
-            note: "Assigned and submitted records",
+            note: "Across all payment types",
           },
           {
-            label: "Pending manager approvals",
-            value: pendingQueueCount,
-            note: "Waiting for Manager action",
+            label: "My requests in progress",
+            value: summary.inProgress,
+            note: "Moving through the workflow",
           },
           {
-            label: "Completed payments",
+            label: "My requests completed",
             value: summary.completed,
             note: "Paid or fully closed",
           },
           {
-            label: "Requests needing action",
-            value: summary.attention,
-            note: "Assigned approvals and follow-up",
+            label: "Cash advance pending reconciliation",
+            value: pendingReconciliations,
+            note: "Advance waiting for your action",
           },
           {
-            label: "Advance reconciliation rate",
-            value: `${reconciliationRate}%`,
-            note: "Cash Advance and Petty Cash",
+            label: "Completion rate",
+            value: `${completionRate}%`,
+            note: "Completed versus returned",
           },
         ]
-        : account.role === "director"
-          ? [
+      : projectManager || account.role === "manager"
+        ? [
             {
-              label: "Records visible to Director",
+              label: "Records visible to Manager",
               value: records.length,
-              note: "Assigned and organization records",
+              note: "Assigned and submitted records",
             },
             {
-              label: "Pending director approvals",
+              label: "Pending manager approvals",
               value: pendingQueueCount,
-              note: "Waiting for Director action",
+              note: "Waiting for Manager action",
             },
             {
               label: "Completed payments",
@@ -844,33 +826,61 @@ export default function BetaDashboardPage() {
               note: "Paid or fully closed",
             },
             {
+              label: "Requests needing action",
+              value: summary.attention,
+              note: "Assigned approvals and follow-up",
+            },
+            {
               label: "Advance reconciliation rate",
               value: `${reconciliationRate}%`,
               note: "Cash Advance and Petty Cash",
             },
           ]
+        : account.role === "director"
+          ? [
+              {
+                label: "Records visible to Director",
+                value: records.length,
+                note: "Assigned and organization records",
+              },
+              {
+                label: "Pending director approvals",
+                value: pendingQueueCount,
+                note: "Waiting for Director action",
+              },
+              {
+                label: "Completed payments",
+                value: summary.completed,
+                note: "Paid or fully closed",
+              },
+              {
+                label: "Advance reconciliation rate",
+                value: `${reconciliationRate}%`,
+                note: "Cash Advance and Petty Cash",
+              },
+            ]
           : [
-            {
-              label: "Payments received by Finance",
-              value: records.length,
-              note: "Across all payment types",
-            },
-            {
-              label: "Pending finance processing",
-              value: pendingQueueCount,
-              note: "Waiting for Finance action",
-            },
-            {
-              label: "Payments completed",
-              value: summary.completed,
-              note: "Paid or fully closed",
-            },
-            {
-              label: "Advance reconciliation rate",
-              value: `${reconciliationRate}%`,
-              note: "Cash Advance and Petty Cash",
-            },
-          ];
+              {
+                label: "Payments received by Finance",
+                value: records.length,
+                note: "Across all payment types",
+              },
+              {
+                label: "Pending finance processing",
+                value: pendingQueueCount,
+                note: "Waiting for Finance action",
+              },
+              {
+                label: "Payments completed",
+                value: summary.completed,
+                note: "Paid or fully closed",
+              },
+              {
+                label: "Advance reconciliation rate",
+                value: `${reconciliationRate}%`,
+                note: "Cash Advance and Petty Cash",
+              },
+            ];
   const visibleCreateOptions = createPaymentOptions.filter((option) => {
     if (option.type === "TRAVEL_ALLOWANCE")
       return projectManager || account.role === "manager";
@@ -1039,7 +1049,7 @@ export default function BetaDashboardPage() {
                     ? kpi.label === "My requests in progress"
                       ? "/beta/payment-records?scope=mine&summary=PROGRESS"
                       : kpi.label === "My requests completed" ||
-                        kpi.label === "Completion rate"
+                          kpi.label === "Completion rate"
                         ? "/beta/payment-records?scope=mine&summary=COMPLETED"
                         : kpi.label === "Cash advance pending reconciliation"
                           ? "/beta/payment-records?scope=mine&summary=ACTION&type=CASH_ADVANCE&status=PENDING_RECONCILIATION"
@@ -1117,13 +1127,13 @@ export default function BetaDashboardPage() {
           {typeOrder.map((type) => {
             const items = records.filter((record) => record.type === type);
             const attention = items.filter((record) =>
-              needsAction(record, account.role, account.id),
+              needsAction(record, effectiveRole, account.id),
             ).length;
             return (
               <Link
                 className={styles.typeCard}
                 data-type={type}
-                href={typeHref(type, account.role)}
+                href={typeHref(type, effectiveRole)}
                 key={type}
               >
                 <div className={styles.typeCardTop}>
@@ -1315,7 +1325,7 @@ export default function BetaDashboardPage() {
                       <span
                         className={styles.status}
                         data-status={record.status}
-                        data-tone={tone(record, account.role, account.id)}
+                        data-tone={tone(record, effectiveRole, account.id)}
                       >
                         {record.statusLabel}
                       </span>
@@ -1382,7 +1392,7 @@ export default function BetaDashboardPage() {
             <div className={styles.drawerList}>
               {selectedActions.slice(0, 10).map((record) => (
                 <Link
-                  href={pendingRecordHref(record, account)}
+                  href={pendingRecordHref(record, routingAccount)}
                   key={`${record.type}-${record.id}`}
                 >
                   <div>
@@ -1390,7 +1400,7 @@ export default function BetaDashboardPage() {
                     <span>
                       {record.requesterName} · {date(record.updatedAt)}
                     </span>
-                    <small data-tone={tone(record, account.role, account.id)}>
+                    <small data-tone={tone(record, effectiveRole, account.id)}>
                       {record.statusLabel}
                     </small>
                   </div>
@@ -1400,13 +1410,27 @@ export default function BetaDashboardPage() {
               ))}
             </div>
             <footer>
-              <Link href={typeHref(selectedActionType, account.role)}>
-                View all {selectedActions.length}{" "}
-                {typeLabels[selectedActionType]} →
-              </Link>
+              {selectedRequesterActions.length > 0 && (
+                <Link
+                  href={myRequestsHref(selectedActionType, {
+                    actionOnly: true,
+                  })}
+                >
+                  View {selectedRequesterActions.length === 1 ? "" : "all "}
+                  {selectedRequesterActions.length} of my{" "}
+                  {typeLabels[selectedActionType]} →
+                </Link>
+              )}
+              {selectedRoleActions.length > 0 && effectiveRole !== "staff" && (
+                <Link href={typeHref(selectedActionType, effectiveRole)}>
+                  View {selectedRoleActions.length === 1 ? "" : "all "}
+                  {selectedRoleActions.length} pending{" "}
+                  {typeLabels[selectedActionType]} →
+                </Link>
+              )}
               <small>
-                Select a record to open its full action page. Press Esc to
-                close.
+                Your own requests open in My Requests. Assigned approvals and
+                processing stay in the role queue. Press Esc to close.
               </small>
             </footer>
           </aside>
