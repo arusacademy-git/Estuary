@@ -1,323 +1,198 @@
 import type {
   CreateNotificationInput,
   NotificationRecord,
-} from '@/domain/notifications/types';
+} from "@/domain/notifications/types";
 
-import {
-  isNotificationUnread,
-} from '@/domain/notifications/types';
-import { createRuntimeId } from '@/lib/ids/runtime-id';
+const STORAGE_KEY = "estuary-beta-notifications";
+const CHANGE_EVENT = "estuary:notifications-changed";
 
-const NOTIFICATION_STORAGE_KEY =
-  'estuary-beta-notifications';
-
-const NOTIFICATION_CHANGE_EVENT =
-  'estuary:notifications-changed';
-
-async function sendNotificationChange(url: string, method: string, body: object) {
+async function sendNotificationChange(
+  url: string,
+  method: "POST" | "PATCH" | "DELETE",
+  body: object,
+) {
   try {
     const response = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       keepalive: true,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      console.warn(
+        `Notifications API returned HTTP ${response.status}; the local change was kept.`,
+      );
+    }
   } catch (error) {
-    console.error('The in-app notification could not sync across browsers.', error);
+    console.warn(
+      "Notifications API could not be reached; the local change was kept.",
+      error,
+    );
   }
 }
 
-export async function getSharedNotificationsForRecipient(recipientId: string): Promise<NotificationRecord[]> {
-  const response = await fetch(`/api/v1/notifications?recipientId=${encodeURIComponent(recipientId)}`, {
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error(`Notifications could not be loaded (HTTP ${response.status}).`);
-  const result = await response.json() as { data?: NotificationRecord[] };
-  return result.data ?? [];
+function readNotifications(): NotificationRecord[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as NotificationRecord[]) : [];
+  } catch (error) {
+    console.warn("Stored notifications could not be read.", error);
+    return [];
+  }
 }
 
-function canUseLocalStorage() {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.localStorage !== 'undefined'
-  );
-}
-
-function createNotificationId() {
-  return createRuntimeId();
-}
-
-function sortNewestFirst(
+function writeNotifications(
   notifications: NotificationRecord[],
+  notify = true,
 ) {
-  return [...notifications].sort(
-    (firstNotification, secondNotification) =>
-      new Date(
-        secondNotification.createdAt,
-      ).getTime() -
-      new Date(
-        firstNotification.createdAt,
-      ).getTime(),
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+  if (notify) window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
+function newestFirst(notifications: NotificationRecord[]) {
+  return [...notifications].sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
   );
 }
 
-function notifyNotificationChange() {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.dispatchEvent(
-    new CustomEvent(
-      NOTIFICATION_CHANGE_EVENT,
+export function getNotificationsForRecipient(recipientId: string) {
+  return newestFirst(
+    readNotifications().filter(
+      (notification) => notification.recipientId === recipientId,
     ),
   );
 }
 
-function saveNotifications(
-  notifications: NotificationRecord[],
-) {
-  if (!canUseLocalStorage()) {
-    return;
-  }
+function extractNotifications(payload: unknown): NotificationRecord[] {
+  if (Array.isArray(payload)) return payload as NotificationRecord[];
+  if (!payload || typeof payload !== "object") return [];
 
-  window.localStorage.setItem(
-    NOTIFICATION_STORAGE_KEY,
-    JSON.stringify(notifications),
-  );
-
-  notifyNotificationChange();
+  const record = payload as Record<string, unknown>;
+  if (Array.isArray(record.notifications))
+    return record.notifications as NotificationRecord[];
+  if (Array.isArray(record.data)) return record.data as NotificationRecord[];
+  return [];
 }
 
-export function getAllNotifications() {
-  if (!canUseLocalStorage()) {
-    return [] as NotificationRecord[];
-  }
-
-  const storedValue = window.localStorage.getItem(
-    NOTIFICATION_STORAGE_KEY,
-  );
-
-  if (!storedValue) {
-    return [];
-  }
+export async function getSharedNotificationsForRecipient(recipientId: string) {
+  const localNotifications = getNotificationsForRecipient(recipientId);
 
   try {
-    const parsedValue = JSON.parse(
-      storedValue,
-    ) as unknown;
+    const response = await fetch(
+      `/api/v1/notifications?recipientId=${encodeURIComponent(recipientId)}`,
+      { cache: "no-store" },
+    );
 
-    if (!Array.isArray(parsedValue)) {
-      return [];
+    if (!response.ok) {
+      console.warn(
+        `Notifications API returned HTTP ${response.status}; using local notifications.`,
+      );
+      return localNotifications;
     }
 
-    return sortNewestFirst(
-      parsedValue as NotificationRecord[],
+    const remoteNotifications = extractNotifications(await response.json());
+    const merged = new Map<string, NotificationRecord>();
+    for (const notification of [
+      ...localNotifications,
+      ...remoteNotifications,
+    ]) {
+      merged.set(notification.id, notification);
+    }
+
+    const recipientNotifications = newestFirst([...merged.values()]).filter(
+      (notification) => notification.recipientId === recipientId,
     );
-  } catch {
-    return [];
+    const otherRecipients = readNotifications().filter(
+      (notification) => notification.recipientId !== recipientId,
+    );
+    writeNotifications([...otherRecipients, ...recipientNotifications], false);
+    return recipientNotifications;
+  } catch (error) {
+    console.warn(
+      "Notifications API could not be reached; using local notifications.",
+      error,
+    );
+    return localNotifications;
   }
 }
 
-export function getNotificationsForRecipient(
-  recipientId: string,
-) {
-  return getAllNotifications().filter(
-    (notification) =>
-      notification.recipientId === recipientId,
-  );
-}
-
-export function getUnreadNotificationsForRecipient(
-  recipientId: string,
-) {
-  return getNotificationsForRecipient(
-    recipientId,
-  ).filter(isNotificationUnread);
-}
-
-export function getUnreadNotificationCount(
-  recipientId: string,
-) {
-  return getUnreadNotificationsForRecipient(
-    recipientId,
-  ).length;
-}
-
-export function createLocalNotification(
-  input: CreateNotificationInput,
-) {
-  const notifications = getAllNotifications();
-
-  const createdNotification: NotificationRecord = {
+export function createLocalNotification(input: CreateNotificationInput) {
+  const notification: NotificationRecord = {
     ...input,
-    id: createNotificationId(),
+    id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
-
-  saveNotifications([
-    createdNotification,
-    ...notifications,
-  ]);
-
-  void sendNotificationChange('/api/v1/notifications', 'POST', createdNotification);
-
-  return createdNotification;
+  writeNotifications([notification, ...readNotifications()]);
+  void sendNotificationChange("/api/v1/notifications", "POST", notification);
+  return notification;
 }
 
 export function markNotificationAsRead(
   notificationId: string,
   recipientId: string,
 ) {
-  const notifications = getAllNotifications();
-
-  let updatedNotification:
-    | NotificationRecord
-    | undefined;
-
-  const updatedNotifications =
-    notifications.map((notification) => {
-      if (
-        notification.id !== notificationId ||
-        notification.recipientId !==
-          recipientId
-      ) {
-        return notification;
-      }
-
-      if (notification.readAt) {
-        updatedNotification = notification;
-        return notification;
-      }
-
-      const nextNotification = {
-        ...notification,
-        readAt: new Date().toISOString(),
-      };
-
-      updatedNotification = nextNotification;
-
-      return nextNotification;
-    });
-
-  saveNotifications(updatedNotifications);
-
-  void sendNotificationChange(`/api/v1/notifications/${encodeURIComponent(notificationId)}`, 'PATCH', { recipientId });
-
-  return updatedNotification;
+  const readAt = new Date().toISOString();
+  writeNotifications(
+    readNotifications().map((notification) =>
+      notification.id === notificationId &&
+      notification.recipientId === recipientId
+        ? { ...notification, readAt }
+        : notification,
+    ),
+  );
+  void sendNotificationChange(
+    `/api/v1/notifications/${encodeURIComponent(notificationId)}`,
+    "PATCH",
+    { recipientId },
+  );
 }
 
-export function markAllNotificationsAsRead(
-  recipientId: string,
-) {
+export function markAllNotificationsAsRead(recipientId: string) {
   const readAt = new Date().toISOString();
-
-  const notifications = getAllNotifications();
-
-  const updatedNotifications =
-    notifications.map((notification) => {
-      if (
-        notification.recipientId !==
-          recipientId ||
-        notification.readAt
-      ) {
-        return notification;
-      }
-
-      return {
-        ...notification,
-        readAt,
-      };
-    });
-
-  saveNotifications(updatedNotifications);
-
-  void sendNotificationChange('/api/v1/notifications', 'PATCH', { recipientId });
+  writeNotifications(
+    readNotifications().map((notification) =>
+      notification.recipientId === recipientId && !notification.readAt
+        ? { ...notification, readAt }
+        : notification,
+    ),
+  );
+  void sendNotificationChange("/api/v1/notifications", "PATCH", {
+    recipientId,
+  });
 }
 
 export function deleteNotification(
   notificationId: string,
   recipientId: string,
 ) {
-  const notifications = getAllNotifications();
-
-  const updatedNotifications =
-    notifications.filter(
+  writeNotifications(
+    readNotifications().filter(
       (notification) =>
-        !(
-          notification.id === notificationId &&
-          notification.recipientId ===
-            recipientId
-        ),
-    );
-
-  saveNotifications(updatedNotifications);
-
-  void sendNotificationChange(`/api/v1/notifications/${encodeURIComponent(notificationId)}`, 'DELETE', { recipientId });
-}
-
-export function clearNotificationsForRecipient(
-  recipientId: string,
-) {
-  const notifications = getAllNotifications();
-
-  const remainingNotifications =
-    notifications.filter(
-      (notification) =>
+        notification.id !== notificationId ||
         notification.recipientId !== recipientId,
-    );
-
-  saveNotifications(remainingNotifications);
+    ),
+  );
+  void sendNotificationChange(
+    `/api/v1/notifications/${encodeURIComponent(notificationId)}`,
+    "DELETE",
+    { recipientId },
+  );
 }
 
-export function clearAllDummyNotifications() {
-  if (!canUseLocalStorage()) {
-    return;
-  }
+export function subscribeToNotifications(callback: () => void) {
+  if (typeof window === "undefined") return () => undefined;
 
-  window.localStorage.removeItem(
-    NOTIFICATION_STORAGE_KEY,
-  );
-
-  notifyNotificationChange();
-}
-
-export function subscribeToNotifications(
-  listener: () => void,
-) {
-  if (typeof window === 'undefined') {
-    return () => undefined;
-  }
-
-  function handleStorageChange(
-    event: StorageEvent,
-  ) {
-    if (
-      event.key === NOTIFICATION_STORAGE_KEY
-    ) {
-      listener();
-    }
-  }
-
-  window.addEventListener(
-    NOTIFICATION_CHANGE_EVENT,
-    listener,
-  );
-
-  window.addEventListener(
-    'storage',
-    handleStorageChange,
-  );
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) callback();
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(CHANGE_EVENT, callback);
 
   return () => {
-    window.removeEventListener(
-      NOTIFICATION_CHANGE_EVENT,
-      listener,
-    );
-
-    window.removeEventListener(
-      'storage',
-      handleStorageChange,
-    );
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(CHANGE_EVENT, callback);
   };
 }
