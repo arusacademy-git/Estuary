@@ -1674,22 +1674,22 @@
   width: min(1080px, 100%);
   margin: 0 auto;
   padding: 12px 0 36px;
-  color: #102a4c
+  color: #102a4c;
 }
 
 .cashReviewCard {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(300px, .9fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.9fr);
   overflow: hidden;
   border: 1px solid #d9e3ee;
   border-radius: 15px;
   background: #fff;
-  box-shadow: 0 8px 24px rgb(15 23 42/5%)
+  box-shadow: 0 8px 24px rgb(15 23 42/5%);
 }
 
 .cashReviewMain {
   min-width: 0;
-  padding: 27px 32px
+  padding: 27px 32px;
 }
 
 .cashReviewAside {
@@ -1698,12 +1698,12 @@
   flex-direction: column;
   padding: 27px 25px;
   border-left: 1px solid #dce5ef;
-  background: #f5f8fc
+  background: #f5f8fc;
 }
 
 .cashReviewTitle {
   padding-bottom: 19px;
-  border-bottom: 1px solid #edf1f5
+  border-bottom: 1px solid #edf1f5;
 }
 
 .cashReviewTitle p {
@@ -1711,8 +1711,8 @@
   color: #607693;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .cashReviewTitle p span {
@@ -1724,60 +1724,60 @@
   border-radius: 5px;
   color: #fff;
   background: #df1f4d;
-  font-size: 8px
+  font-size: 8px;
 }
 
 .cashReviewTitle h1 {
   margin: 7px 0 3px;
   color: #08254a;
-  font-size: 24px
+  font-size: 24px;
 }
 
 .cashReviewTitle small,
 .cashReviewSection>small,
 .cashReviewAside small {
   color: #71839a;
-  font-size: 10px
+  font-size: 10px;
 }
 
 .cashReviewSection {
   padding: 18px 0;
-  border-bottom: 1px solid #edf1f5
+  border-bottom: 1px solid #edf1f5;
 }
 
 .cashReviewSection h2,
 .cashReviewAside h2 {
   margin: 0 0 12px;
   color: #102a4c;
-  font-size: 14px
+  font-size: 14px;
 }
 
 .cashReviewSection h2 small {
   margin-left: 5px;
   color: #71839a;
   font-size: 9px;
-  font-weight: 400
+  font-weight: 400;
 }
 
 .cashReviewGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px 28px;
-  margin: 0
+  margin: 0;
 }
 
 .cashReviewAccount {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
-  margin: 14px 0 0
+  margin: 14px 0 0;
 }
 
 .cashReviewGrid dt,
 .cashReviewAccount dt {
   color: #71839a;
   font-size: 9px;
-  text-transform: uppercase
+  text-transform: uppercase;
 }
 
 .cashReviewGrid dd,
@@ -1785,13 +1785,13 @@
   margin: 4px 0 0;
   overflow-wrap: anywhere;
   font-size: 12px;
-  font-weight: 700
+  font-weight: 700;
 }
 
 .cashReviewPerson {
   display: flex;
   align-items: center;
-  gap: 7px
+  gap: 7px;
 }
 
 .cashReviewPerson i {
@@ -1803,7 +1803,7 @@
   color: #2563eb;
   background: #dbeafe;
   font-size: 8px;
-  font-style: normal
+  font-style: normal;
 }
 
 .cashReviewTotal {
@@ -1811,15 +1811,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  background: #f5f8fc
+  background: #f5f8fc;
 }
 
 .cashReviewTotal span {
-  font-size: 10px
+  font-size: 10px;
 }
 
 .cashReviewTotal strong {
-  font-size: 18px
+  font-size: 18px;
 }
 
 .cashReviewAside>div:first-child>strong {
@@ -1827,19 +1827,19 @@
   margin: 5px 0;
   color: #113765;
   font-size: 31px;
-  line-height: 1
+  line-height: 1;
 }
 
 .cashReviewAside>div:first-child>p {
   margin: 5px 0;
   color: #71839a;
-  font-size: 9px
+  font-size: 9px;
 }
 
 .cashReviewAside>section {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid #dce5ef
+  border-top: 1px solid #dce5ef;
 }
 
 .cashReviewSignature {
@@ -1851,25 +1851,25 @@
   padding: 10px;
   border: 1px solid #dce5ef;
   border-radius: 9px;
-  background: #fff
+  background: #fff;
 }
 
 .cashReviewSignature span,
 .cashReviewSignature strong {
   display: block;
-  font-size: 8px
+  font-size: 8px;
 }
 
 .cashReviewSignature strong {
   margin-top: 3px;
-  font-size: 9px
+  font-size: 9px;
 }
 
 .cashReviewSignature img {
   max-width: 120px;
   height: auto;
   max-height: 55px;
-  object-fit: contain
+  object-fit: contain;
 }
 
 .cashReviewConfirm {
@@ -1879,41 +1879,41 @@
   margin-top: 12px;
   color: #465f7c;
   font-size: 9px;
-  line-height: 1.4
+  line-height: 1.4;
 }
 
 .cashReviewActions {
   display: grid;
   gap: 8px;
   margin-top: auto;
-  padding-top: 22px
+  padding-top: 22px;
 }
 
 .cashReviewActions .primary,
 .cashReviewActions .secondary {
   width: 100%;
   min-height: 40px;
-  font-size: 10px
+  font-size: 10px;
 }
 
-@media(max-width:760px) {
+@media (max-width: 760px) {
   .cashReviewCard {
-    grid-template-columns: 1fr
+    grid-template-columns: 1fr;
   }
 
   .cashReviewAside {
     border-top: 1px solid #dce5ef;
-    border-left: 0
+    border-left: 0;
   }
 
   .cashReviewAccount,
   .cashReviewGrid {
-    grid-template-columns: 1fr
+    grid-template-columns: 1fr;
   }
 
   .cashReviewMain,
   .cashReviewAside {
-    padding: 22px
+    padding: 22px;
   }
 }
 
@@ -4565,7 +4565,11 @@
   font-size: 10px;
   font-weight: 750;
   text-decoration: none;
-  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .cashReviewSignatureRequired>a:hover {
@@ -4590,4 +4594,433 @@
   color: #8a9aae;
   font-size: 8px;
   text-align: center;
+}
+
+/* Prototype-aligned Cash Advance request form */
+.formHero {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 150px;
+  margin-bottom: 20px;
+  padding: 34px 44px;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.formHero .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #607795;
+}
+
+.formHero .eyebrow b {
+  display: inline-grid;
+  min-width: 27px;
+  min-height: 19px;
+  place-items: center;
+  border-radius: 5px;
+  color: #fff;
+  background: #db224a;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.formHero .draftPill {
+  border: 0;
+  color: #526987;
+  background: #eef2f8;
+}
+
+.cashAdvanceForm {
+  display: block;
+}
+
+.cashAdvanceForm>.returnNotice,
+.cashAdvanceForm>.error {
+  margin-bottom: 16px;
+}
+
+.cashAdvanceLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.78fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.cashAdvanceLayout .formReceipt,
+.cashAdvanceSummary {
+  min-width: 0;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.cashAdvanceSummary {
+  position: static;
+  padding: 26px;
+}
+
+.cashAdvanceLayout .receiptSection {
+  padding: 28px 30px;
+}
+
+.cashAdvanceLayout .sectionHeading {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cashAdvanceLayout .sectionHeading>div {
+  min-width: 0;
+}
+
+.sectionNumber {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  color: #2563eb;
+  background: #e9f0ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.requesterCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 13px 15px;
+  border: 1px solid #dbe5f1;
+  border-radius: 12px;
+  background: #f6f9fd;
+}
+
+.requesterCard>span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #1f3a5f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.requesterCard strong,
+.requesterCard small {
+  display: block;
+}
+
+.requesterCard strong {
+  color: #102a4c;
+  font-size: 13px;
+}
+
+.requesterCard small {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 10.5px;
+}
+
+.cashAdvanceForm .requiredMark,
+.cashEntryCard em {
+  color: #dc2626;
+  font-style: normal;
+}
+
+.cashEntryList {
+  display: grid;
+  gap: 12px;
+}
+
+.cashEntryCard {
+  padding: 16px;
+  border: 1px solid #dbe5f1;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.cashEntryCard>header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.cashEntryCard>header strong {
+  color: #102a4c;
+  font-size: 12px;
+}
+
+.cashEntryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cashEntryGrid label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.cashEntryGrid label>span {
+  color: #435d7c;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cashEntryGrid input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 11px;
+  border: 1px solid #d1dce9;
+  border-radius: 8px;
+  color: #172b4d;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.cashEntryGrid input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 11%);
+}
+
+.cashEntryList+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-color: #fecaca;
+  background: #fff5f6;
+}
+
+.cashEntryList+.total span,
+.cashEntryList+.total small {
+  display: block;
+}
+
+.cashEntryList+.total small {
+  margin-top: 3px;
+  color: #db224a;
+  font-size: 9px;
+}
+
+.cashEntryList+.total strong {
+  color: #cf203f;
+  font-size: 21px;
+}
+
+.cashSummaryHeading>span,
+.cashChecklist h2 {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cashSummaryHeading>strong {
+  display: block;
+  margin-top: 7px;
+  color: #cf203f;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.cashSummaryRows {
+  display: grid;
+  margin: 19px 0 0;
+}
+
+.cashSummaryRows>div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.cashSummaryRows dt,
+.cashSummaryRows dd {
+  margin: 0;
+  font-size: 11px;
+}
+
+.cashSummaryRows dt {
+  color: #71849c;
+}
+
+.cashSummaryRows dd {
+  color: #1f3a5f;
+  font-weight: 750;
+  text-align: right;
+}
+
+.cashSummaryRows .cashSummaryWarning {
+  color: #dc2626;
+}
+
+.cashChecklist {
+  margin-top: 21px;
+}
+
+.cashChecklist h2 {
+  margin: 0 0 8px;
+}
+
+.cashChecklist>div {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.cashChecklist i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+}
+
+.cashChecklist span,
+.cashChecklist small {
+  color: #64748b;
+  font-size: 10.5px;
+}
+
+.cashChecklist small {
+  font-size: 9.5px;
+}
+
+.cashChecklistComplete i {
+  background: #0e8750;
+}
+
+.cashChecklistComplete small {
+  color: #0e8750;
+  font-weight: 700;
+}
+
+.minimumPolicy,
+.nextStepNote {
+  margin-top: 15px;
+  padding: 12px 13px;
+  border: 1px solid #f1e0a8;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.nextStepNote {
+  border-color: #dbe5f1;
+  background: #f3f6fa;
+}
+
+.minimumPolicy strong,
+.nextStepNote strong {
+  color: #92580a;
+  font-size: 10.5px;
+}
+
+.nextStepNote strong {
+  color: #1f3a5f;
+}
+
+.minimumPolicy p,
+.nextStepNote p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.summaryActions {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.summaryActions .draftActions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  justify-content: stretch;
+  justify-items: stretch;
+}
+
+.summaryActions .draftActions button {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.summaryActions .primary {
+  border-color: #1f3a5f;
+  background: #1f3a5f;
+}
+
+.summaryActions .draftStatus,
+.summaryActions p {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 920px) {
+  .cashAdvanceLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .formHero {
+    min-height: 0;
+    padding: 24px 22px;
+  }
+
+  .cashEntryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cashAdvanceLayout .receiptSection,
+  .cashAdvanceSummary {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
 }

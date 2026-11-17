@@ -85,12 +85,12 @@ function readDocument(file: File): Promise<PaymentRequestDocument> {
     reader.onload = () =>
       typeof reader.result === "string"
         ? resolve({
-          id: `${file.name}-${file.size}-${file.lastModified}`,
-          fileName: file.name,
-          mimeType: file.type,
-          size: file.size,
-          dataUrl: reader.result,
-        })
+            id: `${file.name}-${file.size}-${file.lastModified}`,
+            fileName: file.name,
+            mimeType: file.type,
+            size: file.size,
+            dataUrl: reader.result,
+          })
         : reject(new Error(`${file.name} could not be read.`));
     reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
     reader.readAsDataURL(file);
@@ -442,13 +442,13 @@ export function TravelAllowanceForm({
     <main className={styles.page}>
       <header className={styles.pageHeader}>
         <div>
-          <p>Payment Requests / Travel Allowance</p>
+          <p>
+            <b>TA</b> Travel Allowance · On behalf of Staff
+          </p>
           <h1>
             {initialRecord
               ? `Edit ${initialRecord.requestNumber}`
-              : requestMode === "manager"
-                ? "New Travel Allowance on behalf of Staff"
-                : "New Travel Allowance"}
+              : "New Travel Allowance request"}
           </h1>
           <span>
             Enter each project-travel meal allowance. Estuary will calculate and
@@ -473,460 +473,578 @@ export function TravelAllowanceForm({
           {error}
         </div>
       )}
-      <form className={styles.formCard} onSubmit={review}>
-        <section className={styles.guidance}>
-          <div>
-            <span>Travel Allowance</span>
-            <h2>Paid before project travel</h2>
-          </div>
-          <p>
-            Approved allowances are scheduled one business day before the travel
-            date. Breakfast is RM10, lunch RM20 and dinner RM20.
-          </p>
-        </section>
-        <section className={styles.section}>
-          <div className={styles.sectionHeading}>
-            <h2>Requester and approval</h2>
-            <p>
-              {requestMode === "manager"
-                ? isDirector
-                  ? "You are submitting this request as Director."
-                  : "You are submitting this request on behalf of Staff."
-                : "Your profile is used as the requester."}
-            </p>
-          </div>
-          <div className={styles.fields}>
-            <label>
-              <span>
-                Request date <em>*</em>
-              </span>
-              <input
-                type="date"
-                value={requestDate}
-                onChange={(event) => setRequestDate(event.target.value)}
-              />
-            </label>
-            <label>
-              <span>
-                {requestMode === "manager"
-                  ? isDirector
-                    ? "Submitted by Director"
-                    : "Submitted by Manager"
-                  : "Staff name"}
-              </span>
-              <input disabled value={account?.name ?? "Loading…"} />
-            </label>
-            <label>
-              <span>Position</span>
-              <input disabled value={account?.position ?? "Loading…"} />
-            </label>
-            <label>
-              <span>
-                Contact <em>*</em>
-              </span>
-              <input
-                placeholder="Phone number or extension"
-                value={contact}
-                onChange={(event) => setContact(event.target.value)}
-              />
-            </label>
-            <label>
-              <span>
-                Manager reviewer <em>*</em>
-              </span>
-              {requestMode === "manager" ? (
+      <form className={styles.travelFormLayout} onSubmit={review}>
+        <div className={styles.travelMainCard}>
+          <section className={styles.section}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.sectionNumber}>1</span>
+              <div>
+                <h2>Requester and approval</h2>
+                <p>
+                  {requestMode === "manager"
+                    ? isDirector
+                      ? "You are submitting this request as Director."
+                      : "You are submitting this request on behalf of Staff."
+                    : "Your profile is used as the requester."}
+                </p>
+              </div>
+            </div>
+            <div className={styles.fields}>
+              <label>
+                <span>
+                  Request date <em>*</em>
+                </span>
+                <input
+                  required
+                  type="date"
+                  value={requestDate}
+                  onChange={(event) => setRequestDate(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>
+                  {requestMode === "manager"
+                    ? isDirector
+                      ? "Submitted by Director"
+                      : "Submitted by Manager"
+                    : "Staff name"}
+                </span>
                 <input disabled value={account?.name ?? "Loading…"} />
-              ) : (
+              </label>
+              <label>
+                <span>Position</span>
+                <input disabled value={account?.position ?? "Loading…"} />
+              </label>
+              <label>
+                <span>
+                  Contact <em>*</em>
+                </span>
+                <input
+                  required
+                  placeholder="Phone number or extension"
+                  value={contact}
+                  onChange={(event) => setContact(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>
+                  Manager reviewer <em>*</em>
+                </span>
+                {requestMode === "manager" ? (
+                  <input disabled value={account?.name ?? "Loading…"} />
+                ) : (
+                  <select
+                    required
+                    value={managerApproverId}
+                    onChange={(event) =>
+                      setManagerApproverId(event.target.value)
+                    }
+                  >
+                    <option value="">Choose a Manager</option>
+                    {managers.map((manager) => (
+                      <option key={manager.id} value={manager.id}>
+                        {manager.name} - {manager.position}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+              <label>
+                <span>
+                  Project Director in charge <em>*</em>
+                </span>
                 <select
-                  value={managerApproverId}
-                  onChange={(event) => setManagerApproverId(event.target.value)}
+                  required
+                  value={projectDirectorId}
+                  onChange={(event) => setProjectDirectorId(event.target.value)}
                 >
-                  <option value="">Choose a Manager</option>
-                  {managers.map((manager) => (
-                    <option key={manager.id} value={manager.id}>
-                      {manager.name} - {manager.position}
+                  <option value="">Choose a Director</option>
+                  {directors.map((director) => (
+                    <option key={director.id} value={director.id}>
+                      {director.name} - {director.position}
                     </option>
                   ))}
                 </select>
-              )}
-            </label>
-            <label>
-              <span>
-                Project Director in charge <em>*</em>
-              </span>
-              <select
-                value={projectDirectorId}
-                onChange={(event) => setProjectDirectorId(event.target.value)}
-              >
-                <option value="">Choose a Director</option>
-                {directors.map((director) => (
-                  <option key={director.id} value={director.id}>
-                    {director.name} - {director.position}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-        <section className={styles.entriesSection}>
-          <div className={styles.entriesHeading}>
-            <div>
-              <h2>Travel entries</h2>
-              <p>
-                Select one or more employees per entry. Every entry in this
-                request must use the same project. Create a new request for a
-                different project. Up to {MAX_LINES} rows are supported.
-              </p>
+              </label>
             </div>
-            <button
-              type="button"
-              disabled={lines.length >= MAX_LINES}
-              onClick={() =>
-                setLines((current) => [
-                  ...current,
-                  {
-                    ...newLine(),
-                    projectName: current[0]?.projectName ?? "",
-                    isOtherProject: current[0]?.isOtherProject ?? false,
-                  },
-                ])
-              }
-            >
-              + Add entry
-            </button>
-          </div>
-          <div className={styles.entryList}>
-            {lines
-              .filter(
-                (line, index, current) =>
-                  current.findIndex(
-                    (item) =>
-                      (item.groupId ?? item.id) === (line.groupId ?? line.id),
-                  ) === index,
-              )
-              .map((line, index) => {
-                const groupId = line.groupId ?? line.id;
-                const groupLines = lines.filter(
-                  (item) => (item.groupId ?? item.id) === groupId,
-                );
-                return (
-                  <article className={styles.entryCard} key={line.id}>
-                    <div className={styles.entryTop}>
-                      <strong>Entry {index + 1}</strong>
-                      <div className={styles.entryActions}>
-                        <button
-                          type="button"
-                          disabled={lines.length >= MAX_LINES}
-                          onClick={() => {
-                            const nextGroupId = uniqueId("group");
-                            setLines((current) => [
-                              ...current,
-                              ...groupLines.map((item) => ({
-                                ...item,
-                                id: uniqueId(),
-                                groupId: nextGroupId,
-                                travelDate: "",
-                              })),
-                            ]);
-                          }}
-                        >
-                          Duplicate
-                        </button>
-                        <button
-                          type="button"
-                          disabled={lines.length === groupLines.length}
-                          onClick={() =>
-                            setLines((current) =>
-                              current.filter(
-                                (item) => (item.groupId ?? item.id) !== groupId,
-                              ),
-                            )
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                    <div className={styles.entryFields}>
-                      {requestMode === "manager" ? (
-                        <div
-                          className={`${styles.full} ${styles.employeePicker}`}
-                        >
-                          <span>
-                            Employee name <em>*</em>
-                          </span>
-                          <details>
-                            <summary>
-                              {groupLines.some((item) => item.employeeId)
-                                ? `${groupLines.filter((item) => item.employeeId).length} employee${groupLines.filter((item) => item.employeeId).length === 1 ? "" : "s"} selected`
-                                : "Choose one or more employees"}
-                            </summary>
-                            <div className={styles.employeeOptions}>
-                              {employees.map((employee) => (
-                                <label key={employee.id}>
-                                  <input
-                                    type="checkbox"
-                                    checked={groupLines.some(
-                                      (item) => item.employeeId === employee.id,
-                                    )}
-                                    onChange={() =>
-                                      toggleGroupEmployee(line, employee.id)
-                                    }
-                                  />
-                                  <span>
-                                    <strong>{employee.name}</strong>
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </details>
-                          <div className={styles.employeeChips}>
-                            {groupLines
-                              .filter((item) => item.employeeId)
-                              .map((item) => (
-                                <button
-                                  key={item.employeeId}
-                                  type="button"
-                                  onClick={() =>
-                                    toggleGroupEmployee(line, item.employeeId)
-                                  }
-                                >
-                                  {item.employeeName}{" "}
-                                  <span aria-hidden="true">×</span>
-                                </button>
-                              ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <label className={styles.full}>
-                          <span>
-                            Employee name <em>*</em>
-                          </span>
-                          <select
-                            value={line.employeeId}
-                            onChange={(event) => {
-                              const employee = employees.find(
-                                (item) => item.id === event.target.value,
-                              );
-                              updateLine(line.id, {
-                                employeeId: employee?.id ?? "",
-                                employeeName: employee?.name ?? "",
-                              });
+          </section>
+          <section className={styles.entriesSection}>
+            <div className={styles.entriesHeading}>
+              <span className={styles.sectionNumber}>2</span>
+              <div>
+                <h2>Travel entries</h2>
+                <p>
+                  Select one or more employees per entry. Every entry in this
+                  request must use the same project. Create a new request for a
+                  different project. Up to {MAX_LINES} rows are supported.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={lines.length >= MAX_LINES}
+                onClick={() =>
+                  setLines((current) => [
+                    ...current,
+                    {
+                      ...newLine(),
+                      projectName: current[0]?.projectName ?? "",
+                      isOtherProject: current[0]?.isOtherProject ?? false,
+                    },
+                  ])
+                }
+              >
+                + Add entry
+              </button>
+            </div>
+            <div className={styles.entryList}>
+              {lines
+                .filter(
+                  (line, index, current) =>
+                    current.findIndex(
+                      (item) =>
+                        (item.groupId ?? item.id) === (line.groupId ?? line.id),
+                    ) === index,
+                )
+                .map((line, index) => {
+                  const groupId = line.groupId ?? line.id;
+                  const groupLines = lines.filter(
+                    (item) => (item.groupId ?? item.id) === groupId,
+                  );
+                  return (
+                    <article className={styles.entryCard} key={line.id}>
+                      <div className={styles.entryTop}>
+                        <strong>Entry {index + 1}</strong>
+                        <div className={styles.entryActions}>
+                          <button
+                            type="button"
+                            disabled={lines.length >= MAX_LINES}
+                            onClick={() => {
+                              const nextGroupId = uniqueId("group");
+                              setLines((current) => [
+                                ...current,
+                                ...groupLines.map((item) => ({
+                                  ...item,
+                                  id: uniqueId(),
+                                  groupId: nextGroupId,
+                                  travelDate: "",
+                                })),
+                              ]);
                             }}
                           >
-                            <option value="">Choose an employee</option>
-                            {line.employeeId &&
-                              !employees.some(
-                                (employee) => employee.id === line.employeeId,
-                              ) && (
-                                <option value={line.employeeId}>
-                                  {line.employeeName || "Saved employee"}
+                            Duplicate
+                          </button>
+                          <button
+                            type="button"
+                            disabled={lines.length === groupLines.length}
+                            onClick={() =>
+                              setLines((current) =>
+                                current.filter(
+                                  (item) =>
+                                    (item.groupId ?? item.id) !== groupId,
+                                ),
+                              )
+                            }
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      <div className={styles.entryFields}>
+                        {requestMode === "manager" ? (
+                          <div
+                            className={`${styles.full} ${styles.employeePicker}`}
+                          >
+                            <span>
+                              Employee name <em>*</em>
+                            </span>
+                            <details>
+                              <summary>
+                                {groupLines.some((item) => item.employeeId)
+                                  ? `${groupLines.filter((item) => item.employeeId).length} employee${groupLines.filter((item) => item.employeeId).length === 1 ? "" : "s"} selected`
+                                  : "Choose one or more employees"}
+                              </summary>
+                              <div className={styles.employeeOptions}>
+                                {employees.map((employee) => (
+                                  <label key={employee.id}>
+                                    <input
+                                      type="checkbox"
+                                      checked={groupLines.some(
+                                        (item) =>
+                                          item.employeeId === employee.id,
+                                      )}
+                                      onChange={() =>
+                                        toggleGroupEmployee(line, employee.id)
+                                      }
+                                    />
+                                    <span>
+                                      <strong>{employee.name}</strong>
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </details>
+                            <div className={styles.employeeChips}>
+                              {groupLines
+                                .filter((item) => item.employeeId)
+                                .map((item) => (
+                                  <button
+                                    key={item.employeeId}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleGroupEmployee(line, item.employeeId)
+                                    }
+                                  >
+                                    {item.employeeName}{" "}
+                                    <span aria-hidden="true">×</span>
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <label className={styles.full}>
+                            <span>
+                              Employee name <em>*</em>
+                            </span>
+                            <select
+                              required
+                              value={line.employeeId}
+                              onChange={(event) => {
+                                const employee = employees.find(
+                                  (item) => item.id === event.target.value,
+                                );
+                                updateLine(line.id, {
+                                  employeeId: employee?.id ?? "",
+                                  employeeName: employee?.name ?? "",
+                                });
+                              }}
+                            >
+                              <option value="">Choose an employee</option>
+                              {line.employeeId &&
+                                !employees.some(
+                                  (employee) => employee.id === line.employeeId,
+                                ) && (
+                                  <option value={line.employeeId}>
+                                    {line.employeeName || "Saved employee"}
+                                  </option>
+                                )}
+                              {employees.map((employee) => (
+                                <option key={employee.id} value={employee.id}>
+                                  {employee.name}
                                 </option>
-                              )}
-                            {employees.map((employee) => (
-                              <option key={employee.id} value={employee.id}>
-                                {employee.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-                      <label>
-                        <span>
-                          Travel date <em>*</em>
-                        </span>
-                        <input
-                          type="date"
-                          value={line.travelDate}
-                          onChange={(event) =>
-                            updateLine(line.id, {
-                              travelDate: event.target.value,
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>
-                          Project Name <em>*</em>
-                        </span>
-                        <select
-                          value={
-                            line.isOtherProject ? "OTHER" : line.projectName
-                          }
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            updateRequestProject(
-                              value === "OTHER"
-                                ? { isOtherProject: true, projectName: "" }
-                                : {
-                                  isOtherProject: false,
-                                  projectName: value,
-                                },
-                            );
-                          }}
-                        >
-                          <option value="">Choose a project</option>
-                          {availableProjects.map((project) => (
-                            <option key={project} value={project}>
-                              {project}
-                            </option>
-                          ))}
-                          {isDirector && <option value="OTHER">Other</option>}
-                        </select>
-                        {line.isOtherProject && (
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        <label>
+                          <span>
+                            Travel date <em>*</em>
+                          </span>
                           <input
-                            aria-label="Other Project Name"
-                            placeholder="Enter the Project Name"
-                            value={line.projectName}
+                            required
+                            type="date"
+                            value={line.travelDate}
                             onChange={(event) =>
-                              updateRequestProject({
-                                isOtherProject: true,
-                                projectName: event.target.value,
+                              updateLine(line.id, {
+                                travelDate: event.target.value,
                               })
                             }
                           />
-                        )}
-                      </label>
-                      <label className={styles.reason}>
-                        <span>
-                          Reason for meal allowance <em>*</em>
-                        </span>
-                        <input
-                          placeholder="Example: Cohort workshop"
-                          value={line.reason}
-                          onChange={(event) =>
-                            updateLine(line.id, {
-                              reason: event.target.value,
-                            })
-                          }
-                        />
-                      </label>
-                    </div>
-                    <fieldset className={styles.meals}>
-                      <legend>Meal type - fixed rates</legend>
-                      {meals.map((meal) => (
-                        <label key={meal}>
-                          <input
-                            type="checkbox"
-                            checked={line.meals.includes(meal)}
-                            onChange={() => toggleMeal(line, meal)}
-                          />
-                          <span>
-                            {meal[0] + meal.slice(1).toLowerCase()}{" "}
-                            <small>{money(TRAVEL_MEAL_RATES[meal])}</small>
-                          </span>
                         </label>
-                      ))}
-                    </fieldset>
-                    <div className={styles.specialRow}>
-                      <label>
-                        <span>Special allowance (RM)</span>
-                        <DecimalInput
-                          value={line.specialAllowance}
-                          onValueChange={(value) =>
-                            updateLine(line.id, {
-                              specialAllowance: value,
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Reason for special allowance</span>
-                        <input
-                          disabled={line.specialAllowance <= 0}
-                          value={line.specialAllowanceReason ?? ""}
-                          onChange={(event) =>
-                            updateLine(line.id, {
-                              specialAllowanceReason: event.target.value,
-                            })
-                          }
-                        />
-                      </label>
-                      <div>
-                        <span>Entry total</span>
-                        <strong>{money(travelLineTotal(line))}</strong>
-                        <small>
-                          Meals {money(travelLineMealSubtotal(line))}
-                        </small>
+                        <label>
+                          <span>
+                            Project Name <em>*</em>
+                          </span>
+                          <select
+                            required
+                            value={
+                              line.isOtherProject ? "OTHER" : line.projectName
+                            }
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              updateRequestProject(
+                                value === "OTHER"
+                                  ? { isOtherProject: true, projectName: "" }
+                                  : {
+                                      isOtherProject: false,
+                                      projectName: value,
+                                    },
+                              );
+                            }}
+                          >
+                            <option value="">Choose a project</option>
+                            {availableProjects.map((project) => (
+                              <option key={project} value={project}>
+                                {project}
+                              </option>
+                            ))}
+                            {isDirector && <option value="OTHER">Other</option>}
+                          </select>
+                          {line.isOtherProject && (
+                            <input
+                              aria-label="Other Project Name"
+                              placeholder="Enter the Project Name"
+                              value={line.projectName}
+                              onChange={(event) =>
+                                updateRequestProject({
+                                  isOtherProject: true,
+                                  projectName: event.target.value,
+                                })
+                              }
+                            />
+                          )}
+                        </label>
+                        <label className={styles.reason}>
+                          <span>
+                            Reason for meal allowance <em>*</em>
+                          </span>
+                          <input
+                            required
+                            placeholder="Example: Cohort workshop"
+                            value={line.reason}
+                            onChange={(event) =>
+                              updateLine(line.id, {
+                                reason: event.target.value,
+                              })
+                            }
+                          />
+                        </label>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
-          </div>
-          <div className={styles.grandTotal}>
+                      <fieldset className={styles.meals}>
+                        <legend>Meal type - fixed rates</legend>
+                        {meals.map((meal) => (
+                          <label key={meal}>
+                            <input
+                              type="checkbox"
+                              checked={line.meals.includes(meal)}
+                              onChange={() => toggleMeal(line, meal)}
+                            />
+                            <span>
+                              {meal[0] + meal.slice(1).toLowerCase()}{" "}
+                              <small>{money(TRAVEL_MEAL_RATES[meal])}</small>
+                            </span>
+                          </label>
+                        ))}
+                      </fieldset>
+                      <div className={styles.specialRow}>
+                        <label>
+                          <span>Special allowance (RM)</span>
+                          <DecimalInput
+                            value={line.specialAllowance}
+                            onValueChange={(value) =>
+                              updateLine(line.id, {
+                                specialAllowance: value,
+                              })
+                            }
+                          />
+                        </label>
+                        <label>
+                          <span>
+                            Reason for special allowance
+                            {line.specialAllowance > 0 && (
+                              <em className={styles.requiredMark}> *</em>
+                            )}
+                          </span>
+                          <input
+                            disabled={line.specialAllowance <= 0}
+                            required={line.specialAllowance > 0}
+                            value={line.specialAllowanceReason ?? ""}
+                            onChange={(event) =>
+                              updateLine(line.id, {
+                                specialAllowanceReason: event.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                        <div>
+                          <span>Entry total</span>
+                          <strong>{money(travelLineTotal(line))}</strong>
+                          <small>
+                            Meals {money(travelLineMealSubtotal(line))}
+                          </small>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+            </div>
+            <div className={styles.grandTotal}>
+              <span>Total requested</span>
+              <strong>{money(total)}</strong>
+            </div>
+          </section>
+          <section className={styles.section}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.sectionNumber}>3</span>
+              <div>
+                <h2>Supporting information</h2>
+                <p>
+                  Estuary generates the official TA form from the information
+                  entered here.
+                </p>
+              </div>
+            </div>
+            <div className={styles.upload}>
+              <span>Optional supporting documents</span>
+              <input
+                accept=".pdf,.png,.jpg,.jpeg"
+                id="travel-allowance-documents"
+                multiple
+                type="file"
+                onChange={(event) => void selectDocuments(event)}
+              />
+              <label
+                className={styles.uploadControl}
+                htmlFor="travel-allowance-documents"
+              >
+                <strong>Choose files</strong>
+                <span>
+                  {documents.length
+                    ? `${documents.length} file${documents.length === 1 ? "" : "s"} selected`
+                    : "No file chosen"}
+                  {" · "}PDF, PNG or JPG · max 5 files · 2.5 MB combined
+                </span>
+              </label>
+            </div>
+            {documents.map((document) => (
+              <div className={styles.document} key={document.id}>
+                <span>{document.fileName}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocuments((current) =>
+                      current.filter((item) => item.id !== document.id),
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <label className={styles.remarks}>
+              <span>Additional remarks</span>
+              <textarea
+                value={remarks}
+                onChange={(event) => setRemarks(event.target.value)}
+              />
+            </label>
+          </section>
+        </div>
+
+        <aside className={styles.travelSummaryCard}>
+          <div className={styles.travelSummaryHeading}>
             <span>Total requested</span>
             <strong>{money(total)}</strong>
           </div>
-        </section>
-        <section className={styles.section}>
-          <div className={styles.sectionHeading}>
-            <h2>Supporting information</h2>
+          <dl className={styles.travelSummaryRows}>
+            <div>
+              <dt>Entries</dt>
+              <dd>{lines.length}</dd>
+            </div>
+            <div>
+              <dt>Meals</dt>
+              <dd>
+                {money(
+                  lines.reduce(
+                    (sum, line) => sum + travelLineMealSubtotal(line),
+                    0,
+                  ),
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Special allowance</dt>
+              <dd>
+                {money(
+                  lines.reduce((sum, line) => sum + line.specialAllowance, 0),
+                )}
+              </dd>
+            </div>
+          </dl>
+
+          <div className={styles.travelChecklist}>
+            <h2>Checklist</h2>
+            <TravelCheck
+              complete={Boolean(contact.trim() && projectDirectorId)}
+              label="Contact and Director"
+            />
+            <TravelCheck
+              complete={lines.every(
+                (line) =>
+                  Boolean(line.employeeId) &&
+                  Boolean(line.travelDate) &&
+                  Boolean(line.projectName),
+              )}
+              label="Employee, date and project"
+            />
+            <TravelCheck
+              complete={lines.every(
+                (line) => Boolean(line.reason.trim()) && line.meals.length > 0,
+              )}
+              label="Reason and a meal type"
+            />
+            <TravelCheck
+              complete={documents.length > 0}
+              label="Documents"
+              optional
+            />
+          </div>
+
+          <div className={styles.travelPolicyNote}>
+            <strong>Paid before project travel</strong>
             <p>
-              Estuary generates the official TA form from the information
-              entered here.
+              Approved allowances are scheduled one business day before the
+              travel date.
             </p>
           </div>
-          <label className={styles.upload}>
-            <span>Optional supporting documents</span>
-            <input
-              accept=".pdf,.png,.jpg,.jpeg"
-              multiple
-              type="file"
-              onChange={(event) => void selectDocuments(event)}
-            />
-            <small>
-              PDF, PNG or JPG; combined maximum 2.5 MB for local testing.
-            </small>
-          </label>
-          {documents.map((document) => (
-            <div className={styles.document} key={document.id}>
-              <span>{document.fileName}</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setDocuments((current) =>
-                    current.filter((item) => item.id !== document.id),
+          <div className={styles.travelMealNote}>
+            <strong>Meal rates</strong>
+            <p>Breakfast RM10 · Lunch RM20 · Dinner RM20</p>
+          </div>
+
+          <footer className={styles.actions}>
+            <button type="submit">Continue to review →</button>
+            <button
+              className={styles.secondaryAction}
+              disabled={draft.isSavingDraft}
+              type="button"
+              onClick={() =>
+                draft
+                  .saveDraft()
+                  .then(() => setDraftSaved(true))
+                  .catch((caught) =>
+                    setError(
+                      caught instanceof Error
+                        ? caught.message
+                        : "The draft could not be saved.",
+                    ),
                   )
-                }
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          <label className={styles.remarks}>
-            <span>Additional remarks</span>
-            <textarea
-              value={remarks}
-              onChange={(event) => setRemarks(event.target.value)}
-            />
-          </label>
-        </section>
-        <footer className={styles.actions}>
-          <button
-            className={styles.secondaryAction}
-            disabled={draft.isSavingDraft}
-            type="button"
-            onClick={() =>
-              draft
-                .saveDraft()
-                .then(() => setDraftSaved(true))
-                .catch((caught) =>
-                  setError(
-                    caught instanceof Error
-                      ? caught.message
-                      : "The draft could not be saved.",
-                  ),
-                )
-            }
-          >
-            {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
-          </button>
-          <button type="submit">Continue to review →</button>
-          <ManualDraftStatus message={draft.draftMessage} />
-        </footer>
+              }
+            >
+              {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
+            </button>
+            <ManualDraftStatus message={draft.draftMessage} />
+          </footer>
+        </aside>
       </form>
     </main>
+  );
+}
+
+function TravelCheck({
+  complete,
+  label,
+  optional = false,
+}: {
+  complete: boolean;
+  label: string;
+  optional?: boolean;
+}) {
+  return (
+    <div className={complete ? styles.travelChecklistComplete : ""}>
+      <i aria-hidden="true" />
+      <span>{label}</span>
+      <small>{optional ? "Optional" : complete ? "Added" : "Required"}</small>
+    </div>
   );
 }
 

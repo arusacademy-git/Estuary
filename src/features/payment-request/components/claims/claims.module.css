@@ -858,7 +858,7 @@
     box-sizing: border-box;
     width: calc(100% - 40px);
     min-height: 150px;
-    margin: 0 20px 20px;
+    margin: 0 20px 10px;
     padding: 34px 44px;
     border: 1px solid #dbe5f1;
     border-radius: 18px;
@@ -1119,6 +1119,29 @@
     font-style: normal;
 }
 
+.claimForm .sectionHeading {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+.claimForm .sectionHeading>span {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 10px;
+    color: #2563eb;
+    background: #eaf2ff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.claimForm .sectionHeading>div {
+    min-width: 0;
+}
+
 /* Clean Claims request composer */
 .claimEyebrow {
     display: inline-flex;
@@ -1144,7 +1167,7 @@
 }
 
 .claimForm {
-    padding: 20px;
+    padding: 8px 20px 20px;
     background: #f6f8fb;
 }
 
@@ -2000,12 +2023,11 @@
 }
 
 .primaryButton {
-  min-height: 41px;
-  border: 1px solid #1f3a5f;
-  border-radius: 7px;
-  color: #fff;
-  background: #1f3a5f;
-  font-size: 11px;
+    min-height: 41px;
+    border-color: #14243a;
+    border-radius: 7px;
+    background: #14243a;
+    font-size: 11px;
 }
 
 @media (max-width: 800px) {

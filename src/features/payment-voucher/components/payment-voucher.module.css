@@ -564,8 +564,8 @@
 .voucherSummary {
   display: grid;
   grid-template-areas:
-    'words stats'
-    'words total';
+    "words stats"
+    "words total";
   grid-template-columns: minmax(0, 1.5fr) minmax(250px, 0.85fr);
   margin-top: 0;
   border-radius: 0 0 10px 10px;
@@ -687,8 +687,7 @@
 
 .reviewGrid {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   margin: 0;
 }
@@ -840,7 +839,7 @@
 }
 
 .trackerStep:not(:last-child)::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 40px;
   bottom: 0;
@@ -967,7 +966,6 @@
   line-height: 1.6;
 }
 
-
 .detailPage {
   display: grid;
   gap: 24px;
@@ -1038,27 +1036,27 @@
   font-weight: 700;
 }
 
-.statusBadge[data-tone='green'] {
+.statusBadge[data-tone="green"] {
   color: #16a34a;
   background: #dcfce7;
 }
 
-.statusBadge[data-tone='amber'] {
+.statusBadge[data-tone="amber"] {
   color: #d97706;
   background: #fef3c7;
 }
 
-.statusBadge[data-tone='red'] {
+.statusBadge[data-tone="red"] {
   color: #dc2626;
   background: #fee2e2;
 }
 
-.statusBadge[data-tone='blue'] {
+.statusBadge[data-tone="blue"] {
   color: #2563eb;
   background: #dbeafe;
 }
 
-.statusBadge[data-tone='gray'] {
+.statusBadge[data-tone="gray"] {
   color: #64748b;
   background: #f1f5f9;
 }
@@ -1338,27 +1336,27 @@
   text-align: center;
 }
 
-.recordStatusBadge[data-tone='green'] {
+.recordStatusBadge[data-tone="green"] {
   color: #16a34a;
   background: #dcfce7;
 }
 
-.recordStatusBadge[data-tone='amber'] {
+.recordStatusBadge[data-tone="amber"] {
   color: #d97706;
   background: #fef3c7;
 }
 
-.recordStatusBadge[data-tone='red'] {
+.recordStatusBadge[data-tone="red"] {
   color: #dc2626;
   background: #fee2e2;
 }
 
-.recordStatusBadge[data-tone='blue'] {
+.recordStatusBadge[data-tone="blue"] {
   color: #2563eb;
   background: #dbeafe;
 }
 
-.recordStatusBadge[data-tone='gray'] {
+.recordStatusBadge[data-tone="gray"] {
   color: #64748b;
   background: #f1f5f9;
 }
@@ -1492,8 +1490,6 @@
   background: #162e4a;
 }
 
-
-
 .pvDetailPage {
   display: grid;
   gap: 24px;
@@ -1536,8 +1532,7 @@
 
 .pvDetailLayout {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1.75fr) minmax(280px, 0.75fr);
+  grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.75fr);
   align-items: start;
   gap: 34px;
 }
@@ -1680,8 +1675,7 @@
 
 .pvInformationGrid {
   display: grid;
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px 28px;
   margin: 0;
 }
@@ -1707,8 +1701,7 @@
 
 .pvPurposeSummary {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0;
   margin-top: 22px;
   overflow: hidden;
@@ -1975,8 +1968,7 @@
 
 .recordsOverview {
   display: grid;
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -2070,7 +2062,7 @@
   background: #e2e8f0;
 }
 
-.recordsViewToggle button[data-active='true'] {
+.recordsViewToggle button[data-active="true"] {
   color: #ffffff;
   background: #1e3a5f;
   box-shadow: 0 1px 2px rgb(15 23 42 / 14%);
@@ -2078,8 +2070,7 @@
 
 .recordsFilters {
   display: grid;
-  grid-template-columns:
-    minmax(260px, 1.6fr) repeat(3, minmax(170px, 1fr));
+  grid-template-columns: minmax(260px, 1.6fr) repeat(3, minmax(170px, 1fr));
   gap: 16px;
 }
 
@@ -2128,8 +2119,7 @@
 
 .recordsGrid {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -2190,35 +2180,34 @@
   display: none;
 }
 
-.voucherStatusBadge[data-tone='green'] {
+.voucherStatusBadge[data-tone="green"] {
   color: #16a34a;
   background: #dcfce7;
 }
 
-.voucherStatusBadge[data-tone='amber'] {
+.voucherStatusBadge[data-tone="amber"] {
   color: #d97706;
   background: #fef3c7;
 }
 
-.voucherStatusBadge[data-tone='red'] {
+.voucherStatusBadge[data-tone="red"] {
   color: #dc2626;
   background: #fee2e2;
 }
 
-.voucherStatusBadge[data-tone='blue'] {
+.voucherStatusBadge[data-tone="blue"] {
   color: #2563eb;
   background: #dbeafe;
 }
 
-.voucherStatusBadge[data-tone='gray'] {
+.voucherStatusBadge[data-tone="gray"] {
   color: #64748b;
   background: #f1f5f9;
 }
 
 .voucherRecordGrid {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -2688,8 +2677,7 @@
 
 .directorFormActions {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
   margin-top: 16px;
 }
@@ -2784,8 +2772,7 @@
 
 .approvalQueueSummary {
   display: grid;
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -2960,7 +2947,7 @@
   background: rgb(255 255 255 / 70%);
 }
 
-.approvalWorkspaceTabs button[data-active='true'] {
+.approvalWorkspaceTabs button[data-active="true"] {
   border-color: #1e3a5f;
   color: #ffffff;
   background: #1e3a5f;
@@ -2980,7 +2967,7 @@
   font-size: 0.65rem;
 }
 
-.approvalWorkspaceTabs button[data-active='true'] span {
+.approvalWorkspaceTabs button[data-active="true"] span {
   color: #1e3a5f;
   background: #ffffff;
 }
@@ -3057,7 +3044,7 @@
   background: #f8fafc;
 }
 
-.approvalFilterTabs button[data-active='true'] {
+.approvalFilterTabs button[data-active="true"] {
   border-color: #bfdbfe;
   color: #1e3a5f;
   background: #eff6ff;
@@ -3076,7 +3063,7 @@
   font-size: 0.62rem;
 }
 
-.approvalFilterTabs button[data-active='true'] span {
+.approvalFilterTabs button[data-active="true"] span {
   color: #ffffff;
   background: #2563eb;
 }
@@ -3087,7 +3074,6 @@
   color: #64748b;
   line-height: 1.6;
 }
-
 
 .approvalQueueResults {
   min-width: 0;
@@ -3146,7 +3132,7 @@
   background: #ffffff;
 }
 
-.approvalViewToggle button[data-active='true'] {
+.approvalViewToggle button[data-active="true"] {
   color: #ffffff;
   background: #1e3a5f;
   box-shadow: 0 2px 6px rgb(15 23 42 / 12%);
@@ -3326,7 +3312,10 @@
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
-  transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .directorSignatureRequired a:hover,
@@ -3441,7 +3430,6 @@
   background: #ecfdf3;
 }
 
-
 @media (max-width: 1100px) {
   .lineLabels {
     display: none;
@@ -3462,13 +3450,11 @@
   }
 
   .recordsOverview {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .recordsFilters {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .voucherRecordTable th:nth-child(2),
@@ -3501,8 +3487,7 @@
   }
 
   .approvalQueueSummary {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -3585,8 +3570,7 @@
   }
 
   .pvInformationGrid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .pvPurposeSummary {
@@ -3629,9 +3613,9 @@
 
   .voucherSummary {
     grid-template-areas:
-      'words'
-      'stats'
-      'total';
+      "words"
+      "stats"
+      "total";
     grid-template-columns: 1fr;
   }
 
@@ -3678,8 +3662,7 @@
   }
 
   .trackerStep {
-    grid-template-columns:
-      36px minmax(0, 1fr);
+    grid-template-columns: 36px minmax(0, 1fr);
     gap: 12px;
   }
 
@@ -3857,8 +3840,7 @@
 }
 
 .pvDetailLayout {
-  grid-template-columns:
-    minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
   align-items: start;
   gap: 20px;
 }
@@ -4234,7 +4216,7 @@
   color: #58708f;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -4242,7 +4224,7 @@
   margin: 0;
   color: #0b294d;
   font-size: clamp(27px, 3vw, 34px);
-  letter-spacing: -.035em;
+  letter-spacing: -0.035em;
 }
 
 .panel>.pageHeading .copy {
@@ -4295,7 +4277,7 @@
   color: #526a87;
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .05em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -4482,8 +4464,7 @@
 /* The lower row contains exactly the two primary cards. */
 .pvDetailPage>.pvDetailLayout {
   display: grid;
-  grid-template-columns:
-    minmax(0, 2fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
   width: 100%;
   min-width: 0;
   align-items: start;
@@ -4834,8 +4815,7 @@
   }
 
   .pvDetailContentCard .pvInformationGrid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -4854,7 +4834,7 @@
   font-size: 0;
 }
 
-.pvDetailPage>.pvNextAction .pvNextActionDocumentActions button>span[aria-hidden='true'] {
+.pvDetailPage>.pvNextAction .pvNextActionDocumentActions button>span[aria-hidden="true"] {
   display: none;
 }
 
@@ -5058,7 +5038,7 @@
   color: #9a5b00;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -5176,4 +5156,420 @@
 .field input[aria-invalid="true"] {
   border-color: #ef4444;
   box-shadow: 0 0 0 1px #ef4444;
+}
+
+/* Prototype-aligned Single Payment Voucher form */
+.panel>.pageHeading {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 150px;
+  margin-bottom: 20px;
+  padding: 34px 44px;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.pageEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageEyebrow b {
+  display: inline-grid;
+  min-width: 27px;
+  min-height: 19px;
+  place-items: center;
+  border-radius: 5px;
+  color: #fff;
+  background: #075985;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.panel>.pageHeading .status {
+  border: 0;
+  background: #eef2f8;
+}
+
+.panel>.pvFormLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.78fr);
+  gap: 20px;
+  align-items: start;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pvFormMain,
+.pvFormSummary {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.pvFormSummary {
+  position: static;
+  padding: 26px;
+}
+
+.pvFormMain>.formSection {
+  padding: 32px 34px;
+}
+
+.pvFormMain>.linesSection {
+  margin: 0;
+  padding: 30px 34px 34px;
+  border-top: 1px solid #e5eaf0;
+}
+
+.pvFormMain .form {
+  gap: 21px 20px;
+  margin-top: 24px;
+}
+
+.pvFormMain .field {
+  gap: 8px;
+}
+
+.pvFormMain .field input,
+.pvFormMain .field select {
+  min-height: 48px;
+  padding: 11px 14px;
+}
+
+.pvFormMain .field textarea {
+  min-height: 118px;
+  padding: 13px 14px;
+}
+
+.pvFormMain .sectionHeading,
+.pvFormMain .linesHeading {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.pvFormMain .linesHeading {
+  margin-bottom: 22px;
+}
+
+.pvSectionNumber {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  color: #2563eb;
+  background: #e9f0ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pvFormLayout .requiredMarker,
+.pvFormLayout .mobileFieldLabel em {
+  color: #dc2626;
+  font-style: normal;
+}
+
+.pvFormMain .lineLabels span:not(:last-child) {
+  color: #435d7c;
+}
+
+.pvFormMain .voucherLine {
+  grid-template-columns:
+    minmax(130px, 1.1fr) minmax(185px, 1.7fr) minmax(72px, 0.5fr) minmax(100px, 0.72fr) minmax(82px, 0.62fr);
+  gap: 12px;
+  border-color: #dbe5f1;
+  background: #fbfcfe;
+  padding: 15px 18px;
+}
+
+.pvFormMain .lineLabels {
+  grid-template-columns:
+    minmax(130px, 1.1fr) minmax(185px, 1.7fr) minmax(72px, 0.5fr) minmax(100px, 0.72fr) minmax(82px, 0.62fr);
+  gap: 12px;
+  margin-top: 4px;
+  padding: 13px 18px;
+  border: 1px solid #dbe5f1;
+  border-radius: 11px 11px 0 0;
+}
+
+.pvFormMain .voucherLines {
+  overflow: hidden;
+  border-right: 1px solid #dbe5f1;
+  border-bottom: 1px solid #dbe5f1;
+  border-left: 1px solid #dbe5f1;
+  border-radius: 0 0 11px 11px;
+}
+
+.pvFormMain .voucherLine:last-child {
+  border-bottom: 0;
+}
+
+.pvFormMain .mobileFieldLabel input,
+.pvFormMain .mobileFieldLabel select {
+  min-height: 42px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.pvFormMain .lineTotal {
+  min-height: 42px;
+  justify-items: end;
+  padding-right: 2px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pvFormMain .lineTotal strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.pvFormMain .lineLabels span:last-child {
+  padding-right: 2px;
+  text-align: right;
+}
+
+.pvFormMain .voucherSummary {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #dbe5f1;
+  border-radius: 11px;
+}
+
+.pvFormMain .amountInWords {
+  padding: 19px 20px;
+}
+
+.pvFormMain .summaryStats,
+.pvFormMain .grandTotalBar {
+  padding: 17px 20px;
+}
+
+.pvFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+}
+
+.pvFormMain .fileUploadControl {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 13px;
+  border: 1px dashed #b8cce5;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.pvFormMain .uploadLabel {
+  margin-top: 3px;
+}
+
+.pvFormMain .fileUploadControl>strong {
+  flex: 0 0 auto;
+  padding: 9px 15px;
+  border: 1px solid #bfd0e5;
+  border-radius: 8px;
+  color: #1f3a5f;
+  background: #fff;
+  font-size: 11px;
+}
+
+.pvFormMain .fileUploadControl>small {
+  color: #8091a7;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.pvSummaryHeading>span,
+.pvChecklist h2 {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pvSummaryHeading>strong {
+  display: block;
+  margin-top: 7px;
+  color: #1f3a5f;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.pvSummaryRows {
+  display: grid;
+  margin: 19px 0 0;
+}
+
+.pvSummaryRows>div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.pvSummaryRows dt,
+.pvSummaryRows dd {
+  margin: 0;
+  font-size: 11px;
+}
+
+.pvSummaryRows dt {
+  color: #71849c;
+}
+
+.pvSummaryRows dd {
+  color: #1f3a5f;
+  font-weight: 750;
+}
+
+.pvChecklist {
+  margin-top: 21px;
+}
+
+.pvChecklist h2 {
+  margin: 0 0 8px;
+}
+
+.pvChecklist>div {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.pvChecklist i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+}
+
+.pvChecklist span,
+.pvChecklist small {
+  color: #64748b;
+  font-size: 10.5px;
+}
+
+.pvChecklist small {
+  font-size: 9.5px;
+}
+
+.pvChecklistComplete i {
+  background: #0e8750;
+}
+
+.pvChecklistComplete small {
+  color: #0e8750;
+  font-weight: 700;
+}
+
+.pvNextNote {
+  margin-top: 15px;
+  padding: 12px 13px;
+  border: 1px solid #dbe5f1;
+  border-radius: 10px;
+  background: #f3f6fa;
+}
+
+.pvNextNote strong {
+  color: #1f3a5f;
+  font-size: 10.5px;
+}
+
+.pvNextNote p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.pvFormSummary .formActions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.pvFormSummary .formActions button {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.pvFormSummary .formActions .primary {
+  order: 1;
+}
+
+.pvFormSummary .formActions .secondary {
+  order: 2;
+}
+
+.pvFormSummary .formActions>p {
+  order: 3;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .panel>.pvFormLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .panel>.pageHeading {
+    min-height: 0;
+    padding: 24px 22px;
+  }
+
+  .pvFormMain .fileUploadControl {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pvFormMain>.formSection,
+  .pvFormMain>.linesSection {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .pvFormMain .voucherLines {
+    overflow: visible;
+  }
 }

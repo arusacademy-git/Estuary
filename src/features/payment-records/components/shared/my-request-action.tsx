@@ -57,14 +57,16 @@ export function MyRequestAction({
   organizationId,
   requesterId,
   onDraftDeleted,
+  autoOpen = false,
 }: {
   record: MyRequestActionRecord;
   label: string;
   organizationId: string;
   requesterId: string;
   onDraftDeleted: (id: string) => void;
+  autoOpen?: boolean;
 }) {
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(() => autoOpen && !record.draft);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");

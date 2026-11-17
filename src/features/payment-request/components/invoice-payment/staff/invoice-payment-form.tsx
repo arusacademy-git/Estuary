@@ -77,8 +77,8 @@ export function InvoicePaymentForm({
 }) {
   const initialProjectIsListed = initialRecord
     ? (INVOICE_PAYMENT_PROJECTS as readonly string[]).includes(
-        initialRecord.projectName,
-      )
+      initialRecord.projectName,
+    )
     : false;
   const [account, setAccount] =
     useState<ReturnType<typeof readBetaSession>>(null);
@@ -394,8 +394,8 @@ export function InvoicePaymentForm({
           initialRecord
             ? window.location.assign("/beta/payment-records/invoice-payments")
             : window.location.assign(
-                "/beta/payment-requests/invoice-payment/new",
-              )
+              "/beta/payment-requests/invoice-payment/new",
+            )
         }
       />
     );
@@ -444,327 +444,408 @@ export function InvoicePaymentForm({
           {error}
         </div>
       )}
-      <form className={styles.formCard} onSubmit={continueToReview}>
-        <section className={styles.guidance}>
-          <div>
-            <span>Invoice requirements</span>
-            <h2>E-Invoice / Monthly Payment</h2>
-          </div>
-          <p>
-            The e-invoice must be billed to{" "}
-            <strong>Arus Education Sdn. Bhd.</strong>, include the required
-            company address and contain the contractor’s bank details.
-          </p>
-        </section>
-
-        <FormSection
-          title="Request Overview"
-          copy="Staff and project information for Finance tracking"
-        >
-          <div className={styles.fieldGrid}>
-            <Field label="Request date" required>
-              <input
+      <form className={styles.formLayout} onSubmit={continueToReview}>
+        <div className={styles.formCard}>
+          <FormSection
+            index="1"
+            title="Request Overview"
+            copy="Staff and project information for Finance tracking"
+          >
+            <div className={styles.requesterCard}>
+              <span aria-hidden="true">
+                {(account?.name ?? "Staff")
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </span>
+              <div>
+                <strong>{account?.name ?? "No Staff session found"}</strong>
+                <small>Programme Staff · Staff</small>
+              </div>
+            </div>
+            <div className={styles.fieldGrid}>
+              <Field label="Request date" required>
+                <input
+                  required
+                  type="date"
+                  value={requestDate}
+                  onChange={(event) => setRequestDate(event.target.value)}
+                />
+              </Field>
+              <Field
+                label="Project name"
                 required
-                type="date"
-                value={requestDate}
-                onChange={(event) => setRequestDate(event.target.value)}
-              />
-            </Field>
-            <Field label="Staff name">
-              <input
-                disabled
-                value={account?.name ?? "No Staff session found"}
-              />
-            </Field>
-            <Field
-              className={styles.fullWidth}
-              label="Project name"
-              required
-              help="If your project is not listed, select Other and enter it below."
-            >
-              <select
-                required
-                value={projectSelection}
-                onChange={(event) => {
-                  setProjectSelection(event.target.value);
-                  if (event.target.value !== "OTHER") {
-                    setOtherProjectName("");
-                  }
-                }}
+                help="If your project is not listed, select Other and enter it below."
               >
-                <option value="">Select a project</option>
-                {INVOICE_PAYMENT_PROJECTS.map((project) => (
-                  <option key={project} value={project}>
-                    {project}
-                  </option>
-                ))}
-                <option value="OTHER">Other</option>
-              </select>
+                <select
+                  required
+                  value={projectSelection}
+                  onChange={(event) => {
+                    setProjectSelection(event.target.value);
+                    if (event.target.value !== "OTHER") {
+                      setOtherProjectName("");
+                    }
+                  }}
+                >
+                  <option value="">Select a project</option>
+                  {INVOICE_PAYMENT_PROJECTS.map((project) => (
+                    <option key={project} value={project}>
+                      {project}
+                    </option>
+                  ))}
+                  <option value="OTHER">Other</option>
+                </select>
 
-              {projectSelection === "OTHER" && (
+                {projectSelection === "OTHER" && (
+                  <input
+                    required
+                    placeholder="Enter the Project Name"
+                    value={otherProjectName}
+                    onChange={(event) =>
+                      setOtherProjectName(event.target.value)
+                    }
+                  />
+                )}
+              </Field>
+            </div>
+          </FormSection>
+
+          <FormSection
+            index="2"
+            title="Invoice Details"
+            copy="Information required to verify and process the e-invoice"
+          >
+            <div className={styles.fieldGrid}>
+              <Field label="Contractor / Vendor name" required>
                 <input
                   required
-                  placeholder="Enter the Project Name"
-                  value={otherProjectName}
-                  onChange={(event) => setOtherProjectName(event.target.value)}
+                  placeholder="Enter the vendor name shown on the invoice"
+                  value={vendorName}
+                  onChange={(event) => setVendorName(event.target.value)}
                 />
-              )}
-            </Field>
-          </div>
-        </FormSection>
-
-        <FormSection
-          title="Invoice Details"
-          copy="Information required to verify and process the e-invoice"
-        >
-          <div className={styles.fieldGrid}>
-            <Field label="Contractor / Vendor name" required>
-              <input
+              </Field>
+              <Field
+                label="E-invoice link"
                 required
-                placeholder="Enter the vendor name shown on the invoice"
-                value={vendorName}
-                onChange={(event) => setVendorName(event.target.value)}
-              />
-            </Field>
-            <Field
-              label="E-invoice link"
-              required
-              help="Use the complete URL beginning with https://"
-            >
-              <input
-                required
-                type="url"
-                placeholder="https://..."
-                value={eInvoiceLink}
-                onChange={(event) => setEInvoiceLink(event.target.value)}
-              />
-            </Field>
-          </div>
-          <div className={styles.choiceGrid}>
-            <ChoiceGroup legend="Transfer type" required>
-              <Choice
-                checked={transferType === "GIRO"}
-                label="GIRO transfer"
-                description="Processed on the next working day"
-                onChange={() => setTransferType("GIRO")}
-              />
-              <Choice
-                checked={transferType === "INSTANT"}
-                label="Instant transfer"
-                description="Process the payment immediately"
-                onChange={() => setTransferType("INSTANT")}
-              />
-            </ChoiceGroup>
-            <ChoiceGroup legend="Payment portion" required>
-              <Choice
-                checked={paymentPortion === "UPFRONT_50"}
-                label="50% upfront payment"
-                onChange={() => setPaymentPortion("UPFRONT_50")}
-              />
-              <Choice
-                checked={paymentPortion === "BALANCE_50"}
-                label="50% balance payment"
-                onChange={() => setPaymentPortion("BALANCE_50")}
-              />
-              <Choice
-                checked={paymentPortion === "FULL"}
-                label="Full payment"
-                onChange={() => setPaymentPortion("FULL")}
-              />
-              <Choice
-                checked={paymentPortion === "OTHER"}
-                label="Other"
-                onChange={() => setPaymentPortion("OTHER")}
-              />
-              {paymentPortion === "OTHER" && (
+                help="Use the complete URL beginning with https://"
+              >
                 <input
-                  className={styles.otherInput}
                   required
-                  placeholder="Describe the payment portion"
-                  value={paymentPortionOther}
-                  onChange={(event) =>
-                    setPaymentPortionOther(event.target.value)
-                  }
+                  type="url"
+                  placeholder="https://..."
+                  value={eInvoiceLink}
+                  onChange={(event) => setEInvoiceLink(event.target.value)}
                 />
-              )}
-            </ChoiceGroup>
-          </div>
-          <div className={`${styles.fieldGrid} ${styles.purposeFieldGrid}`}>
-            <Field
-              className={styles.fullWidth}
-              label="Purpose of payment"
-              required
-            >
-              <textarea
+              </Field>
+            </div>
+            <div className={styles.choiceStack}>
+              <ChoiceGroup legend="Transfer type" required>
+                <Choice
+                  checked={transferType === "GIRO"}
+                  label="GIRO transfer"
+                  description="Processed on the next working day"
+                  onChange={() => setTransferType("GIRO")}
+                />
+                <Choice
+                  checked={transferType === "INSTANT"}
+                  label="Instant transfer"
+                  description="Process the payment immediately"
+                  onChange={() => setTransferType("INSTANT")}
+                />
+              </ChoiceGroup>
+              <ChoiceGroup legend="Payment portion" required>
+                <Choice
+                  checked={paymentPortion === "UPFRONT_50"}
+                  label="50% upfront payment"
+                  onChange={() => setPaymentPortion("UPFRONT_50")}
+                />
+                <Choice
+                  checked={paymentPortion === "BALANCE_50"}
+                  label="50% balance payment"
+                  onChange={() => setPaymentPortion("BALANCE_50")}
+                />
+                <Choice
+                  checked={paymentPortion === "FULL"}
+                  label="Full payment"
+                  onChange={() => setPaymentPortion("FULL")}
+                />
+                <Choice
+                  checked={paymentPortion === "OTHER"}
+                  label="Other"
+                  onChange={() => setPaymentPortion("OTHER")}
+                />
+                {paymentPortion === "OTHER" && (
+                  <input
+                    className={styles.otherInput}
+                    required
+                    placeholder="Describe the payment portion"
+                    value={paymentPortionOther}
+                    onChange={(event) =>
+                      setPaymentPortionOther(event.target.value)
+                    }
+                  />
+                )}
+              </ChoiceGroup>
+            </div>
+            <div className={`${styles.fieldGrid} ${styles.purposeFieldGrid}`}>
+              <Field
+                className={styles.fullWidth}
+                label="Purpose of payment"
                 required
-                rows={3}
-                placeholder="Describe the services, billing period and reason for payment"
-                value={purpose}
-                onChange={(event) => setPurpose(event.target.value)}
-              />
-            </Field>
-          </div>
-        </FormSection>
+              >
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Describe the services, billing period and reason for payment"
+                  value={purpose}
+                  onChange={(event) => setPurpose(event.target.value)}
+                />
+              </Field>
+            </div>
+          </FormSection>
 
-        <FormSection
-          title="Payment Amount"
-          copy="Enter the invoice total; Estuary calculates the requested amount from the selected payment portion"
-        >
-          <div className={styles.amountTableWrap}>
-            <table className={styles.amountTable}>
-              <thead>
-                <tr>
-                  <th>Currency</th>
-                  <th>
-                    Invoice Total <em>*</em>
-                  </th>
-                  <th>
-                    Amount Requested <em>*</em>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <input aria-label="Currency" disabled value="MYR" />
-                  </td>
-                  <td>
-                    <input
-                      aria-label="Invoice total"
-                      required
-                      inputMode="decimal"
-                      type="text"
-                      placeholder="Enter invoice total"
-                      value={invoiceTotal}
-                      onChange={(event) => setInvoiceTotal(event.target.value)}
-                    />
-                    <small>Total shown on the invoice</small>
-                  </td>
-                  <td>
-                    {paymentPortion === "OTHER" ? (
+          <FormSection
+            index="3"
+            title="Payment Amount"
+            copy="Enter the invoice total; Estuary calculates the requested amount from the selected payment portion"
+          >
+            <div className={styles.amountTableWrap}>
+              <table className={styles.amountTable}>
+                <thead>
+                  <tr>
+                    <th>Currency</th>
+                    <th>
+                      Invoice Total <em>*</em>
+                    </th>
+                    <th>
+                      Amount Requested <em>*</em>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <input aria-label="Currency" disabled value="MYR" />
+                    </td>
+                    <td>
                       <input
-                        aria-label="Amount requested"
+                        aria-label="Invoice total"
                         required
                         inputMode="decimal"
                         type="text"
-                        placeholder="Enter requested amount"
-                        value={otherRequestedAmount}
+                        placeholder="Enter invoice total"
+                        value={invoiceTotal}
                         onChange={(event) =>
-                          setOtherRequestedAmount(event.target.value)
+                          setInvoiceTotal(event.target.value)
                         }
                       />
-                    ) : (
-                      <input
-                        aria-label="Amount requested"
-                        disabled
-                        placeholder="Select payment portion"
-                        value={paymentPortion ? requestedAmount.toFixed(2) : ""}
-                      />
-                    )}
-                    <small>
-                      {paymentPortion === "OTHER"
-                        ? "Custom payment portion"
-                        : "Calculated automatically"}
-                    </small>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.amountWordsBox}>
-            <span>Amount requested in words</span>
-            <output>{amountInWords}</output>
-          </div>
-        </FormSection>
+                      <small>Total shown on the invoice</small>
+                    </td>
+                    <td>
+                      {paymentPortion === "OTHER" ? (
+                        <input
+                          aria-label="Amount requested"
+                          required
+                          inputMode="decimal"
+                          type="text"
+                          placeholder="Enter requested amount"
+                          value={otherRequestedAmount}
+                          onChange={(event) =>
+                            setOtherRequestedAmount(event.target.value)
+                          }
+                        />
+                      ) : (
+                        <input
+                          aria-label="Amount requested"
+                          disabled
+                          placeholder="Select payment portion"
+                          value={
+                            paymentPortion ? requestedAmount.toFixed(2) : ""
+                          }
+                        />
+                      )}
+                      <small>
+                        {paymentPortion === "OTHER"
+                          ? "Custom payment portion"
+                          : "Calculated automatically"}
+                      </small>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className={styles.amountWordsBox}>
+              <span>Amount requested in words</span>
+              <output>{amountInWords}</output>
+            </div>
+          </FormSection>
 
-        <FormSection
-          title="Supporting Documents"
-          copy="Attach the e-invoice or supporting proof if available"
-          optional
-        >
-          <div className={styles.uploadField}>
-            <input
-              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-              id="invoice-documents"
-              multiple
-              type="file"
-              onChange={selectDocuments}
-            />
-            <label className={styles.uploadArea} htmlFor="invoice-documents">
-              <strong>
-                {isReadingFiles
-                  ? "Reading files…"
-                  : "Choose supporting documents"}
-              </strong>
-              <span>PDF, PNG or JPG · maximum 5 files · 2.5 MB combined</span>
-            </label>
-            {documents.length > 0 && (
-              <ul className={styles.documentList}>
-                {documents.map((document) => (
-                  <li key={document.id}>
-                    <div>
-                      <strong>{document.fileName}</strong>
-                      <span>{formatFileSize(document.size)}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDocuments((current) =>
-                          current.filter((item) => item.id !== document.id),
-                        )
-                      }
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </FormSection>
-
-        <FormSection
-          title="Review Workflow"
-          copy="Manager and Director review without signatures"
-        >
-          <div className={styles.fieldGrid}>
-            <Field label="Project manager" required>
+          <FormSection
+            index="4"
+            title="Supporting Documents"
+            copy="Attach the e-invoice or supporting proof if available"
+            optional
+          >
+            <div className={styles.uploadField}>
               <input
-                disabled
-                value={
-                  managerApproverId
-                    ? (getBetaAccount(managerApproverId)?.name ??
-                      managerApproverId)
-                    : "No manager assigned to this project"
-                }
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                id="invoice-documents"
+                multiple
+                type="file"
+                onChange={selectDocuments}
               />
-            </Field>
-            <Field label="Director reviewer" required>
-              <select
-                required
-                value={directorApproverId}
-                onChange={(event) => setDirectorApproverId(event.target.value)}
-              >
-                <option value="">Choose Director</option>
-                <option value="amir-iskandar">Amir Iskandar</option>
-                <option value="farid-hakim">Farid Hakim</option>
-                <option value="maryam-iskandar">Maryam Iskandar</option>
-                <option value="daniel-lee">Daniel Lee</option>
-              </select>
-            </Field>
-            <Field className={styles.fullWidth} label="Additional remarks">
-              <textarea
-                rows={3}
-                placeholder="Optional notes for Manager, Director or Finance"
-                value={remarks}
-                onChange={(event) => setRemarks(event.target.value)}
-              />
-            </Field>
-          </div>
-        </FormSection>
+              <label className={styles.uploadArea} htmlFor="invoice-documents">
+                <strong>
+                  {isReadingFiles ? "Reading files…" : "Choose files"}
+                </strong>
+                <span>
+                  {documents.length
+                    ? `${documents.length} file${documents.length === 1 ? "" : "s"} selected`
+                    : "No file chosen"}
+                  {" · "}PDF, PNG or JPG · max 5 files · 2.5 MB combined
+                </span>
+              </label>
+              {documents.length > 0 && (
+                <ul className={styles.documentList}>
+                  {documents.map((document) => (
+                    <li key={document.id}>
+                      <div>
+                        <strong>{document.fileName}</strong>
+                        <span>{formatFileSize(document.size)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDocuments((current) =>
+                            current.filter((item) => item.id !== document.id),
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </FormSection>
 
-        <footer className={styles.formActions}>
-          <div>
+          <FormSection
+            index="5"
+            title="Review Workflow"
+            copy="Manager and Director review without signatures"
+          >
+            <div className={styles.fieldGrid}>
+              <Field label="Project manager" required>
+                <input
+                  disabled
+                  value={
+                    managerApproverId
+                      ? (getBetaAccount(managerApproverId)?.name ??
+                        managerApproverId)
+                      : "No manager assigned to this project"
+                  }
+                />
+              </Field>
+              <Field label="Director reviewer" required>
+                <select
+                  required
+                  value={directorApproverId}
+                  onChange={(event) =>
+                    setDirectorApproverId(event.target.value)
+                  }
+                >
+                  <option value="">Choose Director</option>
+                  <option value="amir-iskandar">Amir Iskandar</option>
+                  <option value="farid-hakim">Farid Hakim</option>
+                  <option value="maryam-iskandar">Maryam Iskandar</option>
+                  <option value="daniel-lee">Daniel Lee</option>
+                </select>
+              </Field>
+              <Field className={styles.fullWidth} label="Additional remarks">
+                <textarea
+                  rows={3}
+                  placeholder="Optional notes for Manager, Director or Finance"
+                  value={remarks}
+                  onChange={(event) => setRemarks(event.target.value)}
+                />
+              </Field>
+            </div>
+          </FormSection>
+        </div>
+
+        <aside className={styles.summaryCard}>
+          <div className={styles.summaryHeading}>
+            <span>Amount requested</span>
+            <strong>RM {requestedAmount.toFixed(2)}</strong>
+          </div>
+          <dl className={styles.summaryRows}>
+            <SummaryRow label="Request type" value="Invoice Payment" />
+            <SummaryRow
+              label="Invoice total"
+              value={`RM ${(Number(invoiceTotal) || 0).toFixed(2)}`}
+            />
+            <SummaryRow
+              label="Payment portion"
+              value={paymentPortionLabel(paymentPortion, paymentPortionOther)}
+            />
+            <SummaryRow
+              label="Transfer type"
+              value={transferTypeLabel(transferType)}
+            />
+          </dl>
+
+          <div className={styles.checklist}>
+            <h2>Checklist</h2>
+            <ChecklistRow
+              complete={Boolean(vendorName.trim())}
+              label="Vendor name"
+            />
+            <ChecklistRow
+              complete={Boolean(eInvoiceLink.trim())}
+              label="E-invoice link"
+            />
+            <ChecklistRow
+              complete={Boolean(transferType)}
+              label="Transfer type"
+            />
+            <ChecklistRow
+              complete={Boolean(paymentPortion)}
+              label="Payment portion"
+            />
+            <ChecklistRow
+              complete={Number(invoiceTotal) > 0}
+              label="Invoice total"
+            />
+            <ChecklistRow
+              complete={Boolean(directorApproverId)}
+              label="Director reviewer"
+            />
+            <ChecklistRow
+              complete={documents.length > 0}
+              label="Supporting documents"
+              optional
+            />
+          </div>
+
+          <div className={styles.requirementNote}>
+            <strong>Invoice requirement</strong>
+            <p>
+              The e-invoice must be billed to Arus Education Sdn. Bhd., include
+              the company address and the contractor’s bank details.
+            </p>
+          </div>
+
+          <footer className={styles.formActions}>
+            <button
+              className={styles.primaryButton}
+              disabled={isReadingFiles}
+              type="submit"
+            >
+              Continue to review <span aria-hidden="true">→</span>
+            </button>
             <button
               className={styles.secondaryButton}
               disabled={draft.isSavingDraft || isReadingFiles}
@@ -784,18 +865,55 @@ export function InvoicePaymentForm({
             >
               {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
             </button>
-            <button
-              className={styles.primaryButton}
-              disabled={isReadingFiles}
-              type="submit"
-            >
-              Continue to review <span aria-hidden="true">→</span>
-            </button>
-          </div>
-          <ManualDraftStatus message={draft.draftMessage} />
-        </footer>
+            <ManualDraftStatus message={draft.draftMessage} />
+          </footer>
+        </aside>
       </form>
     </main>
+  );
+}
+
+function paymentPortionLabel(
+  portion: InvoicePaymentPortion | "",
+  other: string,
+) {
+  if (portion === "UPFRONT_50") return "50% upfront";
+  if (portion === "BALANCE_50") return "50% balance";
+  if (portion === "FULL") return "Full payment";
+  if (portion === "OTHER") return other.trim() || "Other";
+  return "Not selected";
+}
+
+function transferTypeLabel(type: InvoiceTransferType | "") {
+  if (type === "GIRO") return "GIRO transfer";
+  if (type === "INSTANT") return "Instant transfer";
+  return "Not selected";
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+function ChecklistRow({
+  complete,
+  label,
+  optional = false,
+}: {
+  complete: boolean;
+  label: string;
+  optional?: boolean;
+}) {
+  return (
+    <div className={complete ? styles.checklistComplete : ""}>
+      <i aria-hidden="true" />
+      <span>{label}</span>
+      <small>{optional ? "Optional" : complete ? "Added" : "Required"}</small>
+    </div>
   );
 }
 
@@ -803,8 +921,18 @@ function PageHeader({ review = false }: { review?: boolean }) {
   return (
     <header className={styles.pageHeader}>
       <div>
-        <p>Payment Requests / Invoice Payment</p>
-        <h1>{review ? "Review Invoice Payment" : "Create Invoice Payment"}</h1>
+        <p>
+          <strong>INV</strong> Invoice Payment · E-Invoice / Monthly
+        </p>
+        <h1>
+          {review ? "Review Invoice Payment" : "New Invoice Payment request"}
+        </h1>
+        {!review && (
+          <small>
+            Pay a contractor or vendor from an e-invoice. It goes to your
+            Manager and Director for review, then to Finance for payment.
+          </small>
+        )}
       </div>
       <span>{review ? "Review" : "Draft"}</span>
     </header>
@@ -812,12 +940,14 @@ function PageHeader({ review = false }: { review?: boolean }) {
 }
 
 function FormSection({
+  index,
   title,
   copy,
   required = false,
   optional = false,
   children,
 }: {
+  index?: string;
   title: string;
   copy: string;
   required?: boolean;
@@ -827,6 +957,7 @@ function FormSection({
   return (
     <section className={styles.formSection}>
       <div className={styles.sectionHeading}>
+        {index && <span className={styles.sectionNumber}>{index}</span>}
         <div>
           <h2>{title}</h2>
           {required && <span data-kind="required">Required</span>}

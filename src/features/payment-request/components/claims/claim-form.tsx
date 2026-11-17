@@ -242,14 +242,14 @@ export function ClaimForm({
       !line.details.trim() ||
       (claimType === "MILEAGE"
         ? !line.division.trim() ||
-        !line.from.trim() ||
-        !line.to.trim() ||
-        line.kilometers <= 0
+          !line.from.trim() ||
+          !line.to.trim() ||
+          line.kilometers <= 0
         : !line.supplier.trim() ||
-        !hasReceipt ||
-        line.amount <= 0 ||
-        (claimType === "EXPENSE" &&
-          (!line.accountType.trim() || !line.division.trim())));
+          !hasReceipt ||
+          line.amount <= 0 ||
+          (claimType === "EXPENSE" &&
+            (!line.accountType.trim() || !line.division.trim())));
     if (incomplete) {
       setError(
         claimType === "MILEAGE"
@@ -832,11 +832,11 @@ export function ClaimForm({
                   {claimType === "MILEAGE"
                     ? 0
                     : lines.filter(
-                      (line) =>
-                        !line.receiptFileName &&
-                        !line.receiptLink &&
-                        !line.receiptDocumentId,
-                    ).length}
+                        (line) =>
+                          !line.receiptFileName &&
+                          !line.receiptLink &&
+                          !line.receiptDocumentId,
+                      ).length}
                 </dd>
               </div>
               <div>
@@ -875,15 +875,15 @@ export function ClaimForm({
               setEntryModal((current) =>
                 current
                   ? {
-                    ...current,
-                    line: {
-                      ...current.line,
-                      receiptDocumentId: undefined,
-                      receiptFileName: "",
-                      receiptMimeType: "",
-                      receiptFileSize: 0,
-                    },
-                  }
+                      ...current,
+                      line: {
+                        ...current.line,
+                        receiptDocumentId: undefined,
+                        receiptFileName: "",
+                        receiptMimeType: "",
+                        receiptFileSize: 0,
+                      },
+                    }
                   : current,
               );
               return;
@@ -901,15 +901,15 @@ export function ClaimForm({
             setEntryModal((current) =>
               current
                 ? {
-                  ...current,
-                  line: {
-                    ...current.line,
-                    receiptLink: undefined,
-                    receiptFileName: file.name,
-                    receiptMimeType: file.type,
-                    receiptFileSize: file.size,
-                  },
-                }
+                    ...current,
+                    line: {
+                      ...current.line,
+                      receiptLink: undefined,
+                      receiptFileName: file.name,
+                      receiptMimeType: file.type,
+                      receiptFileSize: file.size,
+                    },
+                  }
                 : current,
             );
           }}
@@ -1693,10 +1693,9 @@ function SectionHeading({
 }) {
   return (
     <div className={styles.sectionHeading}>
+      <span aria-hidden="true">{number}</span>
       <div>
-        <h2>
-          {number}. {title}
-        </h2>
+        <h2>{title}</h2>
         {copy && <p>{copy}</p>}
       </div>
     </div>
