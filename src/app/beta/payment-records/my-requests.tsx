@@ -76,43 +76,43 @@ const createOptions: Array<{
   description: string;
   href: string;
 }> = [
-    {
-      type: "PAYMENT_VOUCHER",
-      label: "Payment Voucher",
-      description: "Pay a person or vendor",
-      href: "/beta/payment-vouchers/new",
-    },
-    {
-      type: "INVOICE_PAYMENT",
-      label: "Invoice Payment",
-      description: "Pay against a supplier invoice",
-      href: "/beta/payment-requests/invoice-payment/new",
-    },
-    {
-      type: "TRAVEL_ALLOWANCE",
-      label: "Travel Allowance",
-      description: "Submit travel-related allowances",
-      href: "/beta/payment-requests/travel-allowance/new",
-    },
-    {
-      type: "CASH_ADVANCE",
-      label: "Cash Advance",
-      description: "Get money before an activity",
-      href: "/beta/payment-requests/cash-advance/new",
-    },
-    {
-      type: "PETTY_CASH",
-      label: "Petty Cash",
-      description: "Small day-to-day spending",
-      href: "/beta/payment-requests/petty-cash/new",
-    },
-    {
-      type: "CLAIM",
-      label: "Claims",
-      description: "Get reimbursed for an expense",
-      href: "/beta/payment-requests/claims/new",
-    },
-  ];
+  {
+    type: "PAYMENT_VOUCHER",
+    label: "Payment Voucher",
+    description: "Pay a person or vendor",
+    href: "/beta/payment-vouchers/new",
+  },
+  {
+    type: "INVOICE_PAYMENT",
+    label: "Invoice Payment",
+    description: "Pay against a supplier invoice",
+    href: "/beta/payment-requests/invoice-payment/new",
+  },
+  {
+    type: "TRAVEL_ALLOWANCE",
+    label: "Travel Allowance",
+    description: "Submit travel-related allowances",
+    href: "/beta/payment-requests/travel-allowance/new",
+  },
+  {
+    type: "CASH_ADVANCE",
+    label: "Cash Advance",
+    description: "Get money before an activity",
+    href: "/beta/payment-requests/cash-advance/new",
+  },
+  {
+    type: "PETTY_CASH",
+    label: "Petty Cash",
+    description: "Small day-to-day spending",
+    href: "/beta/payment-requests/petty-cash/new",
+  },
+  {
+    type: "CLAIM",
+    label: "Claims",
+    description: "Get reimbursed for an expense",
+    href: "/beta/payment-requests/claims/new",
+  },
+];
 const summaryIcons: Record<Exclude<SummaryFilter, "ALL">, string> = {
   DRAFT: "/assets/icons/submitted-doc-white.png",
   PROGRESS: "/assets/icons/in-progress-clock-white.png",
@@ -123,10 +123,13 @@ const completed = new Set(["COMPLETED", "PAID", "RECONCILED", "CLOSED"]);
 const actionStatuses = new Set([
   "DRAFT",
   "REJECTED",
+  "PAYMENT_REJECTED",
   "RETURNED_TO_STAFF",
   "RETURNED_TO_CLAIMANT",
   "PENDING_RECONCILIATION",
+  "PROCESSED_PENDING_RECONCILIATION",
   "AWAITING_RECIPIENT_SIGNATURE",
+  "AWAITING_SIGNED_PV_UPLOAD",
   "AWAITING_STAFF_CONFIRMATION",
   "AWAITING_STAFF_VERIFICATION",
 ]);
@@ -408,10 +411,10 @@ const formatDate = (value: string) => {
   return Number.isNaN(parsed.getTime())
     ? value
     : parsed.toLocaleDateString("en-MY", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
 };
 const money = (value: number) =>
   new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(
@@ -430,16 +433,19 @@ export function MyRequests() {
   const searchParameters = useSearchParams();
   const requestedSummary = searchParameters.get("summary");
   const requestedType = searchParameters.get("type");
+  const requestedRequest = searchParameters.get("request");
+  const autoOpenRequest =
+    searchParameters.get("open") === "1" && Boolean(requestedRequest);
   const [account] = useState(() => readBetaSession());
   const { records: vouchers, isLoading: voucherLoading } = usePaymentVouchers();
   const [otherRows, setOtherRows] = useState<Row[]>([]);
   const [draftRows, setDraftRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState<"ALL" | PaymentType>(() =>
-    types.some((item) => item.value === requestedType)
-      ? (requestedType as PaymentType)
-      : "ALL",
-  ),
+      types.some((item) => item.value === requestedType)
+        ? (requestedType as PaymentType)
+        : "ALL",
+    ),
     [status, setStatus] = useState(
       () => searchParameters.get("status") ?? "ALL",
     ),
@@ -640,20 +646,26 @@ export function MyRequests() {
               value.toLowerCase().includes(search.trim().toLowerCase()),
             ),
         )
-        .sort((a, b) =>
-          sort === "UPDATED_ASC"
+        .sort((a, b) => {
+          const aRequested =
+            requestedRequest === a.id || requestedRequest === a.reference;
+          const bRequested =
+            requestedRequest === b.id || requestedRequest === b.reference;
+          if (aRequested !== bRequested) return aRequested ? -1 : 1;
+          return sort === "UPDATED_ASC"
             ? a.updatedAt.localeCompare(b.updatedAt)
             : sort === "AMOUNT_DESC"
               ? b.amount - a.amount
               : sort === "AMOUNT_ASC"
                 ? a.amount - b.amount
-                : b.updatedAt.localeCompare(a.updatedAt),
-        ),
+                : b.updatedAt.localeCompare(a.updatedAt);
+        }),
     [
       effectiveStatus,
       exactDate,
       month,
       rows,
+      requestedRequest,
       search,
       sort,
       summaryFilter,
@@ -724,7 +736,8 @@ export function MyRequests() {
           <p>Your requests</p>
           <h1>My requests</h1>
           <span>
-            Track what you submitted and act on anything that needs you: continue drafts, amend returned requests, upload reconciliation.
+            Track what you submitted and act on drafts, returned requests and
+            reconciliation from one place.
           </span>
         </div>
         <div className={styles.heroActions}>
@@ -989,6 +1002,11 @@ export function MyRequests() {
                   </td>
                   <td>
                     <MyRequestAction
+                      autoOpen={
+                        autoOpenRequest &&
+                        (requestedRequest === row.id ||
+                          requestedRequest === row.reference)
+                      }
                       label={actionLabel(row)}
                       onDraftDeleted={(id) =>
                         setDraftRows((current) =>
