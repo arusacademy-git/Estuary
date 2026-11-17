@@ -1820,6 +1820,11 @@
     font-size: 11px;
 }
 
+.itemsHeading>.secondaryButton {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .secondaryButton:hover {
     border-color: #93c5fd;
     background: #dbeafe;
