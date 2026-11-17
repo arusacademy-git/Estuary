@@ -249,6 +249,30 @@
   line-height: 1.35;
 }
 
+.workspaceToolbarText p {
+  max-width: 760px;
+  margin: 3px 0 0;
+  color: #536b8c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspaceToolbar:has(.workspaceToolbarText p) {
+  min-height: 104px;
+  padding: 18px 22px;
+}
+
+.workspaceToolbar:has(.workspaceToolbarText p) .workspaceToolbarText span {
+  color: #355477;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.workspaceToolbar:has(.workspaceToolbarText p) .workspaceToolbarText strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
 .changeMethodButton {
   display: inline-flex;
   align-items: center;
@@ -305,8 +329,7 @@
 
 .overviewBar {
   display: grid;
-  grid-template-columns:
-    minmax(180px, 1fr) minmax(420px, 2fr) auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(420px, 2fr) auto;
   align-items: center;
   gap: 24px;
   padding: 20px 24px;
@@ -418,8 +441,7 @@
 .accordionToggle {
   display: grid;
   flex: 1;
-  grid-template-columns:
-    minmax(240px, 1fr) minmax(130px, auto) auto;
+  grid-template-columns: minmax(240px, 1fr) minmax(130px, auto) auto;
   align-items: center;
   gap: 24px;
   min-width: 0;
@@ -1052,8 +1074,7 @@
 
 .sectionHeading {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1fr) minmax(240px, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
   align-items: center;
   column-gap: 30px;
   width: 100%;
@@ -1459,7 +1480,7 @@
   text-align: right;
 }
 
-.sheetGuidance > span {
+.sheetGuidance>span {
   display: block;
 }
 
@@ -2214,3 +2235,406 @@
   box-shadow: 0 0 0 1px #ef4444;
 }
 
+/* Prototype-aligned Multiple Payment Voucher manual entry */
+.bulkFlow:has(> .methodTabs) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bulkFlow:has(> .methodTabs)>.bulkHeader {
+  display: none;
+}
+
+.bulkFlow:has(> .methodTabs)>.methodTabs {
+  align-self: flex-start;
+  width: auto;
+  min-height: 40px;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.bulkFlow:has(> .methodTabs)>.methodTabs .methodTab {
+  min-height: 34px;
+  padding: 0 16px;
+  font-size: 11px;
+}
+
+.bulkFlow:has(> .methodTabs)>[role="tabpanel"] {
+  width: 100%;
+}
+
+.manualPanelGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-areas:
+    "notice notice"
+    "vouchers summary";
+  align-items: start;
+  gap: 16px;
+}
+
+.validationNotice {
+  grid-area: notice;
+}
+
+.voucherList {
+  grid-area: vouchers;
+  min-width: 0;
+}
+
+.overviewBar {
+  position: static;
+  grid-area: summary;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 47, 87, 0.05);
+}
+
+.overviewTitle {
+  gap: 7px;
+}
+
+.overviewTitle strong {
+  color: #17395f;
+  font-size: 27px;
+  line-height: 1.1;
+}
+
+.overviewMetrics {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e5eaf0;
+  border-bottom: 1px solid #e5eaf0;
+}
+
+.overviewMetric {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.overviewMetric:last-child {
+  border-bottom: 0;
+}
+
+.overviewMetric span,
+.overviewMetric strong {
+  font-size: 12px;
+}
+
+.overviewActions {
+  display: none;
+}
+
+.nextStepNote {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  color: #536b8c;
+  background: #f6f9fd;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.nextStepNote strong {
+  color: #17395f;
+  font-size: 10px;
+}
+
+.pageActions {
+  position: static;
+  grid-area: actions;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 10px;
+  margin: -17px 0 0;
+  padding: 0 22px 22px;
+  border: 1px solid var(--bulk-border);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 47, 87, 0.06);
+}
+
+.pageActionGroup {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.pageActions .secondaryButton,
+.pageActions .primaryButton,
+.pageActions .dangerButton,
+.pageActions .discardButton {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.pageActions .primaryButton {
+  order: -1;
+}
+
+.overviewBar .pageActions {
+  position: static;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.overviewBar .pageActionGroup {
+  width: 100%;
+}
+
+.overviewBar .pageActions button {
+  width: 100%;
+}
+
+.voucherCard {
+  border-radius: 14px;
+}
+
+.voucherCardHeader {
+  align-items: center;
+}
+
+.accordionToggle {
+  grid-template-columns: minmax(180px, 1fr) 105px auto;
+  gap: 14px;
+  padding: 15px 16px;
+}
+
+.accordionIdentity {
+  position: relative;
+  padding-left: 42px;
+}
+
+.accordionIdentity::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  color: #2563eb;
+  background: #eaf1ff;
+  content: "PV";
+  font-size: 9px;
+  font-weight: 800;
+  transform: translateY(-50%);
+}
+
+.accordionIdentity>span {
+  display: none;
+}
+
+.accordionIdentity strong {
+  font-size: 14px;
+}
+
+.accordionIdentity small {
+  font-size: 10px;
+}
+
+.voucherCardActions {
+  gap: 8px;
+  padding: 12px 14px 12px 0;
+}
+
+.voucherBody {
+  gap: 22px;
+  padding: 24px;
+}
+
+.manualPanelGrid .formGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.manualPanelGrid .paymentDetailsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.manualPanelGrid .field.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.formGrid {
+  gap: 16px 18px;
+}
+
+.field>span,
+.manualLinesTable th {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.requiredMarker,
+.manualLinesTable .requiredMarker {
+  color: #dc2626;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.hiddenFileInput {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0 !important;
+  white-space: nowrap;
+}
+
+.compactUpload {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 9px 12px;
+  border: 1px dashed #bfd1e7;
+  border-radius: 9px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.compactUpload strong {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border: 1px solid #c7d5e8;
+  border-radius: 7px;
+  color: #12345f;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.compactUpload span {
+  overflow: hidden;
+  color: #71849e;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compactUpload:hover strong {
+  border-color: #8eb2ea;
+  background: #edf3ff;
+}
+
+.manualLinesTable {
+  min-width: 660px;
+}
+
+.manualLinesTable th:nth-child(1) {
+  width: 23%;
+}
+
+.manualLinesTable th:nth-child(2) {
+  width: 29%;
+}
+
+.manualLinesTable th:nth-child(3) {
+  width: 12%;
+}
+
+.manualLinesTable th:nth-child(4) {
+  width: 20%;
+}
+
+.manualLinesTable th:nth-child(5) {
+  width: 16%;
+}
+
+@media (max-width: 1020px) {
+  .manualPanelGrid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "notice"
+      "summary"
+      "vouchers";
+  }
+
+  .overviewBar,
+  .pageActions {
+    position: static;
+  }
+
+  .pageActions {
+    margin-top: 0;
+    padding: 18px;
+    border-top: 1px solid var(--bulk-border);
+    border-radius: 14px;
+  }
+
+  .overviewBar {
+    border-bottom: 1px solid var(--bulk-border);
+    border-radius: 14px;
+  }
+
+  .manualPanelGrid .formGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .voucherCardHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .accordionToggle {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .statusPill {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .voucherCardActions {
+    padding: 0 16px 14px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .manualPanelGrid .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .manualPanelGrid .paymentDetailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: auto;
+  }
+}

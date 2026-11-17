@@ -2158,7 +2158,7 @@
   margin: 0 auto 10px;
   color: #526b89;
   font-size: 9px;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -2178,7 +2178,7 @@
 
 .compactReviewCard {
   display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(290px, .85fr);
+  grid-template-columns: minmax(0, 1.75fr) minmax(290px, 0.85fr);
   max-width: 1100px;
   margin: 0 auto;
   overflow: hidden;
@@ -2201,7 +2201,7 @@
 .compactReviewHeader>span:not(.compactTypeBadge) {
   color: #526b89;
   font-size: 9px;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -2285,7 +2285,7 @@
   color: #60738d;
   background: #f3f6fa;
   font-size: 8px;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
 }
@@ -2320,7 +2320,7 @@
 .compactNextStep span {
   color: #647a96;
   font-size: 9px;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -4274,13 +4274,19 @@
   }
 }
 
-/* Keep the page heading outside the main form card, matching Travel Allowance. */
+/* Match the full-width Claims request header card. */
 .requestHeader {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 150px;
+  margin: 0 0 20px;
+  padding: 34px 44px;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
 }
 
 .recordsPage .queueTable th:nth-child(5),
@@ -4291,6 +4297,462 @@
 .requiredMark {
   color: #dc2626;
   font-style: normal;
+}
+
+.pettyForm .requiredMark,
+.pettyForm label em {
+  color: #dc2626;
+  font-style: normal;
+}
+
+/* Prototype-aligned Petty Cash request form */
+.pettyCashEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pettyCashEyebrow b {
+  display: inline-grid;
+  min-width: 28px;
+  min-height: 20px;
+  place-items: center;
+  border: 1px solid #173a64;
+  border-radius: 5px;
+  color: #173a64;
+  background: #fff;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.pettyForm {
+  display: block;
+}
+
+.pettyForm>.error {
+  margin: 0 0 16px;
+}
+
+.pettyFormLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(290px, 0.75fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.pettyMainCard,
+.pettySummaryCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.pettySection {
+  padding: 28px 30px;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.pettySection:last-child {
+  border-bottom: 0;
+}
+
+.pettySection .sectionHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.pettySection .sectionHeading>div {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pettySection .sectionHeading>div>span {
+  display: grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 8px;
+  color: #2563eb;
+  background: #eaf2ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pettySection .sectionHeading h2 {
+  margin: 0;
+  color: #173a64;
+  font-size: 17px;
+}
+
+.pettySection .sectionHeading p {
+  margin: 4px 0 0;
+  color: #71849c;
+  font-size: 11px;
+}
+
+.pettySection .sectionHeading>button {
+  min-height: 37px;
+  border-color: #c6d5e6;
+  color: #1f3a5f;
+  background: #fff;
+}
+
+.pettySection .sectionHeading>button:hover:not(:disabled) {
+  border-color: #1f3a5f;
+  background: #eef3fb;
+  box-shadow: 0 4px 12px rgb(31 58 95 / 14%);
+  transform: translateY(-1px);
+}
+
+.requesterProfile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border: 1px solid #dbe5f1;
+  border-radius: 12px;
+  background: #f5f8fc;
+}
+
+.requesterProfile>b {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #1f3a5f;
+  font-size: 11px;
+}
+
+.requesterProfile>span {
+  display: grid;
+  gap: 2px;
+}
+
+.requesterProfile strong {
+  color: #173a64;
+  font-size: 12px;
+}
+
+.requesterProfile small {
+  color: #71849c;
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.pettySection .fieldGrid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.pettySection .fieldGrid>label {
+  grid-column: span 2;
+}
+
+.pettySection .fieldGrid>.reviewerField {
+  grid-column: span 3;
+}
+
+.pettySection .fieldGrid>.reviewerFieldFull {
+  grid-column: 1 / -1;
+}
+
+.pettySection .fieldGrid label,
+.pettySection .notesField,
+.expensePurposeField,
+.expenseFieldGrid label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: #526987;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.pettySection .fieldGrid input,
+.pettySection .fieldGrid select,
+.pettySection .notesField textarea,
+.expensePurposeField input,
+.expenseFieldGrid input,
+.expenseFieldGrid select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #cbd9e8;
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: #173a64;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+}
+
+.pettySection .fieldGrid input:focus,
+.pettySection .fieldGrid select:focus,
+.pettySection .notesField textarea:focus,
+.expensePurposeField input:focus,
+.expenseFieldGrid input:focus,
+.expenseFieldGrid select:focus {
+  border-color: #2563eb;
+  outline: 3px solid rgb(37 99 235 / 12%);
+}
+
+.plannedExpenseList {
+  display: grid;
+  gap: 12px;
+}
+
+.plannedExpenseCard {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid #dbe5f1;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.plannedExpenseCard>header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plannedExpenseCard>header strong {
+  color: #173a64;
+  font-size: 11px;
+}
+
+.plannedExpenseCard>header button {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid #d8e2ee;
+  border-radius: 50%;
+  color: #71849c;
+  background: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.plannedExpenseCard>header button:hover:not(:disabled) {
+  border-color: #f2a8ae;
+  color: #d92d3a;
+  background: #fff5f5;
+}
+
+.plannedExpenseCard>header button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.expenseFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.receiptNote {
+  margin: 12px 0 0;
+  color: #71849c;
+  font-size: 10px;
+}
+
+.pettySection .notesField {
+  margin: 0;
+}
+
+.pettySection .notesField textarea {
+  min-height: 110px;
+  resize: vertical;
+  text-transform: none;
+}
+
+.pettySummaryCard {
+  position: static;
+  display: grid;
+  gap: 10px;
+  padding: 24px;
+}
+
+.pettySummaryCard>span {
+  color: #607795;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pettySummaryCard>strong {
+  margin-bottom: 8px;
+  color: #1f3a5f;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.pettySummaryCard dl {
+  display: grid;
+  margin: 0;
+}
+
+.pettySummaryCard dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #e5ebf2;
+  font-size: 10px;
+}
+
+.pettySummaryCard dt {
+  color: #71849c;
+}
+
+.pettySummaryCard dd {
+  margin: 0;
+  color: #173a64;
+  font-weight: 800;
+  text-align: right;
+}
+
+.pettyPolicyBox,
+.pettyNextBox {
+  padding: 13px;
+  border: 1px solid #d5e1ef;
+  border-radius: 10px;
+  background: #f2f7fc;
+}
+
+.pettyPolicyBox b,
+.pettyNextBox b {
+  color: #1f3a5f;
+  font-size: 10px;
+}
+
+.pettyPolicyBox p,
+.pettyNextBox p {
+  margin: 5px 0 0;
+  color: #607795;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.pettyPolicyError {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.pettyPolicyError b,
+.pettyPolicyError p {
+  color: #b42318;
+}
+
+.pettyNextBox {
+  border-color: #f1e0a8;
+  background: #fffbeb;
+}
+
+.pettySummaryCard>label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 2px;
+  color: #526987;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.pettySummaryCard>label input {
+  margin: 2px 0 0;
+}
+
+.pettySummaryCard .draftActions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  justify-content: stretch;
+  justify-items: stretch;
+}
+
+.pettySummaryCard .draftActions button {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: 100%;
+  max-width: none;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.pettySummaryCard .primaryButton {
+  border-color: #1f3a5f;
+  background: #1f3a5f;
+}
+
+.pettySummaryCard .primaryButton:hover:not(:disabled) {
+  background: #2a4a78;
+  box-shadow: 0 6px 16px rgb(31 58 95 / 28%);
+}
+
+.pettySummaryCard .draftMessage {
+  margin: 0;
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .pettyFormLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .pettySummaryCard {
+    order: -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .pettySection {
+    padding: 23px 20px;
+  }
+
+  .pettySection .fieldGrid,
+  .expenseFieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pettySection .fieldGrid>label,
+  .pettySection .fieldGrid>.reviewerField,
+  .pettySection .fieldGrid>.reviewerFieldFull {
+    grid-column: 1;
+  }
+
+  .pettySection .sectionHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pettySection .sectionHeading>button {
+    align-self: flex-start;
+  }
 }
 
 .financePaymentConfirmation {
@@ -4357,6 +4819,13 @@
   padding-inline: 8px;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+@media (max-width: 620px) {
+  .requestHeader {
+    min-height: 0;
+    padding: 24px 22px;
+  }
 }
 
 /* Requester reconciliation: compact two-column workflow matching the clean review prototype. */

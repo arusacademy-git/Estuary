@@ -1,44 +1,26 @@
-'use client';
+"use client";
 
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect, useState } from "react";
 
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { PaymentPageState } from '@/shared/payment-page-state';
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { PaymentPageState } from "@/shared/payment-page-state";
 
-import {
-  fetchPaymentVoucher,
-} from '@/data/payment-vouchers/payment-voucher-api';
+import { fetchPaymentVoucher } from "@/data/payment-vouchers/payment-voucher-api";
 
-import type {
-  PaymentVoucherRecord,
-} from '@/domain/payment-vouchers/types';
+import type { PaymentVoucherRecord } from "@/domain/payment-vouchers/types";
 
-import {
-  PaymentVoucherCreateFlow,
-} from './payment-voucher-create-flow';
+import { PaymentVoucherCreateFlow } from "./payment-voucher-create-flow";
 
-import {
-  BulkPaymentVoucherCreateFlow,
-} from '@/features/payment-voucher/components/staff/bulk/bulk-payment-voucher-create-flow';
+import { BulkPaymentVoucherCreateFlow } from "@/features/payment-voucher/components/staff/bulk/bulk-payment-voucher-create-flow";
 
-import styles from '@/features/payment-voucher/components/staff/bulk/bulk-payment-voucher.module.css';
+import styles from "@/features/payment-voucher/components/staff/bulk/bulk-payment-voucher.module.css";
 
-type CreationMode =
-  | 'single'
-  | 'multiple'
-  | null;
+type CreationMode = "single" | "multiple" | null;
 
 function SingleVoucherIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
       <path
         d="M7.25 3.75h6.7l3.3 3.3v13.2h-10V3.75Z"
         stroke="currentColor"
@@ -60,11 +42,7 @@ function SingleVoucherIcon() {
 
 function MultipleVoucherIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
       <rect
         height="13"
         rx="1.5"
@@ -87,11 +65,7 @@ function MultipleVoucherIcon() {
 
 function ArrowIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      viewBox="0 0 20 20"
-    >
+    <svg aria-hidden="true" fill="none" viewBox="0 0 20 20">
       <path
         d="M4.5 10h11M11.5 6l4 4-4 4"
         stroke="currentColor"
@@ -107,51 +81,33 @@ export function PaymentVoucherCreateWorkspace() {
   const searchParams = useSearchParams();
 
   const requestedDraftMode =
-    searchParams.get('draft') === '1'
-      ? searchParams.get('mode')
-      : null;
+    searchParams.get("draft") === "1" ? searchParams.get("mode") : null;
 
-  const amendmentVoucherId =
-    searchParams.get('amend');
+  const amendmentVoucherId = searchParams.get("amend");
 
-  const isAmendmentRequest =
-    Boolean(amendmentVoucherId);
+  const isAmendmentRequest = Boolean(amendmentVoucherId);
 
-  const [
-    initialVoucher,
-    setInitialVoucher,
-  ] =
-    useState<PaymentVoucherRecord | null>(
-      null,
-    );
+  const [initialVoucher, setInitialVoucher] =
+    useState<PaymentVoucherRecord | null>(null);
 
-  const [
-    isLoadingAmendment,
-    setIsLoadingAmendment,
-  ] = useState(isAmendmentRequest);
+  const [isLoadingAmendment, setIsLoadingAmendment] =
+    useState(isAmendmentRequest);
 
-  const [
-    amendmentError,
-    setAmendmentError,
-  ] = useState('');
+  const [amendmentError, setAmendmentError] = useState("");
 
-  const [
-    creationMode,
-    setCreationMode,
-  ] = useState<CreationMode>(
+  const [creationMode, setCreationMode] = useState<CreationMode>(
     isAmendmentRequest
-      ? 'single'
-      : requestedDraftMode === 'multiple'
-        ? 'multiple'
-        : requestedDraftMode === 'single'
-          ? 'single'
+      ? "single"
+      : requestedDraftMode === "multiple"
+        ? "multiple"
+        : requestedDraftMode === "single"
+          ? "single"
           : null,
   );
 
-  const [
-    singleFlowStep,
-    setSingleFlowStep,
-  ] = useState<'form' | 'review'>('form');
+  const [singleFlowStep, setSingleFlowStep] = useState<"form" | "review">(
+    "form",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -159,40 +115,34 @@ export function PaymentVoucherCreateWorkspace() {
     if (!amendmentVoucherId) {
       setInitialVoucher(null);
       setIsLoadingAmendment(false);
-      setAmendmentError('');
+      setAmendmentError("");
 
       return;
     }
 
     setIsLoadingAmendment(true);
-    setAmendmentError('');
+    setAmendmentError("");
 
     async function loadAmendment() {
       try {
-        const voucher = await fetchPaymentVoucher(
-          amendmentVoucherId!,
-        );
+        const voucher = await fetchPaymentVoucher(amendmentVoucherId!);
 
         if (cancelled) return;
 
         if (!voucher) {
           setInitialVoucher(null);
-          setAmendmentError(
-            'The Payment Voucher could not be found.',
-          );
+          setAmendmentError("The Payment Voucher could not be found.");
           return;
         }
 
-        if (voucher.status !== 'REJECTED') {
+        if (voucher.status !== "REJECTED") {
           setInitialVoucher(null);
-          setAmendmentError(
-            'Only a rejected Payment Voucher can be amended.',
-          );
+          setAmendmentError("Only a rejected Payment Voucher can be amended.");
           return;
         }
 
         setInitialVoucher(voucher);
-        setCreationMode('single');
+        setCreationMode("single");
       } catch (error) {
         if (cancelled) return;
 
@@ -200,7 +150,7 @@ export function PaymentVoucherCreateWorkspace() {
         setAmendmentError(
           error instanceof Error
             ? error.message
-            : 'The Payment Voucher could not be loaded.',
+            : "The Payment Voucher could not be loaded.",
         );
       } finally {
         if (!cancelled) {
@@ -216,46 +166,31 @@ export function PaymentVoucherCreateWorkspace() {
     };
   }, [amendmentVoucherId]);
 
-  if (
-    isAmendmentRequest &&
-    isLoadingAmendment
-  ) {
-    return <PaymentPageState title="Loading Payment Voucher" copy="Preparing the returned Payment Voucher for editing…" backHref="/beta/payment-records" backLabel="Back to Payment Records" />;
+  if (isAmendmentRequest && isLoadingAmendment) {
+    return (
+      <PaymentPageState
+        title="Loading Payment Voucher"
+        copy="Preparing the returned Payment Voucher for editing…"
+        backHref="/beta/payment-records"
+        backLabel="Back to Payment Records"
+      />
+    );
   }
 
-  if (
-    isAmendmentRequest &&
-    amendmentError
-  ) {
+  if (isAmendmentRequest && amendmentError) {
     return (
       <div className={styles.workspace}>
-        <section
-          className={styles.choicePanel}
-        >
-          <header
-            className={
-              styles.choiceHeader
-            }
-          >
-            <p
-              className={
-                styles.choiceEyebrow
-              }
-            >
-              Unable to amend voucher
-            </p>
+        <section className={styles.choicePanel}>
+          <header className={styles.choiceHeader}>
+            <p className={styles.choiceEyebrow}>Unable to amend voucher</p>
 
-            <h1>
-              Payment Voucher unavailable
-            </h1>
+            <h1>Payment Voucher unavailable</h1>
 
             <p>{amendmentError}</p>
           </header>
 
           <Link
-            className={
-              styles.changeMethodButton
-            }
+            className={styles.changeMethodButton}
             href="/beta/payment-vouchers"
           >
             Back to payment records
@@ -265,165 +200,113 @@ export function PaymentVoucherCreateWorkspace() {
     );
   }
 
-  const selectedModeLabel =
-    isAmendmentRequest
-      ? 'Amend payment voucher'
-      : creationMode === 'single'
-        ? 'Single Payment Voucher'
-        : 'Multiple Payment Vouchers';
+  const selectedModeLabel = isAmendmentRequest
+    ? "Amend payment voucher"
+    : creationMode === "single"
+      ? "Single Payment Voucher"
+      : "Multiple Payment Vouchers";
 
   return (
     <div className={styles.workspace}>
       {creationMode === null ? (
-        <section
-          className={styles.choicePanel}
-        >
-          <header
-            className={
-              styles.choiceHeader
-            }
-          >
-            <p
-              className={
-                styles.choiceEyebrow
-              }
-            >
-              Create Payment Voucher
-            </p>
+        <section className={styles.choicePanel}>
+          <header className={styles.choiceHeader}>
+            <p className={styles.choiceEyebrow}>Create Payment Voucher</p>
 
-            <h1>
-              How many vouchers are you
-              creating?
-            </h1>
+            <h1>How many vouchers are you creating?</h1>
 
             <p>
-              Choose your preferred method
-              to generate payment vouchers
-              for processing.
+              Choose your preferred method to generate payment vouchers for
+              processing.
             </p>
           </header>
 
-          <div
-            className={styles.choiceGrid}
-          >
-            <article
-              className={styles.choiceCard}
-            >
-              <span
-                className={
-                  styles.choiceIcon
-                }
-              >
+          <div className={styles.choiceGrid}>
+            <article className={styles.choiceCard}>
+              <span className={styles.choiceIcon}>
                 <SingleVoucherIcon />
               </span>
 
-              <h2>
-                Single Payment Voucher
-              </h2>
+              <h2>Single Payment Voucher</h2>
 
               <p>
-                Create one voucher using
-                the complete form. Best for
-                one-off payments or
-                detailed line-item entry.
+                Create one voucher using the complete form. Best for one-off
+                payments or detailed line-item entry.
               </p>
 
               <button
-                className={
-                  styles.choiceAction
-                }
+                className={styles.choiceAction}
                 type="button"
-                onClick={() =>
-                  setCreationMode(
-                    'single',
-                  )
-                }
+                onClick={() => setCreationMode("single")}
               >
-                <span>
-                  Select Single Payment Voucher
-                </span>
+                <span>Select Single Payment Voucher</span>
 
                 <ArrowIcon />
               </button>
             </article>
 
-            <article
-              className={styles.choiceCard}
-            >
-              <span
-                className={
-                  styles.choiceIcon
-                }
-              >
+            <article className={styles.choiceCard}>
+              <span className={styles.choiceIcon}>
                 <MultipleVoucherIcon />
               </span>
 
-              <h2>
-                Multiple Payment Vouchers
-              </h2>
+              <h2>Multiple Payment Vouchers</h2>
 
               <p>
-                Prepare several vouchers
-                together. Upload a CSV for
-                bulk creation or enter rows
-                in a spreadsheet-style
-                grid.
+                Prepare several vouchers together. Upload a CSV for bulk
+                creation or enter rows in a spreadsheet-style grid.
               </p>
 
               <button
-                className={
-                  styles.choiceAction
-                }
+                className={styles.choiceAction}
                 type="button"
-                onClick={() =>
-                  setCreationMode(
-                    'multiple',
-                  )
-                }
+                onClick={() => setCreationMode("multiple")}
               >
-                <span>
-                  Select Multiple Payment Vouchers
-                </span>
+                <span>Select Multiple Payment Vouchers</span>
 
                 <ArrowIcon />
               </button>
             </article>
           </div>
         </section>
-      ) : creationMode === 'single' &&
-        singleFlowStep === 'review' ? null : !isAmendmentRequest ? (
-        <div
-          className={styles.activeWorkspace}
-        >
-          <div
-            className={
-              styles.workspaceToolbar
-            }
-          >
-            <div
-              className={
-                styles.workspaceToolbarText
-              }
-            >
-              <span>
-                Creation method
-              </span>
+      ) : creationMode === "single" &&
+        singleFlowStep === "review" ? null : !isAmendmentRequest ? (
+          <div className={styles.activeWorkspace}>
+            <div className={styles.workspaceToolbar}>
+              <div className={styles.workspaceToolbarText}>
+                <span>
+                  {creationMode === "multiple"
+                    ? "PV · Multiple Payment Vouchers"
+                    : "Creation method"}
+                </span>
 
-              <strong>
-                {selectedModeLabel}
-              </strong>
+                <strong>
+                  {creationMode === "multiple"
+                    ? "Create multiple Payment Vouchers"
+                    : selectedModeLabel}
+                </strong>
+
+                {creationMode === "multiple" && (
+                  <p>
+                    Add several Payment Vouchers, validate them together and
+                    continue to the bulk preview. Each valid entry will become a
+                    separate draft.
+                  </p>
+                )}
+              </div>
+
+              <button
+                className={styles.changeMethodButton}
+                type="button"
+                onClick={() => setCreationMode(null)}
+              >
+                {creationMode === "multiple"
+                  ? "Change method"
+                  : "Change creation method"}
+              </button>
             </div>
-
-            <button
-              className={styles.changeMethodButton}
-              type="button"
-              onClick={() => setCreationMode(null)}
-            >
-              Change creation method
-            </button>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
       {/*
        * For amendment mode, wait until the
@@ -432,26 +315,14 @@ export function PaymentVoucherCreateWorkspace() {
        * The key ensures the form is recreated
        * with the correct initial voucher.
        */}
-      <div
-        hidden={
-          creationMode !== 'single'
-        }
-      >
-        {(!isAmendmentRequest ||
-          initialVoucher) && (
-            <PaymentVoucherCreateFlow
-              key={
-                initialVoucher?.id ??
-                'new-payment-voucher'
-              }
-              initialVoucher={
-                initialVoucher ?? undefined
-              }
-              onStepChange={
-                setSingleFlowStep
-              }
-            />
-          )}
+      <div hidden={creationMode !== "single"}>
+        {(!isAmendmentRequest || initialVoucher) && (
+          <PaymentVoucherCreateFlow
+            key={initialVoucher?.id ?? "new-payment-voucher"}
+            initialVoucher={initialVoucher ?? undefined}
+            onStepChange={setSingleFlowStep}
+          />
+        )}
       </div>
 
       {/*
@@ -460,15 +331,10 @@ export function PaymentVoucherCreateWorkspace() {
        * one existing rejected voucher.
        */}
       {!isAmendmentRequest && (
-        <div
-          hidden={
-            creationMode !== 'multiple'
-          }
-        >
+        <div hidden={creationMode !== "multiple"}>
           <BulkPaymentVoucherCreateFlow />
         </div>
       )}
     </div>
   );
 }
-

@@ -671,7 +671,7 @@
 
 .compactReviewCard {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(270px, .9fr);
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 0.9fr);
   overflow: hidden;
 }
 
@@ -689,7 +689,7 @@
   color: #617690;
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .07em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
@@ -749,7 +749,7 @@
   color: #71849c;
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -806,22 +806,14 @@
 
 .reviewSideColumn .reviewActions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-content: stretch;
-  justify-items: stretch;
-  gap: 10px;
-  width: 100%;
+  gap: 9px;
   margin-top: auto;
   padding: 28px 0 0;
   border: 0;
-  background: transparent;
 }
 
 .reviewSideColumn .reviewActions button {
   width: 100%;
-  min-height: 46px;
-  padding: 11px 18px;
-  font-size: 13px;
 }
 
 .confirmation {
@@ -970,6 +962,330 @@
 
   .confirmationActions {
     width: 100%;
+    flex-direction: column;
+  }
+}
+
+/* Prototype-aligned Travel Allowance request form */
+.pageHeader {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 150px;
+  padding: 34px 44px;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.pageHeader p {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageHeader p b {
+  display: inline-grid;
+  min-width: 27px;
+  min-height: 19px;
+  place-items: center;
+  border-radius: 5px;
+  color: #fff;
+  background: #f59e0b;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.pageHeader>strong {
+  border: 0;
+  background: #eef2f8;
+}
+
+.travelFormLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.78fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.travelMainCard,
+.travelSummaryCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dbe5f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 31 61 / 5%),
+    0 10px 28px rgb(15 31 61 / 6%);
+}
+
+.travelSummaryCard {
+  position: static;
+  padding: 26px;
+}
+
+.travelMainCard .sectionHeading,
+.travelMainCard .entriesHeading {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.sectionNumber {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  color: #2563eb;
+  background: #e9f0ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.travelMainCard .sectionHeading>div,
+.travelMainCard .entriesHeading>div {
+  min-width: 0;
+}
+
+.travelFormLayout em,
+.travelFormLayout .requiredMark {
+  color: #dc2626;
+  font-style: normal;
+}
+
+.travelMainCard .entryCard {
+  border-color: #dbe5f1;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.travelMainCard .entryTop button:first-child {
+  padding: 7px 11px;
+  border: 1px solid #cbd9e8;
+  border-radius: 8px;
+  color: #1f3a5f;
+  background: #fff;
+}
+
+.travelSummaryHeading>span,
+.travelChecklist h2 {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.travelSummaryHeading>strong {
+  display: block;
+  margin-top: 7px;
+  color: #1f3a5f;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.travelSummaryRows {
+  display: grid;
+  margin: 19px 0 0;
+}
+
+.travelSummaryRows>div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.travelSummaryRows dt,
+.travelSummaryRows dd {
+  margin: 0;
+  font-size: 11px;
+}
+
+.travelSummaryRows dt {
+  color: #71849c;
+}
+
+.travelSummaryRows dd {
+  color: #1f3a5f;
+  font-weight: 750;
+}
+
+.travelChecklist {
+  margin-top: 21px;
+}
+
+.travelChecklist h2 {
+  margin: 0 0 8px;
+}
+
+.travelChecklist>div {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.travelChecklist i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+}
+
+.travelChecklist span,
+.travelChecklist small {
+  color: #64748b;
+  font-size: 10.5px;
+}
+
+.travelChecklist small {
+  font-size: 9.5px;
+}
+
+.travelChecklistComplete i {
+  background: #0e8750;
+}
+
+.travelChecklistComplete small {
+  color: #0e8750;
+  font-weight: 700;
+}
+
+.travelPolicyNote,
+.travelMealNote {
+  margin-top: 15px;
+  padding: 12px 13px;
+  border: 1px solid #f1e0a8;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.travelMealNote {
+  border-color: #dbe5f1;
+  background: #f3f6fa;
+}
+
+.travelPolicyNote strong,
+.travelMealNote strong {
+  color: #92580a;
+  font-size: 10.5px;
+}
+
+.travelMealNote strong {
+  color: #1f3a5f;
+}
+
+.travelPolicyNote p,
+.travelMealNote p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.travelSummaryCard .actions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  justify-content: stretch;
+  justify-items: stretch;
+  margin-top: 18px;
+  padding: 0;
+  background: transparent;
+}
+
+.travelSummaryCard .actions button {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.travelSummaryCard .draftMessage {
+  margin: 0;
+  text-align: center;
+}
+
+.travelMainCard .upload>input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+}
+
+.uploadControl {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 14px;
+  border: 1px dashed #b8cce5;
+  border-radius: 11px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.uploadControl:hover {
+  border-color: #7fa9dc;
+  background: #f4f8ff;
+}
+
+.uploadControl>strong {
+  flex: 0 0 auto;
+  padding: 10px 17px;
+  border: 1px solid #bfd0e5;
+  border-radius: 9px;
+  color: #1f3a5f;
+  background: #fff;
+  font-size: 12px;
+}
+
+.uploadControl>span {
+  min-width: 0;
+  color: #8091a7;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 920px) {
+  .travelFormLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .pageHeader {
+    min-height: 0;
+    padding: 24px 22px;
+  }
+
+  .travelMainCard .sectionHeading,
+  .travelMainCard .entriesHeading {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .travelMainCard .entriesHeading>button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .uploadControl {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

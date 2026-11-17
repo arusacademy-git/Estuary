@@ -153,14 +153,14 @@ export function PettyCashForm({
         currentAccount.role === "staff"
           ? managerId
           : currentAccount.role === "finance" &&
-              financeReviewerRole === "manager"
+            financeReviewerRole === "manager"
             ? financeReviewerId
             : currentAccount.id,
       directorApproverId:
         currentAccount.role === "staff" || currentAccount.role === "manager"
           ? directorId
           : currentAccount.role === "finance" &&
-              financeReviewerRole === "director"
+            financeReviewerRole === "director"
             ? financeReviewerId
             : currentAccount.id,
       financeReviewerId:
@@ -380,274 +380,212 @@ export function PettyCashForm({
       )}
       <header className={styles.requestHeader}>
         <div>
-          <p>Payment Requests / Petty Cash</p>
+          <p className={styles.pettyCashEyebrow}>
+            <b>PC</b> Petty Cash
+          </p>
           <h1>
             {initialRecord
               ? `Edit ${initialRecord.requestNumber}`
-              : "New Petty Cash Request"}
+              : "New Petty Cash request"}
           </h1>
+          <span>
+            Request funds for planned work expenses below RM300. Receipts and
+            any unused balance are recorded during reconciliation, after Finance
+            releases the money.
+          </span>
         </div>
         <strong>{initialRecord ? "Correction" : "Draft"}</strong>
       </header>
-      <form
-        className={`${styles.formCard} ${styles.formPage}`}
-        onSubmit={review}
-      >
+      <form className={styles.pettyForm} onSubmit={review}>
         {error && (
           <div className={styles.error} role="alert">
             {error}
           </div>
         )}
-        <section className={styles.formGuidance}>
-          <div>
-            <span>Petty Cash</span>
-            <h2>Request funds for planned work expenses below RM 300</h2>
-          </div>
-          <p>
-            Request Petty Cash before purchasing. Receipts and any unused
-            balance are recorded during reconciliation after Finance releases
-            the money.
-          </p>
-        </section>
-        <section className={styles.card}>
-          <div className={styles.sectionHeading}>
-            <div>
-              <span>1</span>
-              <div>
-                <h2>Request information</h2>
-                <p>Requester, office fund and Manager assignment</p>
+        <div className={styles.pettyFormLayout}>
+          <article className={styles.pettyMainCard}>
+            <section className={styles.pettySection}>
+              <div className={styles.sectionHeading}>
+                <div>
+                  <span>1</span>
+                  <div>
+                    <h2>Requester &amp; reviewers</h2>
+                    <p>Your details are filled in from your profile.</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className={styles.fieldGrid}>
-            <label>
-              <span>Name</span>
-              <input disabled value={account?.name ?? ""} />
-            </label>
-            <label>
-              <span>Position</span>
-              <input disabled value={account?.position ?? ""} />
-            </label>
-            <label>
-              <span>
-                Request date <em className={styles.requiredMark}>*</em>
-              </span>
-              <input
-                type="date"
-                value={requestDate}
-                onChange={(event) => setRequestDate(event.target.value)}
-              />
-            </label>
-            <label>
-              <span>
-                Contact <em className={styles.requiredMark}>*</em>
-              </span>
-              <input
-                value={contact}
-                onChange={(event) => setContact(event.target.value)}
-                placeholder="Phone or email"
-              />
-            </label>
-            <label>
-              <span>
-                Location <em className={styles.requiredMark}>*</em>
-              </span>
-              <select
-                value={location}
-                onChange={(event) =>
-                  setLocation(
-                    event.target.value as CreatePettyCashInput["location"],
-                  )
-                }
-              >
-                {PETTY_CASH_LOCATIONS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {(account?.role === "staff" || account?.role === "manager") && (
-              <label>
+              <div className={styles.requesterProfile}>
+                <b aria-hidden="true">
+                  {(account?.name ?? "User")
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("")
+                    .toUpperCase()}
+                </b>
                 <span>
-                  Director previewer <em className={styles.requiredMark}>*</em>
+                  <strong>{account?.name ?? "Signed-in requester"}</strong>
+                  <small>
+                    {account?.position ?? ""}
+                    {account?.role ? ` · ${account.role}` : ""}
+                  </small>
                 </span>
-                <select
-                  value={directorId}
-                  onChange={(event) => setDirectorId(event.target.value)}
-                >
-                  <option value="">Choose Director</option>
-                  {directors.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {account?.role === "staff" && (
-              <label className={styles.fullWidthField}>
-                <span>
-                  Manager reviewer <em className={styles.requiredMark}>*</em>
-                </span>
-                <select
-                  value={managerId}
-                  onChange={(event) => setManagerId(event.target.value)}
-                >
-                  <option value="">Choose Manager</option>
-                  {managers.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {account?.role === "finance" && (
-              <label>
-                <span>
-                  Independent previewer{" "}
-                  <em className={styles.requiredMark}>*</em>
-                </span>
-                <select
-                  value={
-                    financeReviewerRole && financeReviewerId
-                      ? `${financeReviewerRole}:${financeReviewerId}`
-                      : ""
-                  }
-                  onChange={(event) => {
-                    const [role, id] = event.target.value.split(":");
-                    setFinanceReviewerRole(
-                      (role as "manager" | "director" | "finance") || "",
-                    );
-                    setFinanceReviewerId(id || "");
-                  }}
-                >
-                  <option value="">
-                    Choose another Finance user, Manager or Director
-                  </option>
-                  {financeReviewers.map((item) => {
-                    const reviewerRole = isProjectManagerAccount(item)
-                      ? "manager"
-                      : item.role;
-                    return (
-                      <option
-                        key={item.id}
-                        value={`${reviewerRole}:${item.id}`}
-                      >
-                        {item.name} ·{" "}
-                        {reviewerRole === "finance"
-                          ? "Finance"
-                          : reviewerRole === "manager"
-                            ? "Manager"
-                            : "Director"}
+              </div>
+              <div className={styles.fieldGrid}>
+                <label>
+                  <span>
+                    Request date <em className={styles.requiredMark}>*</em>
+                  </span>
+                  <input
+                    type="date"
+                    value={requestDate}
+                    onChange={(event) => setRequestDate(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>
+                    Contact <em className={styles.requiredMark}>*</em>
+                  </span>
+                  <input
+                    value={contact}
+                    onChange={(event) => setContact(event.target.value)}
+                    placeholder="Phone or email"
+                  />
+                </label>
+                <label>
+                  <span>
+                    Location <em className={styles.requiredMark}>*</em>
+                  </span>
+                  <select
+                    value={location}
+                    onChange={(event) =>
+                      setLocation(
+                        event.target.value as CreatePettyCashInput["location"],
+                      )
+                    }
+                  >
+                    {PETTY_CASH_LOCATIONS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
                       </option>
-                    );
-                  })}
-                </select>
-              </label>
-            )}
-          </div>
-        </section>
-        <section className={`${styles.card} ${styles.expenseSection}`}>
-          <div className={styles.sectionHeading}>
-            <div>
-              <span>2</span>
-              <div>
-                <h2>Planned expense details</h2>
-                <p>
-                  Estimate how the Petty Cash will be used. Purchase receipts
-                  are uploaded during reconciliation.
-                </p>
-              </div>
-            </div>
-            <button
-              className={styles.secondaryButton}
-              type="button"
-              onClick={() => setLines((current) => [...current, makeLine()])}
-            >
-              + Add planned expense
-            </button>
-          </div>
-          <div className={styles.tableWrap}>
-            <table className={styles.expenseTable}>
-              <thead>
-                <tr>
-                  <th>Details / purpose</th>
-                  <th>Type of account</th>
-                  <th>Division</th>
-                  <th>Estimated amount (RM)</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line) => (
-                  <tr key={line.id}>
-                    <td>
-                      <input
-                        value={line.details}
-                        onChange={(e) =>
-                          updateLine(line.id, { details: e.target.value })
-                        }
-                        placeholder="What is the expense for?"
-                      />
-                    </td>
-                    <td>
-                      <select
-                        value={line.accountType}
-                        onChange={(e) =>
-                          updateLine(line.id, { accountType: e.target.value })
-                        }
-                      >
-                        <option value="">Choose account</option>
-                        {line.accountType &&
-                          !PETTY_CASH_ACCOUNT_TYPES.some(
-                            (item) => item === line.accountType,
-                          ) && (
-                            <option value={line.accountType}>
-                              {line.accountType} (saved value)
-                            </option>
-                          )}
-                        {PETTY_CASH_ACCOUNT_TYPES.map((item) => (
-                          <option key={item}>{item}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        value={line.division}
-                        onChange={(e) =>
-                          updateLine(line.id, { division: e.target.value })
-                        }
-                      >
-                        <option value="">Division</option>
-                        {line.division &&
-                          !DIVISION_TYPES.some(
-                            (item) => item === line.division,
-                          ) && (
-                            <option value={line.division}>
-                              {line.division} (saved value)
-                            </option>
-                          )}
-                        {DIVISION_TYPES.map((item) => (
-                          <option key={item} value={item}>
-                            {item}
+                    ))}
+                  </select>
+                </label>
+                {(account?.role === "staff" || account?.role === "manager") && (
+                  <label
+                    className={`${styles.reviewerField} ${account?.role === "manager"
+                        ? styles.reviewerFieldFull
+                        : ""
+                      }`}
+                  >
+                    <span>
+                      Director previewer{" "}
+                      <em className={styles.requiredMark}>*</em>
+                    </span>
+                    <select
+                      value={directorId}
+                      onChange={(event) => setDirectorId(event.target.value)}
+                    >
+                      <option value="">Choose Director</option>
+                      {directors.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {account?.role === "staff" && (
+                  <label className={styles.reviewerField}>
+                    <span>
+                      Manager reviewer{" "}
+                      <em className={styles.requiredMark}>*</em>
+                    </span>
+                    <select
+                      value={managerId}
+                      onChange={(event) => setManagerId(event.target.value)}
+                    >
+                      <option value="">Choose Manager</option>
+                      {managers.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {account?.role === "finance" && (
+                  <label>
+                    <span>
+                      Independent previewer{" "}
+                      <em className={styles.requiredMark}>*</em>
+                    </span>
+                    <select
+                      value={
+                        financeReviewerRole && financeReviewerId
+                          ? `${financeReviewerRole}:${financeReviewerId}`
+                          : ""
+                      }
+                      onChange={(event) => {
+                        const [role, id] = event.target.value.split(":");
+                        setFinanceReviewerRole(
+                          (role as "manager" | "director" | "finance") || "",
+                        );
+                        setFinanceReviewerId(id || "");
+                      }}
+                    >
+                      <option value="">
+                        Choose another Finance user, Manager or Director
+                      </option>
+                      {financeReviewers.map((item) => {
+                        const reviewerRole = isProjectManagerAccount(item)
+                          ? "manager"
+                          : item.role;
+                        return (
+                          <option
+                            key={item.id}
+                            value={`${reviewerRole}:${item.id}`}
+                          >
+                            {item.name} ·{" "}
+                            {reviewerRole === "finance"
+                              ? "Finance"
+                              : reviewerRole === "manager"
+                                ? "Manager"
+                                : "Director"}
                           </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <DecimalInput
-                        value={line.amount}
-                        onValueChange={(amount) =>
-                          updateLine(line.id, { amount })
-                        }
-                      />
-                    </td>
-                    <td>
+                        );
+                      })}
+                    </select>
+                  </label>
+                )}
+              </div>
+            </section>
+            <section className={styles.pettySection}>
+              <div className={styles.sectionHeading}>
+                <div>
+                  <span>2</span>
+                  <div>
+                    <h2>Planned expenses</h2>
+                    <p>Estimate how the Petty Cash will be used.</p>
+                  </div>
+                </div>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  onClick={() =>
+                    setLines((current) => [...current, makeLine()])
+                  }
+                >
+                  + Add expense
+                </button>
+              </div>
+              <div className={styles.plannedExpenseList}>
+                {lines.map((line, index) => (
+                  <article className={styles.plannedExpenseCard} key={line.id}>
+                    <header>
+                      <strong>Expense {index + 1}</strong>
                       <button
-                        aria-label="Remove expense"
-                        className={styles.removeButton}
+                        aria-label={`Remove expense ${index + 1}`}
                         disabled={lines.length === 1}
                         onClick={() =>
                           setLines((current) =>
@@ -658,97 +596,216 @@ export function PettyCashForm({
                       >
                         ×
                       </button>
-                    </td>
-                  </tr>
+                    </header>
+                    <label className={styles.expensePurposeField}>
+                      <span>
+                        Details / purpose{" "}
+                        <em className={styles.requiredMark}>*</em>
+                      </span>
+                      <input
+                        required
+                        value={line.details}
+                        onChange={(event) =>
+                          updateLine(line.id, { details: event.target.value })
+                        }
+                        placeholder="What is this expense for?"
+                      />
+                    </label>
+                    <div className={styles.expenseFieldGrid}>
+                      <label>
+                        <span>
+                          Type of account{" "}
+                          <em className={styles.requiredMark}>*</em>
+                        </span>
+                        <select
+                          required
+                          value={line.accountType}
+                          onChange={(event) =>
+                            updateLine(line.id, {
+                              accountType: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Choose account</option>
+                          {line.accountType &&
+                            !PETTY_CASH_ACCOUNT_TYPES.includes(
+                              line.accountType as (typeof PETTY_CASH_ACCOUNT_TYPES)[number],
+                            ) && (
+                              <option value={line.accountType}>
+                                {line.accountType} (saved value)
+                              </option>
+                            )}
+                          {PETTY_CASH_ACCOUNT_TYPES.map((item) => (
+                            <option key={item}>{item}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>
+                          Division <em className={styles.requiredMark}>*</em>
+                        </span>
+                        <select
+                          required
+                          value={line.division}
+                          onChange={(event) =>
+                            updateLine(line.id, {
+                              division: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Choose division</option>
+                          {line.division &&
+                            !DIVISION_TYPES.includes(
+                              line.division as (typeof DIVISION_TYPES)[number],
+                            ) && (
+                              <option value={line.division}>
+                                {line.division} (saved value)
+                              </option>
+                            )}
+                          {DIVISION_TYPES.map((item) => (
+                            <option key={item} value={item}>
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>
+                          Estimated amount (RM){" "}
+                          <em className={styles.requiredMark}>*</em>
+                        </span>
+                        <DecimalInput
+                          required
+                          value={line.amount}
+                          onValueChange={(amount) =>
+                            updateLine(line.id, { amount })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </article>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <div
-            className={`${styles.totalBar} ${total >= PETTY_CASH_REQUEST_LIMIT ? styles.totalInvalid : ""}`}
-          >
-            <span className={styles.policyCopy}>
+              </div>
+              <p className={styles.receiptNote}>
+                No receipt needed now. Upload purchase receipts when you
+                reconcile.
+              </p>
+            </section>
+            <section className={styles.pettySection}>
+              <div className={styles.sectionHeading}>
+                <div>
+                  <span>3</span>
+                  <div>
+                    <h2>Purpose</h2>
+                    <p>Give the approver the context they need.</p>
+                  </div>
+                </div>
+              </div>
+              <label className={styles.notesField}>
+                <span>Notes / purpose justification</span>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Add project context or an explanation for these expenses"
+                />
+              </label>
+            </section>
+          </article>
+          <aside className={styles.pettySummaryCard}>
+            <span>Request total</span>
+            <strong>RM {total.toFixed(2)}</strong>
+            <dl>
+              <div>
+                <dt>Request type</dt>
+                <dd>Petty Cash</dd>
+              </div>
+              <div>
+                <dt>Items</dt>
+                <dd>{lines.length}</dd>
+              </div>
+              <div>
+                <dt>Limit</dt>
+                <dd>Below RM{PETTY_CASH_REQUEST_LIMIT.toFixed(2)}</dd>
+              </div>
+              <div>
+                <dt>Remaining</dt>
+                <dd>
+                  RM
+                  {Math.max(0, PETTY_CASH_REQUEST_LIMIT - total).toFixed(2)}
+                </dd>
+              </div>
+            </dl>
+            <div
+              className={`${styles.pettyPolicyBox} ${total >= PETTY_CASH_REQUEST_LIMIT ? styles.pettyPolicyError : ""}`}
+            >
+              <b>Policy check</b>
+              <p>
+                {total < PETTY_CASH_REQUEST_LIMIT
+                  ? `Compliant. The total must stay below RM${PETTY_CASH_REQUEST_LIMIT.toFixed(2)}.`
+                  : `Limit exceeded. Reduce the total to below RM${PETTY_CASH_REQUEST_LIMIT.toFixed(2)}.`}
+              </p>
+            </div>
+            <div className={styles.pettyNextBox}>
+              <b>What happens next</b>
+              <p>
+                After approval, Finance releases the money. You then reconcile
+                with receipts and return any unused balance.
+              </p>
+            </div>
+            <label>
+              <input
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+                type="checkbox"
+              />
               <span>
-                Policy status:{" "}
-                <strong>
-                  {total < PETTY_CASH_REQUEST_LIMIT
-                    ? "Compliant"
-                    : "Limit exceeded"}
-                </strong>
-                <small>
-                  Total must remain below RM
-                  {PETTY_CASH_REQUEST_LIMIT.toFixed(2)}
-                </small>
+                I confirm that these planned expenses and estimated amounts are
+                accurate.
               </span>
-            </span>
-            <span className={styles.totalAmount}>
-              <small>Request total</small>
-              <strong>RM {total.toFixed(2)}</strong>
-            </span>
-          </div>
-        </section>
-        <section className={`${styles.card} ${styles.notesSection}`}>
-          <label className={styles.notesField}>
-            <span>Notes / purpose justification for Manager or Finance</span>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Add project context or an explanation for these expenses"
-            />
-          </label>
-        </section>
-        <section className={styles.confirmCard}>
-          <label>
-            <input
-              checked={confirmed}
-              onChange={(event) => setConfirmed(event.target.checked)}
-              type="checkbox"
-            />
-            <span>
-              I confirm that these planned expenses and estimated amounts are
-              accurate.
-            </span>
-          </label>
-          <div className={styles.draftActions}>
-            <button
-              className={styles.secondaryButton}
-              disabled={draft.isSavingDraft || saving}
-              type="button"
-              onClick={() =>
-                draft
-                  .saveDraft()
-                  .then(() => setDraftSaved(true))
-                  .catch((caught) =>
-                    setError(
-                      caught instanceof Error
-                        ? caught.message
-                        : "The draft could not be saved.",
-                    ),
-                  )
-              }
-            >
-              {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
-            </button>
-            <button
-              className={styles.primaryButton}
-              disabled={saving}
-              type="submit"
-            >
-              Continue to review →
-            </button>
-          </div>
-          <ManualDraftStatus message={draft.draftMessage} />
-        </section>
+            </label>
+            <div className={styles.draftActions}>
+              <button
+                className={styles.primaryButton}
+                disabled={saving || !confirmed}
+                type="submit"
+              >
+                Continue to review →
+              </button>
+              <button
+                className={styles.secondaryButton}
+                disabled={draft.isSavingDraft || saving}
+                type="button"
+                onClick={() =>
+                  draft
+                    .saveDraft()
+                    .then(() => setDraftSaved(true))
+                    .catch((caught) =>
+                      setError(
+                        caught instanceof Error
+                          ? caught.message
+                          : "The draft could not be saved.",
+                      ),
+                    )
+                }
+              >
+                {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
+              </button>
+            </div>
+            <ManualDraftStatus message={draft.draftMessage} />
+          </aside>
+        </div>
       </form>
     </main>
   );
 }
 
 function DecimalInput({
+  required = false,
   value,
   onValueChange,
 }: {
+  required?: boolean;
   value: number;
   onValueChange: (value: number) => void;
 }) {
@@ -757,6 +814,7 @@ function DecimalInput({
     <input
       inputMode="decimal"
       placeholder="0.00"
+      required={required}
       type="text"
       value={text}
       onBlur={() => {

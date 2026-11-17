@@ -235,7 +235,10 @@ export function PaymentVoucherForm({
 
   const assignedDirectorName = useMemo(() => {
     if (!initialVoucher) return "";
-    return directors.find((director) => director.id === initialVoucher.directorId)?.name ?? initialVoucher.directorId;
+    return (
+      directors.find((director) => director.id === initialVoucher.directorId)
+        ?.name ?? initialVoucher.directorId
+    );
   }, [initialVoucher]);
 
   function updateVoucherLine(lineId: string, changes: Partial<VoucherLine>) {
@@ -323,7 +326,10 @@ export function PaymentVoucherForm({
           ? accountError || undefined
           : undefined,
     };
-    if (nextFieldErrors.recipientIdentity || nextFieldErrors.bankAccountNumber) {
+    if (
+      nextFieldErrors.recipientIdentity ||
+      nextFieldErrors.bankAccountNumber
+    ) {
       setFieldErrors(nextFieldErrors);
       return;
     }
@@ -405,11 +411,13 @@ export function PaymentVoucherForm({
   }
 
   return (
-    <section className={`${styles.panel} ${isAmendment ? styles.amendmentPanel : ""}`}>
+    <section
+      className={`${styles.panel} ${isAmendment ? styles.amendmentPanel : ""}`}
+    >
       <div className={styles.pageHeading}>
         <div>
           <p className={styles.pageEyebrow}>
-            Payment Vouchers / Single Payment Voucher
+            <b>PV</b> Payment Voucher
           </p>
 
           <h1>
@@ -434,12 +442,21 @@ export function PaymentVoucherForm({
         </div>
       )}
 
-      <form className={isAmendment ? styles.amendmentForm : undefined} ref={formRef} onSubmit={handleReview}>
+      <form
+        className={`${styles.pvFormLayout} ${isAmendment ? styles.amendmentForm : ""}`}
+        ref={formRef}
+        onSubmit={handleReview}
+      >
         {isAmendment && initialVoucher && (
           <aside className={styles.amendmentAside}>
             <section className={styles.amendmentRequestCard} role="status">
               <span>Director requested amendments</span>
-              <strong>“{initialVoucher.rejectionRemarks || "Please amend this voucher."}”</strong>
+              <strong>
+                “
+                {initialVoucher.rejectionRemarks ||
+                  "Please amend this voucher."}
+                ”
+              </strong>
               <small>From {assignedDirectorName} · Director</small>
             </section>
             <section className={styles.amendmentTotalCard}>
@@ -448,448 +465,570 @@ export function PaymentVoucherForm({
               <small>{amountInWords}</small>
             </section>
             <div className={styles.amendmentAsideActions}>
-              <button className={styles.amendmentContinueButton} type="submit">Continue to review amendment →</button>
-              <Link className={styles.amendmentCancelButton} href={`/beta/payment-vouchers/${initialVoucher.id}`}>Cancel amendment</Link>
+              <button className={styles.amendmentContinueButton} type="submit">
+                Continue to review amendment →
+              </button>
+              <Link
+                className={styles.amendmentCancelButton}
+                href={`/beta/payment-vouchers/${initialVoucher.id}`}
+              >
+                Cancel amendment
+              </Link>
             </div>
           </aside>
         )}
-        <section className={styles.formSection}>
-          <div className={styles.sectionHeading}>
-            <p>Payment information</p>
-            <h2>Voucher details</h2>
-          </div>
+        <div className={styles.pvFormMain}>
+          <section className={styles.formSection}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.pvSectionNumber}>1</span>
+              <div>
+                <p>Recipient and payment</p>
+                <h2>Voucher details</h2>
+              </div>
+            </div>
 
-          <div className={styles.form}>
-            <label className={styles.field}>
-              <span>
-                PV date <em className={styles.requiredMarker}>*</em>
-              </span>
+            <div className={styles.form}>
+              <label className={styles.field}>
+                <span>
+                  PV date <em className={styles.requiredMarker}>*</em>
+                </span>
 
-              <input
-                defaultValue={initialVoucher?.pvDate ?? ""}
-                name="pvDate"
-                required
-                type="date"
-              />
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Recipient name <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <input
-                defaultValue={initialVoucher?.recipientName ?? ""}
-                name="recipientName"
-                required
-                type="text"
-              />
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Recipient email <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <input
-                defaultValue={initialVoucher?.recipientEmail ?? ""}
-                name="recipientEmail"
-                required
-                type="email"
-              />
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                IC / identity number{" "}
-                <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <input
-                aria-describedby={fieldErrors.recipientIdentity ? "recipient-identity-error" : undefined}
-                aria-invalid={Boolean(fieldErrors.recipientIdentity)}
-                defaultValue={initialVoucher?.recipientIc ?? ""}
-                name="recipientIdentity"
-                inputMode="numeric"
-                maxLength={12}
-                required
-                type="text"
-                onInput={(event) => {
-                  event.currentTarget.value = event.currentTarget.value
-                    .replace(/\D/g, "")
-                    .slice(0, 12);
-                  if (fieldErrors.recipientIdentity) {
-                    setFieldErrors((current) => ({ ...current, recipientIdentity: undefined }));
-                  }
-                }}
-              />
-              {fieldErrors.recipientIdentity && (
-                <small className={styles.fieldError} id="recipient-identity-error" role="alert">
-                  {fieldErrors.recipientIdentity}
-                </small>
-              )}
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Malaysian? <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <select
-                defaultValue={
-                  initialVoucher
-                    ? initialVoucher.recipientIsMalaysian
-                      ? "yes"
-                      : "no"
-                    : "yes"
-                }
-                name="isMalaysian"
-              >
-                <option value="yes">Yes</option>
-
-                <option value="no">No</option>
-              </select>
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Division <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <select defaultValue={selectedDivision} name="division" required>
-                <option disabled value="">
-                  Select division
-                </option>
-
-                {divisionOptions.map((division) => (
-                  <option key={division} value={division}>
-                    {division}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Assigned Director <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              {isAmendment && initialVoucher && (
                 <input
-                  name="assignedDirector"
-                  type="hidden"
-                  value={initialVoucher.directorId}
+                  defaultValue={initialVoucher?.pvDate ?? ""}
+                  name="pvDate"
+                  required
+                  type="date"
                 />
-              )}
+              </label>
 
-              <select
-                defaultValue={initialVoucher?.directorId ?? ""}
-                disabled={isAmendment}
-                name={isAmendment ? undefined : "assignedDirector"}
-                required={!isAmendment}
-              >
-                <option disabled value="">
-                  Select Director
-                </option>
+              <label className={styles.field}>
+                <span>
+                  Recipient name <em className={styles.requiredMarker}>*</em>
+                </span>
 
-                {initialVoucher &&
-                  !directors.some(
-                    (director) => director.id === initialVoucher.directorId,
-                  ) && (
-                    <option value={initialVoucher.directorId}>
-                      {initialVoucher.directorId}
-                    </option>
-                  )}
+                <input
+                  defaultValue={initialVoucher?.recipientName ?? ""}
+                  name="recipientName"
+                  required
+                  type="text"
+                />
+              </label>
 
-                {directors.map((director) => (
-                  <option key={director.id} value={director.id}>
-                    {director.name} — {director.position}
-                  </option>
-                ))}
-              </select>
+              <label className={styles.field}>
+                <span>
+                  Recipient email <em className={styles.requiredMarker}>*</em>
+                </span>
 
-              {isAmendment && (
-                <small>
-                  The amended voucher will return to the same Director.
-                </small>
-              )}
-            </label>
+                <input
+                  defaultValue={initialVoucher?.recipientEmail ?? ""}
+                  name="recipientEmail"
+                  required
+                  type="email"
+                />
+              </label>
 
-            <label className={styles.field}>
-              <span>
-                Payment method <em className={styles.requiredMarker}>*</em>
-              </span>
+              <label className={styles.field}>
+                <span>
+                  IC / identity number{" "}
+                  <em className={styles.requiredMarker}>*</em>
+                </span>
 
-              <select defaultValue={selectedPaymentMethod} name="paymentMethod">
-                {paymentMethodOptions.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Bank name <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <select
-                defaultValue={initialVoucher?.bankName ?? ""}
-                name="bankName"
-              >
-                <option value="">Select bank</option>
-
-                {bankNameOptions.map((bankName) => (
-                  <option key={bankName} value={bankName}>
-                    {bankName}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={styles.field}>
-              <span>
-                Bank account number <em className={styles.requiredMarker}>*</em>
-              </span>
-
-              <input
-                aria-describedby={fieldErrors.bankAccountNumber ? "bank-account-number-error" : undefined}
-                aria-invalid={Boolean(fieldErrors.bankAccountNumber)}
-                defaultValue={initialVoucher?.bankAccountNumber ?? ""}
-                name="bankAccountNumber"
-                inputMode="numeric"
-                maxLength={19}
-                type="text"
-                onInput={(event) => {
-                  event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "");
-                  if (fieldErrors.bankAccountNumber) {
-                    setFieldErrors((current) => ({ ...current, bankAccountNumber: undefined }));
+                <input
+                  aria-describedby={
+                    fieldErrors.recipientIdentity
+                      ? "recipient-identity-error"
+                      : undefined
                   }
-                }}
-              />
-              {fieldErrors.bankAccountNumber && (
-                <small className={styles.fieldError} id="bank-account-number-error" role="alert">
-                  {fieldErrors.bankAccountNumber}
-                </small>
-              )}
-            </label>
+                  aria-invalid={Boolean(fieldErrors.recipientIdentity)}
+                  defaultValue={initialVoucher?.recipientIc ?? ""}
+                  name="recipientIdentity"
+                  inputMode="numeric"
+                  maxLength={12}
+                  required
+                  type="text"
+                  onInput={(event) => {
+                    event.currentTarget.value = event.currentTarget.value
+                      .replace(/\D/g, "")
+                      .slice(0, 12);
+                    if (fieldErrors.recipientIdentity) {
+                      setFieldErrors((current) => ({
+                        ...current,
+                        recipientIdentity: undefined,
+                      }));
+                    }
+                  }}
+                />
+                {fieldErrors.recipientIdentity && (
+                  <small
+                    className={styles.fieldError}
+                    id="recipient-identity-error"
+                    role="alert"
+                  >
+                    {fieldErrors.recipientIdentity}
+                  </small>
+                )}
+              </label>
 
-            <label className={`${styles.field} ${styles.wide}`}>
-              <span>
-                Purpose of payment <em className={styles.requiredMarker}>*</em>
-              </span>
+              <label className={styles.field}>
+                <span>
+                  Malaysian? <em className={styles.requiredMarker}>*</em>
+                </span>
 
-              <textarea
-                defaultValue={initialVoucher?.purpose ?? ""}
-                name="purpose"
-                required
-                rows={4}
-              />
-            </label>
+                <select
+                  defaultValue={
+                    initialVoucher
+                      ? initialVoucher.recipientIsMalaysian
+                        ? "yes"
+                        : "no"
+                      : "yes"
+                  }
+                  name="isMalaysian"
+                >
+                  <option value="yes">Yes</option>
 
-            <label className={`${styles.field} ${styles.wide}`}>
-              <span className={styles.uploadLabel}>
-                Supporting documents
-                <em className={styles.optionalBadge}>Optional</em>
-              </span>
+                  <option value="no">No</option>
+                </select>
+              </label>
 
-              <span className={styles.fileUploadControl}>
+              <label className={styles.field}>
+                <span>
+                  Division <em className={styles.requiredMarker}>*</em>
+                </span>
+
+                <select
+                  defaultValue={selectedDivision}
+                  name="division"
+                  required
+                >
+                  <option disabled value="">
+                    Select division
+                  </option>
+
+                  {divisionOptions.map((division) => (
+                    <option key={division} value={division}>
+                      {division}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.field}>
+                <span>
+                  Assigned Director <em className={styles.requiredMarker}>*</em>
+                </span>
+
+                {isAmendment && initialVoucher && (
+                  <input
+                    name="assignedDirector"
+                    type="hidden"
+                    value={initialVoucher.directorId}
+                  />
+                )}
+
+                <select
+                  defaultValue={initialVoucher?.directorId ?? ""}
+                  disabled={isAmendment}
+                  name={isAmendment ? undefined : "assignedDirector"}
+                  required={!isAmendment}
+                >
+                  <option disabled value="">
+                    Select Director
+                  </option>
+
+                  {initialVoucher &&
+                    !directors.some(
+                      (director) => director.id === initialVoucher.directorId,
+                    ) && (
+                      <option value={initialVoucher.directorId}>
+                        {initialVoucher.directorId}
+                      </option>
+                    )}
+
+                  {directors.map((director) => (
+                    <option key={director.id} value={director.id}>
+                      {director.name} — {director.position}
+                    </option>
+                  ))}
+                </select>
+
+                {isAmendment && (
+                  <small>
+                    The amended voucher will return to the same Director.
+                  </small>
+                )}
+              </label>
+
+              <label className={styles.field}>
+                <span>
+                  Payment method <em className={styles.requiredMarker}>*</em>
+                </span>
+
+                <select
+                  defaultValue={selectedPaymentMethod}
+                  name="paymentMethod"
+                >
+                  {paymentMethodOptions.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.field}>
+                <span>
+                  Bank name <em className={styles.requiredMarker}>*</em>
+                </span>
+
+                <select
+                  defaultValue={initialVoucher?.bankName ?? ""}
+                  name="bankName"
+                >
+                  <option value="">Select bank</option>
+
+                  {bankNameOptions.map((bankName) => (
+                    <option key={bankName} value={bankName}>
+                      {bankName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.field}>
+                <span>
+                  Bank account number{" "}
+                  <em className={styles.requiredMarker}>*</em>
+                </span>
+
+                <input
+                  aria-describedby={
+                    fieldErrors.bankAccountNumber
+                      ? "bank-account-number-error"
+                      : undefined
+                  }
+                  aria-invalid={Boolean(fieldErrors.bankAccountNumber)}
+                  defaultValue={initialVoucher?.bankAccountNumber ?? ""}
+                  name="bankAccountNumber"
+                  inputMode="numeric"
+                  maxLength={19}
+                  type="text"
+                  onInput={(event) => {
+                    event.currentTarget.value =
+                      event.currentTarget.value.replace(/\D/g, "");
+                    if (fieldErrors.bankAccountNumber) {
+                      setFieldErrors((current) => ({
+                        ...current,
+                        bankAccountNumber: undefined,
+                      }));
+                    }
+                  }}
+                />
+                {fieldErrors.bankAccountNumber && (
+                  <small
+                    className={styles.fieldError}
+                    id="bank-account-number-error"
+                    role="alert"
+                  >
+                    {fieldErrors.bankAccountNumber}
+                  </small>
+                )}
+              </label>
+
+              <label className={`${styles.field} ${styles.wide}`}>
+                <span>
+                  Purpose of payment{" "}
+                  <em className={styles.requiredMarker}>*</em>
+                </span>
+
+                <textarea
+                  defaultValue={initialVoucher?.purpose ?? ""}
+                  name="purpose"
+                  required
+                  rows={4}
+                />
+              </label>
+
+              <label className={`${styles.field} ${styles.wide}`}>
+                <span className={styles.uploadLabel}>
+                  Supporting documents
+                  <em className={styles.optionalBadge}>Optional</em>
+                </span>
+
                 <input
                   accept=".pdf,.png,.jpg,.jpeg"
+                  className={styles.pvFileInput}
+                  id="single-pv-supporting-documents"
                   multiple
                   name="supportingDocuments"
                   type="file"
                 />
-              </span>
-
-              <small>
-                {isAmendment
-                  ? "Upload any replacement or additional supporting documents required for this amendment."
-                  : "Selected file names will be displayed on the review screen."}
-              </small>
-            </label>
-          </div>
-        </section>
-
-        <section className={styles.linesSection}>
-          <div className={styles.linesHeading}>
-            <div>
-              <div className={styles.linesTitleRow}>
-                <h2>Voucher lines</h2>
-
-                <span className={styles.lineCountBadge}>
-                  {voucherLines.length}{" "}
-                  {voucherLines.length === 1 ? "item" : "items"}
+                <span className={styles.fileUploadControl}>
+                  <strong>Choose files</strong>
+                  <small>
+                    No file chosen · PDF, PNG or JPG · selected names appear on
+                    review
+                  </small>
                 </span>
-              </div>
-
-              <span>Enter the payment purpose and accounting category.</span>
+              </label>
             </div>
-          </div>
+          </section>
 
-          <div className={styles.lineLabels}>
-            <span>Account</span>
-            <span>Description</span>
-            <span>Quantity</span>
-            <span>Unit price</span>
-            <span>Total</span>
-          </div>
+          <section className={styles.linesSection}>
+            <div className={styles.linesHeading}>
+              <span className={styles.pvSectionNumber}>2</span>
+              <div>
+                <div className={styles.linesTitleRow}>
+                  <h2>Voucher lines</h2>
 
-          <div className={styles.voucherLines}>
-            {voucherLines.map((line) => {
-              const lineTotal = line.quantity * line.unitPrice;
-
-              return (
-                <div className={styles.voucherLine} key={line.id}>
-                  <label className={styles.mobileFieldLabel}>
-                    <span>Account</span>
-
-                    <select
-                      aria-label="Account"
-                      value={line.account}
-                      onChange={(event) =>
-                        updateVoucherLine(line.id, {
-                          account: event.target.value,
-                        })
-                      }
-                    >
-                      {!knownAccountCodes.includes(line.account) && (
-                        <option value={line.account}>{line.account}</option>
-                      )}
-
-                      {paymentVoucherAccountOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className={styles.mobileFieldLabel}>
-                    <span>Description</span>
-
-                    <input
-                      aria-label="Description"
-                      placeholder="Payment description"
-                      required
-                      type="text"
-                      value={line.description}
-                      onChange={(event) =>
-                        updateVoucherLine(line.id, {
-                          description: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label className={styles.mobileFieldLabel}>
-                    <span>Quantity</span>
-
-                    <input
-                      aria-label="Quantity"
-                      inputMode="decimal"
-                      placeholder="For example: 1"
-                      required
-                      type="text"
-                      value={line.quantity}
-                      onChange={(event) =>
-                        updateVoucherLine(line.id, {
-                          quantity: parsePaymentAmountInput(event.target.value),
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label className={styles.mobileFieldLabel}>
-                    <span>Unit price</span>
-
-                    <PaymentAmountInput
-                      aria-label="Unit price"
-                      placeholder="0.00"
-                      required
-                      value={line.unitPrice}
-                      onValueChange={(unitPrice) =>
-                        updateVoucherLine(line.id, { unitPrice })
-                      }
-                    />
-                  </label>
-
-                  <div className={styles.lineTotal}>
-                    <span className={styles.mobileTotalLabel}>Total</span>
-
-                    <strong>RM {lineTotal.toFixed(2)}</strong>
-                  </div>
+                  <span className={styles.lineCountBadge}>
+                    {voucherLines.length}{" "}
+                    {voucherLines.length === 1 ? "item" : "items"}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
 
-          <div className={styles.voucherSummary}>
-            <div className={styles.summaryStats}>
-              <div className={styles.summaryStat}>
-                <span>Lines</span>
-
-                <strong>{voucherLines.length}</strong>
-              </div>
-
-              <div className={styles.summaryStat}>
-                <span>Subtotal</span>
-
-                <strong>RM {totals.subtotal.toFixed(2)}</strong>
+                <span>Enter the payment purpose and accounting category.</span>
               </div>
             </div>
 
-            <div className={styles.amountInWords}>
-              <div className={styles.amountInWordsHeading}>
-                <span>Amount in words</span>
-
-                <small>Automatically generated</small>
-              </div>
-
-              <output
-                aria-label="Amount in words"
-                className={styles.amountInWordsOutput}
-              >
-                {amountInWords}
-              </output>
+            <div className={styles.lineLabels}>
+              <span>Account <em className={styles.requiredMarker}>*</em></span>
+              <span>Description  <em className={styles.requiredMarker}>*</em></span>
+              <span>Quantity  <em className={styles.requiredMarker}>*</em></span>
+              <span>Unit price <em className={styles.requiredMarker}>*</em></span>
+              <span>Total</span>
             </div>
 
-            <div className={styles.grandTotalBar}>
+            <div className={styles.voucherLines}>
+              {voucherLines.map((line) => {
+                const lineTotal = line.quantity * line.unitPrice;
+
+                return (
+                  <div className={styles.voucherLine} key={line.id}>
+                    <label className={styles.mobileFieldLabel}>
+                      <span>
+                        Account <em className={styles.requiredMarker}>*</em>
+                      </span>
+
+                      <select
+                        aria-label="Account"
+                        required
+                        value={line.account}
+                        onChange={(event) =>
+                          updateVoucherLine(line.id, {
+                            account: event.target.value,
+                          })
+                        }
+                      >
+                        {!knownAccountCodes.includes(line.account) && (
+                          <option value={line.account}>{line.account}</option>
+                        )}
+
+                        {paymentVoucherAccountOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className={styles.mobileFieldLabel}>
+                      <span>
+                        Description <em className={styles.requiredMarker}>*</em>
+                      </span>
+
+                      <input
+                        aria-label="Description"
+                        placeholder="Payment description"
+                        required
+                        type="text"
+                        value={line.description}
+                        onChange={(event) =>
+                          updateVoucherLine(line.id, {
+                            description: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.mobileFieldLabel}>
+                      <span>
+                        Quantity <em className={styles.requiredMarker}>*</em>
+                      </span>
+
+                      <input
+                        aria-label="Quantity"
+                        inputMode="decimal"
+                        placeholder="For example: 1"
+                        required
+                        type="text"
+                        value={line.quantity}
+                        onChange={(event) =>
+                          updateVoucherLine(line.id, {
+                            quantity: parsePaymentAmountInput(
+                              event.target.value,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.mobileFieldLabel}>
+                      <span>
+                        Unit price <em className={styles.requiredMarker}>*</em>
+                      </span>
+
+                      <PaymentAmountInput
+                        aria-label="Unit price"
+                        placeholder="0.00"
+                        required
+                        value={line.unitPrice}
+                        onValueChange={(unitPrice) =>
+                          updateVoucherLine(line.id, { unitPrice })
+                        }
+                      />
+                    </label>
+
+                    <div className={styles.lineTotal}>
+                      <span className={styles.mobileTotalLabel}>Total</span>
+
+                      <strong>RM {lineTotal.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className={styles.voucherSummary}>
+              <div className={styles.summaryStats}>
+                <div className={styles.summaryStat}>
+                  <span>Lines</span>
+
+                  <strong>{voucherLines.length}</strong>
+                </div>
+
+                <div className={styles.summaryStat}>
+                  <span>Subtotal</span>
+
+                  <strong>RM {totals.subtotal.toFixed(2)}</strong>
+                </div>
+              </div>
+
+              <div className={styles.amountInWords}>
+                <div className={styles.amountInWordsHeading}>
+                  <span>Amount in words</span>
+
+                  <small>Automatically generated</small>
+                </div>
+
+                <output
+                  aria-label="Amount in words"
+                  className={styles.amountInWordsOutput}
+                >
+                  {amountInWords}
+                </output>
+              </div>
+
+              <div className={styles.grandTotalBar}>
+                <span>Grand total</span>
+
+                <strong>RM {totals.grandTotal.toFixed(2)}</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {!isAmendment && (
+          <aside className={styles.pvFormSummary}>
+            <div className={styles.pvSummaryHeading}>
               <span>Grand total</span>
-
               <strong>RM {totals.grandTotal.toFixed(2)}</strong>
             </div>
-          </div>
-        </section>
-
-        <footer className={`${styles.formActions} ${isAmendment ? styles.amendmentFooter : ""}`}>
-          <ManualDraftStatus message={draft.draftMessage} />
-          {!initialVoucher && (
-            <button
-              className={styles.secondary}
-              disabled={draft.isSavingDraft}
-              type="button"
-              onClick={async () => {
-                setFormError("");
-                try {
-                  await draft.saveDraft();
-                  setDraftSaved(true);
-                } catch (error) {
-                  setFormError(
-                    error instanceof Error
-                      ? error.message
-                      : "The Payment Voucher draft could not be saved.",
-                  );
-                }
-              }}
-            >
-              {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
-            </button>
-          )}
-          {!isAmendment && <button className={styles.primary} type="submit">Continue to review</button>}
-        </footer>
+            <dl className={styles.pvSummaryRows}>
+              <div>
+                <dt>Voucher type</dt>
+                <dd>Single PV</dd>
+              </div>
+              <div>
+                <dt>Lines</dt>
+                <dd>{voucherLines.length}</dd>
+              </div>
+              <div>
+                <dt>Subtotal</dt>
+                <dd>RM {totals.subtotal.toFixed(2)}</dd>
+              </div>
+            </dl>
+            <div className={styles.pvChecklist}>
+              <h2>Checklist</h2>
+              <PvCheck label="Recipient details" />
+              <PvCheck label="Director and bank details" />
+              <PvCheck
+                complete={voucherLines.every(
+                  (line) =>
+                    Boolean(line.account.trim()) &&
+                    Boolean(line.description.trim()),
+                )}
+                label="Purpose of payment"
+              />
+              <PvCheck
+                complete={totals.grandTotal > 0}
+                label="At least one amount"
+              />
+              <PvCheck label="Documents" optional />
+            </div>
+            <div className={styles.pvNextNote}>
+              <strong>What happens next</strong>
+              <p>
+                The voucher goes to the assigned Director for approval, then to
+                the recipient to sign.
+              </p>
+            </div>
+            <footer className={styles.formActions}>
+              <ManualDraftStatus message={draft.draftMessage} />
+              <button
+                className={styles.secondary}
+                disabled={draft.isSavingDraft}
+                type="button"
+                onClick={async () => {
+                  setFormError("");
+                  try {
+                    await draft.saveDraft();
+                    setDraftSaved(true);
+                  } catch (error) {
+                    setFormError(
+                      error instanceof Error
+                        ? error.message
+                        : "The Payment Voucher draft could not be saved.",
+                    );
+                  }
+                }}
+              >
+                {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
+              </button>
+              <button className={styles.primary} type="submit">
+                Continue to review
+              </button>
+            </footer>
+          </aside>
+        )}
       </form>
     </section>
+  );
+}
+
+function PvCheck({
+  complete = false,
+  label,
+  optional = false,
+}: {
+  complete?: boolean;
+  label: string;
+  optional?: boolean;
+}) {
+  return (
+    <div className={complete ? styles.pvChecklistComplete : ""}>
+      <i aria-hidden="true" />
+      <span>{label}</span>
+      <small>{optional ? "Optional" : complete ? "Added" : "Required"}</small>
+    </div>
   );
 }

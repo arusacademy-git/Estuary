@@ -55,12 +55,12 @@ function readFile(file: File): Promise<CashAdvanceDocument> {
     reader.onload = () =>
       typeof reader.result === "string"
         ? resolve({
-            id: `${file.name}-${file.size}-${file.lastModified}`,
-            fileName: file.name,
-            mimeType: file.type,
-            size: file.size,
-            dataUrl: reader.result,
-          })
+          id: `${file.name}-${file.size}-${file.lastModified}`,
+          fileName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          dataUrl: reader.result,
+        })
         : reject(new Error(`${file.name} could not be read.`));
     reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
     reader.readAsDataURL(file);
@@ -341,7 +341,7 @@ export function CashAdvanceForm({
         <div className={styles.formHeroTop}>
           <div>
             <span className={styles.eyebrow}>
-              Payment Request · Cash Advance
+              <b>CA</b> Cash Advance
             </span>
             <h1>
               {initialRecord
@@ -354,11 +354,11 @@ export function CashAdvanceForm({
             </p>
           </div>
           <span className={styles.draftPill}>
-            {initialRecord ? "Correction" : "New request"}
+            {initialRecord ? "Correction" : "Draft"}
           </span>
         </div>
       </header>
-      <form className={styles.page} onSubmit={review}>
+      <form className={styles.cashAdvanceForm} onSubmit={review}>
         {initialRecord?.returnRemarks && (
           <div className={styles.returnNotice}>
             <strong>Changes requested</strong>
@@ -366,220 +366,324 @@ export function CashAdvanceForm({
           </div>
         )}
         {error && <div className={styles.error}>{error}</div>}
-        <div className={styles.formReceipt}>
-          <section className={styles.receiptSection}>
-            <div className={styles.sectionHeading}>
-              <div>
+        <div className={styles.cashAdvanceLayout}>
+          <div className={styles.formReceipt}>
+            <section className={styles.receiptSection}>
+              <div className={styles.sectionHeading}>
+                <span className={styles.sectionNumber}>1</span>
                 <div>
-                  <h2>Request information</h2>
-                  <p>Staff, project and approval assignment</p>
+                  <div>
+                    <h2>Request information</h2>
+                    <p>Staff, project and approval assignment</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className={styles.grid}>
-              <div className={styles.field}>
-                <label>
-                  Request date <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  type="date"
-                  value={requestDate}
-                  onChange={(e) => setRequestDate(e.target.value)}
-                />
+              <div className={styles.requesterCard}>
+                <span aria-hidden="true">
+                  {(account?.name ?? "Staff")
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </span>
+                <div>
+                  <strong>{account?.name ?? "No Staff session found"}</strong>
+                  <small>Programme Staff · Staff</small>
+                </div>
               </div>
-              <div className={styles.field}>
-                <label>
-                  Contact <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  placeholder="e.g. +60 12-345 6789"
-                  value={contact}
-                  onChange={(e) => setContact(e.target.value)}
-                />
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Project Name <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={isOtherProject ? "__OTHER__" : projectName}
-                  onChange={(e) => {
-                    setIsOtherProject(e.target.value === "__OTHER__");
-                    setProjectName(
-                      e.target.value === "__OTHER__" ? "" : e.target.value,
-                    );
-                  }}
-                >
-                  <option value="">Choose project</option>
-                  {CASH_ADVANCE_PROJECTS.map((project) => (
-                    <option key={project}>{project}</option>
-                  ))}
-                  <option value="__OTHER__">Other</option>
-                </select>
-              </div>
-              {isOtherProject && (
+              <div className={styles.grid}>
                 <div className={styles.field}>
                   <label>
-                    Other Project Name{" "}
+                    Request date <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <input
+                    type="date"
+                    value={requestDate}
+                    onChange={(e) => setRequestDate(e.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label>
+                    Contact <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <input
+                    placeholder="e.g. +60 12-345 6789"
+                    value={contact}
+                    onChange={(e) => setContact(e.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label>
+                    Project Name <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <select
+                    value={isOtherProject ? "__OTHER__" : projectName}
+                    onChange={(e) => {
+                      setIsOtherProject(e.target.value === "__OTHER__");
+                      setProjectName(
+                        e.target.value === "__OTHER__" ? "" : e.target.value,
+                      );
+                    }}
+                  >
+                    <option value="">Choose project</option>
+                    {CASH_ADVANCE_PROJECTS.map((project) => (
+                      <option key={project}>{project}</option>
+                    ))}
+                    <option value="__OTHER__">Other</option>
+                  </select>
+                </div>
+                {isOtherProject && (
+                  <div className={styles.field}>
+                    <label>
+                      Other Project Name{" "}
+                      <em className={styles.requiredMark}>*</em>
+                    </label>
+                    <input
+                      value={otherProject}
+                      onChange={(e) => setOtherProject(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className={styles.field}>
+                  <label>
+                    Manager approver <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <select
+                    value={managerId}
+                    onChange={(e) => setManagerId(e.target.value)}
+                  >
+                    <option value="">Choose Manager</option>
+                    {managers.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={`${styles.field} ${styles.full}`}>
+                  <label>
+                    Director approver <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <select
+                    value={directorId}
+                    onChange={(e) => setDirectorId(e.target.value)}
+                  >
+                    <option value="">Choose Director</option>
+                    {directors.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={`${styles.field} ${styles.full}`}>
+                  <label>
+                    Purpose of Cash Advance{" "}
+                    <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <textarea
+                    placeholder="Explain the main project requirement or context necessitating this Cash Advance…"
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
+                  />
+                </div>
+              </div>
+            </section>
+            <section className={styles.receiptSection}>
+              <div className={styles.sectionHeading}>
+                <span className={styles.sectionNumber}>2</span>
+                <div>
+                  <div>
+                    <h2>Payment account</h2>
+                    <p>
+                      Use the Staff requester’s bank account that will receive
+                      this Cash Advance.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.grid3}>
+                <div className={styles.field}>
+                  <label>
+                    Account holder name{" "}
                     <em className={styles.requiredMark}>*</em>
                   </label>
                   <input
-                    value={otherProject}
-                    onChange={(e) => setOtherProject(e.target.value)}
+                    placeholder="Name as registered with the bank"
+                    value={accountHolderName}
+                    onChange={(e) => setAccountHolderName(e.target.value)}
                   />
                 </div>
-              )}
-              <div className={styles.field}>
-                <label>
-                  Manager approver <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
-                >
-                  <option value="">Choose Manager</option>
-                  {managers.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={`${styles.field} ${styles.full}`}>
-                <label>
-                  Director approver <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={directorId}
-                  onChange={(e) => setDirectorId(e.target.value)}
-                >
-                  <option value="">Choose Director</option>
-                  {directors.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={`${styles.field} ${styles.full}`}>
-                <label>
-                  Purpose of Cash Advance{" "}
-                  <em className={styles.requiredMark}>*</em>
-                </label>
-                <textarea
-                  placeholder="Explain the main project requirement or context necessitating this Cash Advance…"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                />
-              </div>
-            </div>
-          </section>
-          <section className={styles.receiptSection}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <div>
-                  <h2>Payment account</h2>
-                  <p>
-                    Use the Staff requester’s bank account that will receive
-                    this Cash Advance.
-                  </p>
+                <div className={styles.field}>
+                  <label>
+                    Bank name <em className={styles.requiredMark}>*</em>
+                  </label>
+                  <select
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                  >
+                    <option value="">Choose a bank</option>
+                    {BANK_NAME_SELECT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-            </div>
-            <div className={styles.grid3}>
-              <div className={styles.field}>
-                <label>
-                  Account holder name <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  placeholder="Name as registered with the bank"
-                  value={accountHolderName}
-                  onChange={(e) => setAccountHolderName(e.target.value)}
-                />
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Bank name <em className={styles.requiredMark}>*</em>
-                </label>
-                <select
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                >
-                  <option value="">Choose a bank</option>
-                  {BANK_NAME_SELECT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label>
-                  Account number <em className={styles.requiredMark}>*</em>
-                </label>
-                <input
-                  inputMode="numeric"
-                  placeholder="Bank account number"
-                  value={bankAccountNumber}
-                  onChange={(e) => setBankAccountNumber(e.target.value)}
-                />
-              </div>
-            </div>
-          </section>
-          <CashAdvanceRequestLines
-            lines={lines}
-            onAdd={() => setLines((current) => [...current, makeLine()])}
-            onChange={updateLine}
-            onRemove={(id) =>
-              setLines((current) => current.filter((item) => item.id !== id))
-            }
-            total={total}
-          />
-          <section className={styles.receiptSection}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <div>
-                  <h2>Documents and remarks</h2>
-                  <p>Add any supporting information available now.</p>
-                </div>
-              </div>
-            </div>
-            <div className={styles.grid}>
-              <div className={styles.field}>
-                <label>Supporting documents</label>
-                <label className={styles.uploadWell}>
-                  <strong>Choose files</strong>
-                  <span>or drag and drop</span>
-                  <small>PDF, PNG or JPG up to 3 MB combined</small>
+                <div className={styles.field}>
+                  <label>
+                    Account number <em className={styles.requiredMark}>*</em>
+                  </label>
                   <input
-                    accept="application/pdf,image/png,image/jpeg"
-                    multiple
-                    onChange={selectFiles}
-                    type="file"
+                    inputMode="numeric"
+                    placeholder="Bank account number"
+                    value={bankAccountNumber}
+                    onChange={(e) => setBankAccountNumber(e.target.value)}
                   />
-                </label>
-                {documents.map((document) => (
-                  <small key={document.id}>{document.fileName}</small>
-                ))}
+                </div>
               </div>
-              <div className={styles.field}>
-                <label>Additional remarks</label>
-                <textarea
-                  placeholder="Include any timeline urgency, supplier requirements, or relevant notes…"
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                />
+            </section>
+            <CashAdvanceRequestLines
+              lines={lines}
+              onAdd={() => setLines((current) => [...current, makeLine()])}
+              onChange={updateLine}
+              onRemove={(id) =>
+                setLines((current) => current.filter((item) => item.id !== id))
+              }
+              total={total}
+            />
+            <section className={styles.receiptSection}>
+              <div className={styles.sectionHeading}>
+                <span className={styles.sectionNumber}>4</span>
+                <div>
+                  <div>
+                    <h2>Documents and remarks</h2>
+                    <p>Add any supporting information available now.</p>
+                  </div>
+                </div>
               </div>
+              <div className={styles.grid}>
+                <div className={styles.field}>
+                  <label>Supporting documents</label>
+                  <label className={styles.uploadWell}>
+                    <strong>Choose files</strong>
+                    <span>or drag and drop</span>
+                    <small>PDF, PNG or JPG up to 3 MB combined</small>
+                    <input
+                      accept="application/pdf,image/png,image/jpeg"
+                      multiple
+                      onChange={selectFiles}
+                      type="file"
+                    />
+                  </label>
+                  {documents.map((document) => (
+                    <small key={document.id}>{document.fileName}</small>
+                  ))}
+                </div>
+                <div className={styles.field}>
+                  <label>Additional remarks</label>
+                  <textarea
+                    placeholder="Include any timeline urgency, supplier requirements, or relevant notes…"
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                  />
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <aside className={styles.cashAdvanceSummary}>
+            <div className={styles.cashSummaryHeading}>
+              <span>Total requested</span>
+              <strong>RM {total.toFixed(2)}</strong>
             </div>
-            <div className={styles.footerActions}>
+            <dl className={styles.cashSummaryRows}>
+              <div>
+                <dt>Request type</dt>
+                <dd>Cash Advance</dd>
+              </div>
+              <div>
+                <dt>Items</dt>
+                <dd>{lines.length}</dd>
+              </div>
+              <div>
+                <dt>Minimum request</dt>
+                <dd>RM 300.00</dd>
+              </div>
+              <div>
+                <dt>Still needed</dt>
+                <dd className={total < 300 ? styles.cashSummaryWarning : ""}>
+                  RM {Math.max(0, 300 - total).toFixed(2)}
+                </dd>
+              </div>
+            </dl>
+
+            <div className={styles.cashChecklist}>
+              <h2>Checklist</h2>
+              <SummaryCheck
+                complete={Boolean(
+                  (isOtherProject ? otherProject : projectName) &&
+                  managerId &&
+                  directorId,
+                )}
+                label="Project and approvers"
+              />
+              <SummaryCheck
+                complete={Boolean(purpose.trim())}
+                label="Purpose"
+              />
+              <SummaryCheck
+                complete={Boolean(
+                  accountHolderName.trim() &&
+                  bankName.trim() &&
+                  bankAccountNumber.trim(),
+                )}
+                label="Bank details"
+              />
+              <SummaryCheck
+                complete={
+                  total >= 300 &&
+                  lines.every(
+                    (line) =>
+                      line.description.trim() &&
+                      line.purpose.trim() &&
+                      line.amount > 0,
+                  )
+                }
+                label="Breakdown of RM 300 or more"
+              />
+              <SummaryCheck
+                complete={documents.length > 0}
+                label="Documents"
+                optional
+              />
+            </div>
+
+            <div className={styles.minimumPolicy}>
+              <strong>Minimum RM 300</strong>
+              <p>For anything below RM 300, request Petty Cash instead.</p>
+            </div>
+            <div className={styles.nextStepNote}>
+              <strong>What happens next</strong>
+              <p>
+                You review and sign on the next step. After approval, Finance
+                releases the advance and you reconcile with receipts.
+              </p>
+            </div>
+
+            <div className={styles.summaryActions}>
               {draft.draftMessage ? (
                 <ManualDraftStatus message={draft.draftMessage} />
               ) : (
-                <span className={styles.muted}>
+                <span className={styles.srOnly}>
                   You will review and sign on the next step.
                 </span>
               )}
               <div className={styles.draftActions}>
+                <button className={styles.primary} type="submit">
+                  Continue to review →
+                </button>
                 <button
                   className={styles.secondary}
                   disabled={draft.isSavingDraft}
@@ -599,14 +703,29 @@ export function CashAdvanceForm({
                 >
                   {draft.isSavingDraft ? "Saving draft…" : "Save as draft"}
                 </button>
-                <button className={styles.primary} type="submit">
-                  Continue to review →
-                </button>
               </div>
             </div>
-          </section>
+          </aside>
         </div>
       </form>
+    </div>
+  );
+}
+
+function SummaryCheck({
+  complete,
+  label,
+  optional = false,
+}: {
+  complete: boolean;
+  label: string;
+  optional?: boolean;
+}) {
+  return (
+    <div className={complete ? styles.cashChecklistComplete : ""}>
+      <i aria-hidden="true" />
+      <span>{label}</span>
+      <small>{optional ? "Optional" : complete ? "Added" : "Required"}</small>
     </div>
   );
 }
