@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -73,15 +74,23 @@ function paymentRequest(
 
 const pettyCash: NavigationItem = {
   label: "Petty Cash",
-  children: [{ label: "Overview", href: "/beta/petty-cash" }],
+  href: "/beta/petty-cash",
 };
 
 export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
   staff: [
-    { items: [{ label: "Dashboard", href: "/beta/dashboard" }] },
+    { items: [{ label: "Overview", href: "/beta/dashboard" }] },
     {
       label: "Create payments",
-      items: [paymentRequest(true)],
+      items: [paymentRequest(false)],
+    },
+    {
+      items: [
+        {
+          label: "Petty Cash",
+          href: "/beta/payment-requests/petty-cash/new",
+        },
+      ],
     },
     {
       label: "Records",
@@ -95,11 +104,11 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     },
   ],
   manager: [
-    { items: [{ label: "Dashboard", href: "/beta/dashboard" }] },
+    { items: [{ label: "Overview", href: "/beta/dashboard" }] },
     {
       label: "Create payments",
       items: [
-        paymentRequest(true, "/beta/payment-requests/travel-allowance/new"),
+        paymentRequest(false, "/beta/payment-requests/travel-allowance/new"),
       ],
     },
     {
@@ -113,6 +122,14 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
       ],
     },
     {
+      items: [
+        {
+          label: "Petty Cash",
+          href: "/beta/project-manager/payment-requests/petty-cash",
+        },
+      ],
+    },
+    {
       label: "Records",
       items: [
         {
@@ -120,16 +137,16 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
           href: "/beta/payment-records?scope=mine",
           actionType: "MY_REQUESTS",
         },
-        { label: "Payment Records", href: "/beta/payment-records" },
+        { label: "Team Records", href: "/beta/payment-records" },
       ],
     },
   ],
   director: [
-    { items: [{ label: "Dashboard", href: "/beta/dashboard" }] },
+    { items: [{ label: "Overview", href: "/beta/dashboard" }] },
     {
       label: "Create payments",
       items: [
-        paymentRequest(true, "/beta/payment-requests/travel-allowance/new"),
+        paymentRequest(false, "/beta/payment-requests/travel-allowance/new"),
       ],
     },
     {
@@ -151,15 +168,15 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
           href: "/beta/payment-records?scope=mine",
           actionType: "MY_REQUESTS",
         },
-        { label: "Payment Records", href: "/beta/payment-records" },
+        { label: "Team Records", href: "/beta/payment-records" },
       ],
     },
   ],
   finance: [
-    { items: [{ label: "Dashboard", href: "/beta/dashboard" }] },
+    { items: [{ label: "Overview", href: "/beta/dashboard" }] },
     {
       label: "Create payments",
-      items: [paymentRequest(true)],
+      items: [paymentRequest(false)],
     },
     {
       label: "Payment processing",
@@ -186,7 +203,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
           href: "/beta/payment-records?scope=mine",
           actionType: "MY_REQUESTS",
         },
-        { label: "Payment Records", href: "/beta/payment-records" },
+        { label: "Team Records", href: "/beta/payment-records" },
       ],
     },
   ],
@@ -199,13 +216,21 @@ export function navigationForRole(
   if (role !== "staff" || !projectManager) return roleNavigation[role];
 
   return roleNavigation.staff.flatMap((group) => {
+    if (
+      group.items.some(
+        (item) => item.href === "/beta/payment-requests/petty-cash/new",
+      )
+    ) {
+      return [];
+    }
+
     if (group.label === "Records") {
       return [
         {
           ...group,
           items: [
             ...group.items,
-            { label: "Payment Records", href: "/beta/payment-records" },
+            { label: "Team Records", href: "/beta/payment-records" },
           ],
         },
       ];
@@ -216,7 +241,7 @@ export function navigationForRole(
       {
         ...group,
         items: [
-          paymentRequest(true, "/beta/payment-requests/travel-allowance/new"),
+          paymentRequest(false, "/beta/payment-requests/travel-allowance/new"),
         ],
       },
       {
@@ -226,6 +251,14 @@ export function navigationForRole(
             label: "Pending Approvals",
             href: "/beta/project-manager/pending-approvals",
             actionType: "ALL_PENDING",
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            label: "Petty Cash",
+            href: "/beta/project-manager/payment-requests/petty-cash",
           },
         ],
       },
@@ -385,6 +418,9 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
             }
           >
             {itemLabel(item)}
+            <span className={styles.navigationChevron} aria-hidden="true">
+              {isOpen ? "⌃" : "⌄"}
+            </span>
           </button>
           <div
             className={styles.nestedNavigationItems}
@@ -414,7 +450,14 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
     <aside className={styles.sidebar}>
       <div className={styles.sidebarIdentity}>
         <Link className={styles.brand} href="/beta/dashboard">
-          Estuary
+          <Image
+            alt=""
+            aria-hidden="true"
+            height={28}
+            src="/assets/icons/estuary-icon-white.png"
+            width={28}
+          />
+          <span>Estuary</span>
         </Link>
         <p className={styles.roleLabel}>
           {projectManager && account.role === "staff"

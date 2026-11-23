@@ -19,12 +19,24 @@
 }
 
 .brand {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: #ffffff;
   font-size: 27px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -2px;
+}
+
+.brand img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.brand span {
+  display: inline-block;
 }
 
 .roleLabel {
@@ -38,7 +50,7 @@
 
 .roleNavigation {
   display: grid;
-  gap: 10px;
+  gap: 5px;
 }
 
 .sidebarProfile {
@@ -47,11 +59,12 @@
   align-items: center;
   gap: 9px;
   margin-top: auto;
-  padding: 9px;
-  border: 1px solid #2a4669;
-  border-radius: 10px;
+  padding: 14px 8px 0;
+  border: 0;
+  border-top: 1px solid rgb(143 168 196 / 18%);
+  border-radius: 0;
   color: #fff;
-  background: #173354;
+  background: transparent;
 }
 
 .sidebarProfile>span {
@@ -97,25 +110,17 @@
 
 .navigationGroupCard {
   display: grid;
-  gap: 8px;
-  padding: 11px 8px 10px;
-  border: 1px solid #2a4669;
-  border-radius: 10px;
-  background: #173354;
+  gap: 5px;
+  padding: 3px 0 7px;
+  border: 0;
+  border-bottom: 1px solid rgb(143 168 196 / 15%);
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
 .navigationGroupLabel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0;
-  padding: 0 9px 4px;
-  color: #82a9d5;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.35px;
-  text-transform: uppercase;
+  display: none;
 }
 
 .navigationItems {
@@ -154,6 +159,17 @@
   font-weight: 600;
 }
 
+.navigationChevron {
+  display: inline-grid;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: #b5c8dc;
+  font-size: 11px;
+  line-height: 1;
+}
+
 .navigationBranchButton:hover {
   color: #ffffff;
   background: #29496d;
@@ -187,22 +203,23 @@
 }
 
 /* Sidebar icons are served from public/assets/icons. */
-.navigationItem[data-label="Dashboard"]::before,
-.activeNavigationItem[data-label="Dashboard"]::before,
+.navigationItem[data-label="Overview"]::before,
+.activeNavigationItem[data-label="Overview"]::before,
 .navigationBranchButton[data-label="Payment Request"]::before,
 .navigationItem[data-label="Pending Approvals"]::before,
 .activeNavigationItem[data-label="Pending Approvals"]::before,
 .navigationItem[data-label="Pending Processing"]::before,
 .activeNavigationItem[data-label="Pending Processing"]::before,
-.navigationBranchButton[data-label="Petty Cash"]::before,
+.navigationItem[data-label="Petty Cash"]::before,
+.activeNavigationItem[data-label="Petty Cash"]::before,
 .navigationItem[data-label="SQL Entry Tracker"]::before,
 .activeNavigationItem[data-label="SQL Entry Tracker"]::before,
 .navigationItem[data-label="Settings"]::before,
 .activeNavigationItem[data-label="Settings"]::before,
 .navigationItem[data-label="My Requests"]::before,
 .activeNavigationItem[data-label="My Requests"]::before,
-.navigationItem[data-label="Payment Records"]::before,
-.activeNavigationItem[data-label="Payment Records"]::before {
+.navigationItem[data-label="Team Records"]::before,
+.activeNavigationItem[data-label="Team Records"]::before {
   display: block;
   width: 18px;
   height: 18px;
@@ -213,8 +230,8 @@
   content: "";
 }
 
-.navigationItem[data-label="Dashboard"]::before,
-.activeNavigationItem[data-label="Dashboard"]::before {
+.navigationItem[data-label="Overview"]::before,
+.activeNavigationItem[data-label="Overview"]::before {
   background-image: url("/assets/icons/dashboard-light.png");
 }
 
@@ -232,7 +249,8 @@
   background-image: url("/assets/icons/pending-processing-light.png");
 }
 
-.navigationBranchButton[data-label="Petty Cash"]::before {
+.navigationItem[data-label="Petty Cash"]::before,
+.activeNavigationItem[data-label="Petty Cash"]::before {
   background-image: url("/assets/icons/petty-cash-light.png");
 }
 
@@ -251,15 +269,16 @@
   background-image: url("/assets/icons/my-requests-light.png");
 }
 
-.navigationItem[data-label="Payment Records"]::before,
-.activeNavigationItem[data-label="Payment Records"]::before {
-  background-image: url("/assets/icons/payment-records-light.png");
+.navigationItem[data-label="Team Records"]::before,
+.activeNavigationItem[data-label="Team Records"]::before {
+  background-image: url("/assets/icons/team-records-white.png");
 }
 
 .navigationBranchButton[data-label="Payment Request"]> :first-child,
-.navigationBranchButton[data-label="Petty Cash"]> :first-child,
-.navigationItem[data-label="Dashboard"]> :first-child,
-.activeNavigationItem[data-label="Dashboard"]> :first-child,
+.navigationItem[data-label="Overview"]> :first-child,
+.activeNavigationItem[data-label="Overview"]> :first-child,
+.navigationItem[data-label="Petty Cash"]> :first-child,
+.activeNavigationItem[data-label="Petty Cash"]> :first-child,
 .navigationItem[data-label="Pending Approvals"]> :first-child,
 .activeNavigationItem[data-label="Pending Approvals"]> :first-child,
 .navigationItem[data-label="Pending Processing"]> :first-child,
@@ -270,8 +289,8 @@
 .activeNavigationItem[data-label="Settings"]> :first-child,
 .navigationItem[data-label="My Requests"]> :first-child,
 .activeNavigationItem[data-label="My Requests"]> :first-child,
-.navigationItem[data-label="Payment Records"]> :first-child,
-.activeNavigationItem[data-label="Payment Records"]> :first-child {
+.navigationItem[data-label="Team Records"]> :first-child,
+.activeNavigationItem[data-label="Team Records"]> :first-child {
   flex: 1;
 }
 
