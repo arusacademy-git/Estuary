@@ -59,6 +59,9 @@ export function validateClaimInput(
     return `Tech claims are unavailable until ${formatDate(context.techExtendedLockedUntil)} because the RM1,000.00 option was previously used.`;
   }
 
+  if (input.lines.some((line) => !line.accountType?.trim()))
+    return "Choose an account code for every claim entry.";
+
   const incomplete = input.lines.some((line) => {
     if (!line.expenseDate || !line.details.trim()) return true;
     if (input.claimType === "MILEAGE") {
@@ -77,7 +80,7 @@ export function validateClaimInput(
     if (!line.supplier.trim() || !hasReceipt || Number(line.amount) <= 0)
       return true;
     if (input.claimType === "EXPENSE")
-      return !line.accountType.trim() || !line.division.trim();
+      return !line.division.trim();
     return false;
   });
   if (incomplete)

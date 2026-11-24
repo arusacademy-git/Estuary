@@ -1,5 +1,11 @@
 # AI_HANDOFF.md
 
+## 2026-11-24 — Account code required for every Claim entry
+
+- GitHub issue #179: the existing Claim account-code selector now appears for all six Claim types, including Mileage. The entry modal requires a selection before adding or updating a line, and the shared domain validator requires it before API submission. Old drafts and submitted snapshots remain readable; a draft without a code must be completed before submission.
+- Six focused policy cases and a local browser check of all six entry modals pass. Focused ESLint has no errors. The full policy test file retains three unrelated stale failures in existing Manager-approval and purchase-date expectations.
+- Repository-wide typecheck is blocked on current `main` by the missing `src/data/dashboard/staff-dashboard-api.ts` module imported by the staff dashboard. Tracked separately as GitHub issue #180; a production build cannot pass until that issue is fixed.
+
 ## Project Handoff Baseline
 
 - Project: Estuary
