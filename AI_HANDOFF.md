@@ -5309,3 +5309,13 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Signature storage now honors `ESTUARY_PRIVATE_STORAGE_ROOT`, matching the persistent private-storage mount used by the server compose file.
 - Limited user-facing payment-request Google Sheet entry to Payment Voucher plus Cash Advance reconciliation. Latest `main` already removed the Travel Allowance, Claim, and initial Cash Advance Sheet components; conflict resolution preserved those newer form implementations. `.env.server.example` and server build arguments now retain only PV, Appendix A, and Participant Allowance template URLs.
 - Validation before conflict resolution: 9 issue-focused tests, TypeScript, targeted ESLint, and `git diff --check` passed. The repository baseline has unrelated policy/fixture failures documented above; a repeated build also encountered the intermittent Turbopack `next/font` internal resolution failure after an earlier successful production build.
+
+## 2026-11-24 — PR #186 dashboard role API separation
+
+- Resolved the add/add conflict in `staff-dashboard-api.ts` by retaining `main`'s newer Staff-only adapter, requester filtering, direct My Requests links, and focused test.
+- Added fixed-role Staff, Manager, and Director dashboard summary functions so each dashboard adapter can no longer select another role accidentally. Manager and Director keep independent record contracts, labels, routes, action helpers, and project option types.
+- Kept Manager visibility limited to assigned approval/current-assignee records plus the Manager's own requests. Director visibility is organization-wide for the Director oversight dashboard; Staff remains limited to self-submitted records.
+- Corrected the shared Manager/Director team table to use the role-specific approval predicate supplied by its caller when choosing Review versus Open.
+- Added dashboard summary fields required by the new team and organization views (`submittedAt`, project code, and project name).
+- Verification: six focused dashboard tests passed and targeted ESLint passed. Full TypeScript reaches one unrelated `main` baseline error: `workflow-health-workspace.tsx` imports the untracked/missing `features/team-records/notifications/workflow-reminder` module.
+- PR #187 currently points to the same commit as #186 and contains the same dashboard files; it has no domain-specific changes and should be closed as a duplicate or replaced with the intended domain work.

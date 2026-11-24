@@ -1,0 +1,400 @@
+.overview {
+    display: grid;
+    gap: 16px;
+    color: #17365f;
+}
+
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.kpis article {
+    position: relative;
+    min-height: 112px;
+    padding: 19px 20px;
+    border: 1px solid #dbe5f1;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgb(15 31 61 / 5%);
+    transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
+}
+
+.kpis article:hover {
+    transform: translateY(-3px);
+}
+
+.kpis span {
+    display: block;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.kpis article[data-tone="progress"] span {
+    color: #a34e07;
+}
+
+.kpis article[data-tone="completed"] span {
+    color: #087847;
+}
+
+.kpis strong {
+    display: block;
+    margin-top: 14px;
+    color: #17365f;
+    font-size: 31px;
+    line-height: 1;
+}
+
+.kpis small {
+    display: block;
+    margin-top: 8px;
+    color: #71849c;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.kpis i {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 9px;
+    background: #2563eb;
+}
+
+.kpis article[data-tone="progress"] i {
+    background: #ef8b17;
+    box-shadow: 0 5px 13px rgb(239 139 23 / 28%);
+}
+
+.kpis article[data-tone="completed"] i {
+    background: #0e8750;
+}
+
+.kpis article[data-tone="records"]:hover {
+    box-shadow: 0 10px 25px rgb(37 99 235 / 18%);
+}
+
+.kpis article[data-tone="progress"]:hover {
+    box-shadow: 0 10px 25px rgb(245 154 35 / 18%);
+}
+
+.kpis article[data-tone="completed"]:hover {
+    box-shadow: 0 10px 25px rgb(14 135 80 / 18%);
+}
+
+.highlights,
+.typeOverview,
+.recentActivity {
+    border: 1px solid #dbe5f1;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgb(15 31 61 / 5%);
+}
+
+.highlights {
+    padding: 21px 22px;
+}
+
+.highlights h2,
+.typeOverview h2,
+.recentActivity h2 {
+    margin: 0;
+    color: #17365f;
+    font-size: 18px;
+}
+
+.highlights header p,
+.typeOverview header p,
+.recentActivity header p {
+    margin: 5px 0 0;
+    color: #71849c;
+    font-size: 11px;
+}
+
+.highlights>div {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 15px;
+}
+
+.highlights>div>a {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 76px;
+    padding: 12px;
+    border: 1px solid #dbe5f1;
+    border-radius: 11px;
+    color: #17365f;
+    text-decoration: none;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.highlights>div>a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgb(15 31 61 / 10%);
+}
+
+.highlights i {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 9px;
+    background: #db224a;
+    color: #fff;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.highlights a[data-tone="returned"] i {
+    background: #fff0df;
+    color: #b75b0b;
+}
+
+.highlights a[data-tone="delayed"] i {
+    background: #b75b0b;
+}
+
+.highlights a[data-tone="finance"] i {
+    background: #e8f0ff;
+}
+
+.highlights strong {
+    color: #17365f;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.highlights strong span,
+.highlights strong small {
+    display: block;
+}
+
+.highlights strong span {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.15;
+}
+
+.highlights strong small {
+    margin-top: 2px;
+    color: #71849c;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+.activityGrid {
+    display: grid;
+    grid-template-columns: minmax(250px, 0.75fr) minmax(0, 2fr);
+    gap: 14px;
+}
+
+.typeOverview,
+.recentActivity {
+    padding: 20px;
+    min-width: 0;
+}
+
+.typeTable,
+.recordsTable {
+    margin-top: 14px;
+    overflow: hidden;
+    border: 1px solid #dbe5f1;
+    border-radius: 10px;
+}
+
+.typeTable>div,
+.typeTable>a {
+    display: grid;
+    grid-template-columns: 1.15fr 0.7fr 0.7fr 0.85fr;
+    align-items: center;
+    min-height: 43px;
+    padding: 0 12px;
+    border-top: 1px solid #e4eaf2;
+    color: #385273;
+    font-size: 10px;
+    text-decoration: none;
+}
+
+.typeTable>div {
+    min-height: 38px;
+    border-top: 0;
+    background: #f1f5fa;
+    color: #526b8c;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.typeTable i {
+    display: grid;
+    width: 29px;
+    height: 25px;
+    place-items: center;
+    border-radius: 6px;
+    background: #0f4d73;
+    color: #fff;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.typeTable i[data-type="INVOICE_PAYMENT"] {
+    background: #0e8750;
+}
+
+.typeTable i[data-type="TRAVEL_ALLOWANCE"] {
+    background: #f59a23;
+}
+
+.typeTable i[data-type="CASH_ADVANCE"] {
+    background: #db224a;
+}
+
+.typeTable i[data-type="PETTY_CASH"] {
+    border: 1px solid #17365f;
+    background: #fff;
+    color: #17365f;
+}
+
+.typeTable i[data-type="EXPENSE_CLAIM"] {
+    background: #111827;
+}
+
+.typeTable em {
+    justify-self: center;
+    min-width: 22px;
+    padding: 4px 6px;
+    border-radius: 999px;
+    color: #8a9bb0;
+    font-style: normal;
+    text-align: center;
+}
+
+.typeTable em[data-active="true"] {
+    background: #fff0df;
+    color: #a34e07;
+    font-weight: 700;
+}
+
+.recentActivity>header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.recentActivity>header>a {
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.recordsTable {
+    overflow-x: auto;
+}
+
+.recordsTable table {
+    width: 100%;
+    min-width: 660px;
+    border-collapse: collapse;
+}
+
+.recordsTable th {
+    padding: 12px;
+    background: #f1f5fa;
+    color: #526b8c;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.recordsTable td {
+    padding: 12px;
+    border-top: 1px solid #e4eaf2;
+    color: #385273;
+    font-size: 10px;
+}
+
+.recordsTable td strong {
+    color: #17365f;
+}
+
+.recordsTable td>span {
+    display: inline-flex;
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #fff1c7;
+    color: #92580e;
+    font-size: 9px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.recordsTable td>span[data-tone="complete"] {
+    background: #def7e9;
+    color: #087847;
+}
+
+.recordsTable td>span[data-tone="returned"] {
+    background: #ffe4e4;
+    color: #c4252f;
+}
+
+.recordsTable td:last-child {
+    text-align: right;
+}
+
+.recordsTable td a {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.recentActivity>small {
+    display: block;
+    margin-top: 9px;
+    color: #71849c;
+    font-size: 9px;
+}
+
+@media (max-width: 980px) {
+    .highlights>div {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .activityGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+
+    .kpis,
+    .highlights>div {
+        grid-template-columns: 1fr;
+    }
+
+    .typeOverview,
+    .recentActivity,
+    .highlights {
+        padding: 16px;
+    }
+}

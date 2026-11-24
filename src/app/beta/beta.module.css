@@ -48,6 +48,125 @@
   text-transform: uppercase;
 }
 
+.workspaceSwitcher {
+  position: relative;
+  margin: -8px 0 14px;
+}
+
+.workspaceSwitcher>button {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgb(143 168 196 / 22%);
+  border-radius: 11px;
+  background: #1e3b61;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspaceSwitcher>button>span,
+.workspaceMenu a>b {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  background: #315a88;
+  color: #fff;
+  font-size: 9px;
+}
+
+.workspaceSwitcher>button div,
+.workspaceMenu a span {
+  display: grid;
+  min-width: 0;
+}
+
+.workspaceSwitcher>button small {
+  color: #9fb5cf;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workspaceSwitcher>button strong {
+  font-size: 12px;
+}
+
+.workspaceSwitcher>button i {
+  color: #a9bdd6;
+  font-style: normal;
+}
+
+.workspaceMenu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  gap: 5px;
+  width: 286px;
+  padding: 13px;
+  border: 1px solid #dbe5f1;
+  border-radius: 13px;
+  background: #fff;
+  color: #17365f;
+  box-shadow: 0 16px 38px rgb(15 31 61 / 20%);
+}
+
+.workspaceMenu>p {
+  margin: 0 6px 5px;
+  color: #71849c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workspaceMenu a {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border-radius: 9px;
+  color: #17365f;
+  text-decoration: none;
+}
+
+.workspaceMenu a:hover {
+  background: #eef4fc;
+}
+
+.workspaceMenu a:nth-of-type(2)>b {
+  background: #6d28d9;
+}
+
+.workspaceMenu a span strong {
+  font-size: 12px;
+}
+
+.workspaceMenu a span small,
+.workspaceMenu>small {
+  color: #71849c;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.workspaceMenu a>i {
+  color: #17365f;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.workspaceMenu>small {
+  padding: 6px;
+}
+
 .roleNavigation {
   display: grid;
   gap: 5px;
