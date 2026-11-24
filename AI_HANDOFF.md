@@ -1,5 +1,15 @@
 # AI_HANDOFF.md
 
+## 2026-11-24 — Integrated dashboard updates from main
+
+- Merged `origin/main` at `ee0ee64` into `agent/payment-type-approval-routing` without Git conflicts. The new Workflow Health dashboard referenced a missing `workflow-reminder` module, so the branch now supplies the reminder action and a focused recipient-routing test. Production build, typecheck, and dashboard/reminder tests pass after integration.
+
+## 2026-11-24 — Programme-scoped parallel approval routing
+
+- GitHub issue #183, branch `agent/payment-type-approval-routing`. New PV, Cash Advance, Travel Allowance and Petty Cash top-up requests go to Director approval with each relevant programme Manager informed at submission. New Invoice Payments and all six Claims go to their programme Manager for approval with the Director informed; a Manager's own Claim goes to a Director. Multi-programme Claims keep one request and wait for every assigned Manager. Existing submitted requests preserve their recorded route on resubmission.
+- Programme Manager mapping is shared across Arus organizations through `beta_programmes` and `/api/v1/administration/programmes`. The previous general Nadia assignment is removed; an administrator must explicitly assign a Manager to each programme code before new submissions using it. Migration `20261124090000_shared_beta_programme_managers` must run before deploying this code. Other beta Settings still use browser storage.
+- The beta sign-in still trusts a locally selected account, including administrator identity. Shared settings are appropriate for beta testing only until authenticated sessions protect the write endpoint. Local typecheck, focused routing tests, and production build pass. The Claim policy test file still has two pre-existing purchase-date expectation failures unrelated to this route change. Penang DB migration and live end-to-end approvals remain to be verified after merge.
+
 ## 2026-11-24 — Restore staff dashboard API for deployable main
 
 - GitHub issue #180: current `main` imported a missing `staff-dashboard-api` module, blocking TypeScript and Docker builds after the Claim account-code PR was merged. Added the client adapter that reads the existing dashboard summary API, maps staff records and status labels, and creates My Requests deep links and action counts.

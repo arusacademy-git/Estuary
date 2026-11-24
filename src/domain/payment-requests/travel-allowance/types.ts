@@ -71,6 +71,7 @@ export type CreateTravelAllowanceInput = {
   requesterPosition: string;
   contact: string;
   managerApproverId?: string;
+  managerApproverIds?: string[];
   projectDirectorId: string;
   currency: "MYR";
   lines: TravelAllowanceLine[];
@@ -103,6 +104,7 @@ export type TravelAllowanceRecord = CreateTravelAllowanceInput & {
   financeReturnedById?: string;
   financeReturnRemarks?: string;
   managerReviewedAt?: string;
+  managerReviewRequired?: boolean;
   managerReviewedById?: string;
   managerReturnedAt?: string;
   managerReturnedById?: string;
@@ -142,15 +144,16 @@ type ProgressRecord = Pick<
   TravelAllowanceRecord,
   | "status"
   | "requesterRole"
+  | "managerReviewRequired"
   | "managerReturnedAt"
   | "directorReturnedAt"
   | "financeReturnedAt"
 >;
 
 export function travelAllowanceProgressStages(
-  record: Pick<TravelAllowanceRecord, "requesterRole">,
+  record: Pick<TravelAllowanceRecord, "requesterRole" | "managerReviewRequired">,
 ): TravelAllowanceProgressStage[] {
-  return record.requesterRole === "manager"
+  return record.requesterRole === "manager" || record.managerReviewRequired === false
     ? [
         "SUBMITTED",
         "DIRECTOR_REVIEW",

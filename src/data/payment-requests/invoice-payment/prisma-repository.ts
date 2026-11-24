@@ -7,6 +7,7 @@ import type {
   PaymentRequestStatus,
 } from '@/domain/payment-requests/invoice-payment/types';
 import { prisma } from '@/lib/db/prisma';
+import { programmeManagerIds, requireSameManagerIds } from '@/data/payment-requests/shared/programme-managers';
 
 const include = {
   invoice_detail: true,
@@ -54,6 +55,7 @@ function map(record: Stored): InvoicePaymentRequestRecord {
     requestNumber: record.submission_number ?? `IV-DRAFT-${record.id.slice(-6)}`,
     requestType: 'INVOICE_PAYMENT',
     status: record.current_state_code as PaymentRequestStatus,
+    directorApprovalRequired: record.approval_steps.find((item) => item.required_role === 'DIRECTOR')?.status_code !== 'BYPASSED',
     totalAmount: Number(record.total_amount),
     managerReviewedAt:
       managerDecision?.decision_code === 'APPROVED' ? managerDecision.created_at.toISOString() : undefined,
@@ -166,6 +168,7 @@ export async function createInvoicePaymentInDatabase(input: CreateInvoicePayment
 
   return prisma.$transaction(
     async (tx) => {
+      requireSameManagerIds(await programmeManagerIds(tx, input.organizationId, [input.projectName]), [input.managerApproverId]);
       const [organization, staff, manager, director, project] = await Promise.all([
         tx.organization.findUnique({ where: { id: input.organizationId }, select: { id: true } }),
         tx.user.findUnique({ where: { id: input.staffId }, select: { id: true } }),
@@ -217,7 +220,7 @@ export async function createInvoicePaymentInDatabase(input: CreateInvoicePayment
           approval_steps: {
             create: [
               { step_number: 1, required_role: 'MANAGER', assigned_user_id: input.managerApproverId, status_code: 'ACTIVE' },
-              { step_number: 2, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'PENDING' },
+              { step_number: 2, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'BYPASSED' },
             ],
           },
           transitions: {
@@ -293,6 +296,10 @@ export async function resubmitInvoicePaymentInDatabase(id: string, input: Create
       if (!managerStep || !directorStep) {
         throw new Error('Invoice Payment approval steps are incomplete.');
       }
+      const directorIsInformational = directorStep.status_code === 'BYPASSED';
+      if (directorIsInformational) {
+        requireSameManagerIds(await programmeManagerIds(tx, current.organization_id, [input.projectName]), [input.managerApproverId]);
+      }
 
       await tx.approvalStep.update({
         where: { id: managerStep.id },
@@ -300,7 +307,7 @@ export async function resubmitInvoicePaymentInDatabase(id: string, input: Create
       });
       await tx.approvalStep.update({
         where: { id: directorStep.id },
-        data: { assigned_user_id: input.directorApproverId, status_code: 'PENDING' },
+        data: { assigned_user_id: input.directorApproverId, status_code: directorIsInformational ? 'BYPASSED' : 'PENDING' },
       });
 
       await tx.invoicePaymentDetail.update({
@@ -374,7 +381,6 @@ async function approvalAction(
   reason?: string,
 ) {
   const from = role === 'MANAGER' ? 'PENDING_MANAGER_REVIEW' : 'PENDING_DIRECTOR_REVIEW';
-  const to = approved ? (role === 'MANAGER' ? 'PENDING_DIRECTOR_REVIEW' : 'PENDING_FINANCE_REVIEW') : 'RETURNED_TO_STAFF';
   const actionCode = approved
     ? role === 'MANAGER'
       ? 'REVIEW_BY_MANAGER'
@@ -405,6 +411,11 @@ async function approvalAction(
       if (step.assigned_user_id !== actorId) {
         throw new Error('This Invoice Payment is assigned to another reviewer.');
       }
+      const directorStep = current.approval_steps.find((item) => item.required_role === 'DIRECTOR');
+      const managerToFinance = approved && role === 'MANAGER' && directorStep?.status_code === 'BYPASSED';
+      const to = approved
+        ? managerToFinance || role === 'DIRECTOR' ? 'PENDING_FINANCE_REVIEW' : 'PENDING_DIRECTOR_REVIEW'
+        : 'RETURNED_TO_STAFF';
 
       await tx.approvalDecision.create({
         data: {
@@ -418,8 +429,8 @@ async function approvalAction(
 
       let nextAssignee: string | null = current.submitted_by_id;
 
-      if (approved && role === 'MANAGER') {
-        const director = current.approval_steps.find((item) => item.required_role === 'DIRECTOR');
+      if (approved && role === 'MANAGER' && !managerToFinance) {
+        const director = directorStep;
         if (!director?.assigned_user_id) throw new Error('Assigned Director is missing.');
         await tx.approvalStep.update({ where: { id: director.id }, data: { status_code: 'ACTIVE' } });
         nextAssignee = director.assigned_user_id;
@@ -444,7 +455,7 @@ async function approvalAction(
         data: {
           current_state_code: to,
           current_state_group: approved
-            ? role === 'DIRECTOR'
+            ? role === 'DIRECTOR' || managerToFinance
               ? StateGroup.PENDING_VERIFICATION
               : StateGroup.IN_REVIEW
             : StateGroup.REJECTED,

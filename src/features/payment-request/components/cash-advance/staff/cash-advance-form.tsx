@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   createCashAdvance,
@@ -21,7 +21,7 @@ import {
   type CashAdvanceRequestLine,
 } from "@/domain/payment-requests/cash-advance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { isProjectManagerAccount } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 import { BANK_NAME_SELECT_OPTIONS } from "@/shared/constants/payment-options";
 import { CashAdvanceConfirmation } from "./cash-advance-confirmation";
@@ -100,6 +100,12 @@ export function CashAdvanceForm({
   const [managerId, setManagerId] = useState(
     initialRecord?.managerApproverId ?? "",
   );
+  useEffect(() => {
+    if (initialRecord) return;
+    const selectedProject = isOtherProject ? otherProject.trim() : projectName;
+    const assignedManager = projectManagerFor(selectedProject);
+    queueMicrotask(() => setManagerId(assignedManager ?? ""));
+  }, [initialRecord, isOtherProject, otherProject, projectName]);
   const [directorId, setDirectorId] = useState(
     initialRecord?.directorApproverId ?? "",
   );
@@ -451,6 +457,7 @@ export function CashAdvanceForm({
                   </label>
                   <select
                     value={managerId}
+                    disabled={!initialRecord}
                     onChange={(e) => setManagerId(e.target.value)}
                   >
                     <option value="">Choose Manager</option>

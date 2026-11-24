@@ -92,14 +92,16 @@ export function PettyCashManagerReview({ requestId }: PettyCashManagerReviewProp
   if (!record) {
     return <StatePage title="Petty Cash request not found" copy={error || 'The request could not be found.'} />;
   }
-  if (record.managerApproverId !== account.id && record.financeReviewerId !== account.id) {
+  if (!(record.managerApproverIds ?? [record.managerApproverId]).includes(account.id) && record.financeReviewerId !== account.id) {
     return <StatePage title="Request assigned to another Manager" copy="You cannot preview this Petty Cash request." />;
   }
 
-  const requiresApproval = record.requesterRole === 'staff';
+  const requiresApproval = record.status === 'PENDING_MANAGER_APPROVAL';
   const actionable =
     !record.managerApprovedAt &&
+    record.managerActionRequired !== false &&
     record.status !== 'RETURNED_TO_STAFF' &&
+    record.status !== 'PENDING_DIRECTOR_APPROVAL' &&
     (!requiresApproval || record.status === 'PENDING_MANAGER_APPROVAL');
 
   return (

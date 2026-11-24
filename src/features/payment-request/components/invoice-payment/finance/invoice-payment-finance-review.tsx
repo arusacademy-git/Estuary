@@ -281,15 +281,15 @@ export function InvoicePaymentFinanceReview({
               <Value label="Staff" value={record.staffName} />
               <Value label="Project" value={record.projectName} />
               <Value label="Manager reviewer" value={managerName} />
-              <Value label="Director reviewer" value={directorName} />
-              <Value
+              <Value label={record.directorApprovalRequired === false ? 'Director informed' : 'Director reviewer'} value={directorName} />
+              {record.directorApprovalRequired !== false && <Value
                 label="Director approved"
                 value={
                   record.directorReviewedAt
                     ? date(record.directorReviewedAt)
                     : "Not recorded"
                 }
-              />
+              />}
             </dl>
           </DetailSection>
           <DetailSection title="Invoice Details">
@@ -485,11 +485,12 @@ function Progress({
   managerName: string;
   directorName: string;
 }) {
-  const active = record.status === "COMPLETED" ? 5 : 4;
+  const directorGate = record.directorApprovalRequired !== false;
+  const active = record.status === "COMPLETED" ? directorGate ? 5 : 4 : directorGate ? 4 : 3;
   const steps = [
     { title: "Request Submitted", copy: `Submitted by ${record.staffName}` },
     { title: "Manager Review", copy: `Approved by ${managerName}` },
-    { title: "Director Review", copy: `Approved by ${directorName}` },
+    ...(directorGate ? [{ title: "Director Review", copy: `Approved by ${directorName}` }] : []),
     {
       title: "Finance Verification",
       copy: "Finance verification and completion",
@@ -500,13 +501,13 @@ function Progress({
     <aside className={styles.progressPanel}>
       <header>
         <p>Payment progress</p>
-        <span>Step {active} of 5</span>
+        <span>Step {active} of {steps.length}</span>
       </header>
       <ol>
         {steps.map((step, index) => {
           const number = index + 1;
           const state =
-            number < active || (record.status === "COMPLETED" && number === 5)
+            number < active || (record.status === "COMPLETED" && number === steps.length)
               ? "complete"
               : number === active
                 ? "active"

@@ -95,6 +95,7 @@ export function InvoicePaymentConfirmation({
           </div>
           <p>
             Your request has been saved and routed to the assigned Manager.
+            {request.directorApprovalRequired === false ? ' The Director was notified for information.' : ''}
             You can follow its progress from Payment Records.
           </p>
         </header>
@@ -129,11 +130,11 @@ export function InvoicePaymentConfirmation({
           <h2>Workflow progress</h2>
           <ol className={styles.workflow}>
             <WorkflowStep state="complete" number="✓" title="Request Submitted" copy={request.staffName} />
-            <WorkflowStep state="active" number="2" title="Manager Review" copy={`Assigned to ${manager?.name ?? 'Manager'}`} />
-            <WorkflowStep number="3" title="Director Review" copy="Awaiting Manager approval" />
-            <WorkflowStep number="4" title="Finance Verification" copy="Awaiting Director approval" />
-            <WorkflowStep number="5" title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
-            <WorkflowStep number="6" title="Completed" copy="Closes after transaction proof is uploaded" />
+            <WorkflowStep state="active" number="2" title="Manager Approval" copy={`Assigned to ${manager?.name ?? 'Manager'}`} />
+            {request.directorApprovalRequired !== false && <WorkflowStep number="3" title="Director Review" copy="Awaiting Manager approval" />}
+            <WorkflowStep number={request.directorApprovalRequired === false ? '3' : '4'} title="Finance Verification" copy={request.directorApprovalRequired === false ? 'Awaiting Manager approval' : 'Awaiting Director approval'} />
+            <WorkflowStep number={request.directorApprovalRequired === false ? '4' : '5'} title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
+            <WorkflowStep number={request.directorApprovalRequired === false ? '5' : '6'} title="Completed" copy="Closes after transaction proof is uploaded" />
           </ol>
         </section>
 

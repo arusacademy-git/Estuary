@@ -29,6 +29,7 @@ import {
   type CreateClaimInput,
 } from "@/domain/payment-requests/claims/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
 
 import { ClaimConfirmation } from "./claim-confirmation";
 import { ManualDraftConfirmation } from "../shared/manual-draft-confirmation";
@@ -180,6 +181,9 @@ export function ClaimForm({
   }, [account, claimDate]);
 
   const total = useMemo(() => claimTotal(claimType, lines), [claimType, lines]);
+  const legacyReturned = Boolean(initialRecord && !initialRecord.approvalRoute && ["RETURNED_TO_CLAIMANT", "PAYMENT_REJECTED"].includes(initialRecord.status));
+  const assignedManagerIds = [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))];
+  const managerRequester = isProjectManagerAccount(account);
   const limit = claimLimit({ claimType, techExtended }, context);
   const type = claimTypeDetails(claimType);
   const limitExceeded = limit !== null && total > limit;
@@ -192,8 +196,10 @@ export function ClaimForm({
       requesterId: currentAccount.id,
       requesterName: currentAccount.name,
       requesterPosition: currentAccount.position,
-      requesterRole: currentAccount.role,
+      requesterRole: managerRequester ? "manager" : currentAccount.role,
       requesterContact: contact.trim(),
+      managerApproverId: assignedManagerIds[0],
+      managerApproverIds: assignedManagerIds,
       directorApproverId: directorId,
       claimDate,
       claimType,
@@ -254,7 +260,7 @@ export function ClaimForm({
         : !line.supplier.trim() ||
           !hasReceipt ||
           line.amount <= 0 ||
-          (claimType === "EXPENSE" && !line.division.trim()));
+          (!legacyReturned && !line.division.trim()));
     if (incomplete) {
       setError(
         claimType === "MILEAGE"
@@ -310,8 +316,10 @@ export function ClaimForm({
   function review(event: FormEvent) {
     event.preventDefault();
     if (!account) return setError("Sign in before creating a claim.");
+    if (!legacyReturned && lines.some((line) => line.division && !projectManagerFor(line.division)))
+      return setError("Each Claim division must have an assigned Manager in Settings before submission.");
     const input = buildInput(account);
-    const validation = validateClaimInput(input, context);
+    const validation = validateClaimInput(input, context, { legacyApproval: legacyReturned });
     if (validation) return setError(validation);
     if (!confirmed)
       return setError(
@@ -324,6 +332,8 @@ export function ClaimForm({
 
   async function submit() {
     if (!account) return setError("Sign in before creating a claim.");
+    if (!legacyReturned && lines.some((line) => line.division && !projectManagerFor(line.division)))
+      return setError("Each Claim division must have an assigned Manager in Settings before submission.");
     const input = buildInput(account);
     setSaving(true);
     setError("");
@@ -1024,7 +1034,6 @@ function ClaimEntryModal({
   onSave: (addAnother?: boolean) => void;
 }) {
   const mileage = claimType === "MILEAGE";
-  const generalExpense = claimType === "EXPENSE";
   const entryLabel = claimEntryLabel(claimType);
   const [proofMode, setProofMode] = useState<"UPLOAD" | "DRIVE">(() =>
     line.receiptLink ? "DRIVE" : "UPLOAD",
@@ -1164,7 +1173,7 @@ function ClaimEntryModal({
                   placeholder="Where was it bought?"
                 />
               </label>
-              {generalExpense && (
+              {(
                 <>
                   <label>
                     <span>

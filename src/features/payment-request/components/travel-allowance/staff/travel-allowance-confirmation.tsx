@@ -37,6 +37,7 @@ export function TravelAllowanceConfirmation({ request, onCreateAnother }: Props)
     const firstTravelDate = [...request.lines]
         .sort((a, b) => a.travelDate.localeCompare(b.travelDate))[0]?.travelDate;
     const isManagerRequest = request.requesterRole === 'manager';
+    const bypassManagerReview = isManagerRequest || request.managerReviewRequired === false;
 
     async function copyReference() {
         try {
@@ -63,10 +64,10 @@ export function TravelAllowanceConfirmation({ request, onCreateAnother }: Props)
                             <small>REF ID</small><strong>{request.requestNumber}</strong>
                             <button aria-label="Copy request reference" type="button" onClick={copyReference}>{copied ? 'Copied' : 'Copy'}</button>
                         </span>
-                        <span className={styles.statusBadge}><i />{isManagerRequest ? 'Pending Director Approval' : 'Pending Manager Approval'}</span>
+                        <span className={styles.statusBadge}><i />{bypassManagerReview ? 'Pending Director Approval' : 'Pending Manager Approval'}</span>
                     </div>
                     <p>
-                        {isManagerRequest
+                        {bypassManagerReview
                             ? `The request was created on behalf of Staff and routed directly to ${director?.name ?? 'the Project Director'}.`
                             : `The request was routed to ${manager?.name ?? 'the assigned Manager'} for review.`}
                     </p>
@@ -78,19 +79,19 @@ export function TravelAllowanceConfirmation({ request, onCreateAnother }: Props)
                         <div><dt>Total allowance</dt><dd className={styles.amount}>{money(request.totalAmount)}</dd><small>{request.lines.length} travel {request.lines.length === 1 ? 'entry' : 'entries'}</small></div>
                         <div><dt>Employee(s)</dt><dd>{employees.join(', ') || 'Not available'}</dd><small>Submitted by {request.requesterName}</small></div>
                         <div><dt>First travel date</dt><dd>{firstTravelDate ? date(firstTravelDate) : 'Not available'}</dd><small>Payment target: {date(request.paymentDueDate)}</small></div>
-                        <div><dt>Next reviewer</dt><dd>{isManagerRequest ? director?.name ?? request.projectDirectorId : manager?.name ?? request.managerApproverId}</dd><small>{isManagerRequest ? 'Project Director' : 'Manager reviewer'}</small></div>
+                        <div><dt>Next reviewer</dt><dd>{bypassManagerReview ? director?.name ?? request.projectDirectorId : manager?.name ?? request.managerApproverId}</dd><small>{bypassManagerReview ? 'Project Director' : 'Manager reviewer'}</small></div>
                     </dl>
                 </section>
 
                 <section className={styles.workflowSection}>
                     <h2>Workflow progress</h2>
-                    <ol className={styles.workflow} data-count={isManagerRequest ? '5' : '6'}>
+                    <ol className={styles.workflow} data-count={bypassManagerReview ? '5' : '6'}>
                         <Step state="complete" number="✓" title={isManagerRequest ? 'Manager Request Submitted' : 'Request Submitted'} copy={request.requesterName} />
-                        {!isManagerRequest && <Step state="active" number="2" title="Manager Review" copy={`Assigned to ${manager?.name ?? 'Manager'}`} />}
-                        <Step state={isManagerRequest ? 'active' : 'pending'} number={isManagerRequest ? '2' : '3'} title="Director Review" copy={isManagerRequest ? `Assigned to ${director?.name ?? 'Director'}` : 'Awaiting Manager review'} />
-                        <Step number={isManagerRequest ? '3' : '4'} title="Finance Verification" copy="Awaiting Director approval" />
-                        <Step number={isManagerRequest ? '4' : '5'} title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
-                        <Step number={isManagerRequest ? '5' : '6'} title="Completed" copy="Closes after transaction proof is uploaded" />
+                        {!bypassManagerReview && <Step state="active" number="2" title="Manager Review" copy={`Assigned to ${manager?.name ?? 'Manager'}`} />}
+                        <Step state={bypassManagerReview ? 'active' : 'pending'} number={bypassManagerReview ? '2' : '3'} title="Director Review" copy={bypassManagerReview ? `Assigned to ${director?.name ?? 'Director'}` : 'Awaiting Manager review'} />
+                        <Step number={bypassManagerReview ? '3' : '4'} title="Finance Verification" copy="Awaiting Director approval" />
+                        <Step number={bypassManagerReview ? '4' : '5'} title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
+                        <Step number={bypassManagerReview ? '5' : '6'} title="Completed" copy="Closes after transaction proof is uploaded" />
                     </ol>
                 </section>
 

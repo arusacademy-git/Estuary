@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
+import { programmeManagerIds, requireSameManagerIds } from '@/data/payment-requests/shared/programme-managers';
 import {
   PETTY_CASH_MONTHLY_ALLOCATION,
   pettyCashTotal,
@@ -130,6 +131,7 @@ function mapPettyCash(record: StoredPettyCash): PettyCashRecord {
     requestNumber: record.submission_number ?? `PC-DRAFT-${record.id.slice(-6)}`,
     requestType: 'PETTY_CASH_REQUEST',
     status: record.current_state_code as PettyCashRecord['status'],
+    managerActionRequired: !record.transitions.some((item) => item.action_code === 'CREATE' && item.to_state_code === 'PENDING_DIRECTOR_APPROVAL'),
     totalAmount: Number(record.total_amount),
     managerApprovedAt: managerApproval?.created_at.toISOString(),
     directorApprovedAt: directorApproval?.created_at.toISOString(),
@@ -219,7 +221,7 @@ function requesterOrgRole(role: PettyCashRole) {
   return OrgRole.STAFF;
 }
 
-async function prepareRouting(
+async function prepareLegacyRouting(
   tx: Prisma.TransactionClient,
   input: CreatePettyCashInput,
 ) {
@@ -261,6 +263,30 @@ async function prepareRouting(
   }
 
   return { state: 'PENDING_FINANCE_PAYMENT', assigneeId: financeId, steps };
+}
+
+async function prepareRouting(tx: Prisma.TransactionClient, input: CreatePettyCashInput) {
+  const assigned = await programmeManagerIds(tx, input.organizationId, input.lines.map((line) => line.division));
+  requireSameManagerIds(assigned, input.managerApproverIds?.length ? input.managerApproverIds : [input.managerApproverId]);
+  await requireRole(tx, input.organizationId, input.directorApproverId, OrgRole.DIRECTOR);
+  if (input.directorApproverId === input.requesterId) {
+    throw new Error('Choose another Director to approve your Petty Cash request.');
+  }
+  if (input.requesterRole === 'manager') await requireActiveMembership(tx, input.organizationId, input.requesterId);
+  else await requireRole(tx, input.organizationId, input.requesterId, requesterOrgRole(input.requesterRole));
+  if (input.managerApproverId && input.managerApproverId !== input.requesterId) {
+    await requireActiveMembership(tx, input.organizationId, input.managerApproverId);
+  }
+  return {
+    state: 'PENDING_DIRECTOR_APPROVAL',
+    assigneeId: input.directorApproverId,
+    steps: [
+      ...(input.managerApproverId && input.managerApproverId !== input.requesterId
+        ? [{ step_number: 1, required_role: OrgRole.MANAGER, assigned_user_id: input.managerApproverId, status_code: 'BYPASSED' as const }]
+        : []),
+      { step_number: 2, required_role: OrgRole.DIRECTOR, assigned_user_id: input.directorApproverId, status_code: 'ACTIVE' as const },
+    ],
+  };
 }
 
 async function getOrCreateFloat(
@@ -405,7 +431,7 @@ export async function listPettyCashFromDatabase(scope: ListScope) {
   if (scope.includeAll || scope.role === 'finance') return mapped;
   return mapped.filter((item) =>
     item.requesterId === scope.userId ||
-    (scope.role === 'manager' && (item.managerApproverId === scope.userId || item.financeReviewerId === scope.userId)) ||
+    (scope.role === 'manager' && ((item.managerApproverIds ?? [item.managerApproverId]).includes(scope.userId) || item.financeReviewerId === scope.userId)) ||
     (scope.role === 'director' && (item.directorApproverId === scope.userId || item.financeReviewerId === scope.userId)),
   );
 }
@@ -428,6 +454,9 @@ export async function approvePettyCashByManagerInDatabase(
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
     const snapshot = readSnapshot(record);
+    if (record.transitions.some((item) => item.action_code === 'CREATE' && item.to_state_code === 'PENDING_DIRECTOR_APPROVAL')) {
+      throw new Error('Manager action is not required for this Petty Cash request.');
+    }
     const assignedToManager = snapshot.managerApproverId === managerId || (
       snapshot.requesterRole === 'finance' &&
       snapshot.financeReviewerRole === 'manager' &&
@@ -451,7 +480,7 @@ export async function approvePettyCashByManagerInDatabase(
         decision: { create: { decision_code: 'APPROVED', decided_by_user_id: managerId } },
       },
     });
-    const staffApproval = snapshot.requesterRole === 'staff';
+    const staffApproval = snapshot.requesterRole === 'staff' && record.current_state_code === 'PENDING_MANAGER_APPROVAL';
     const legacyState = !staffApproval && ['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_REVIEW'].includes(record.current_state_code);
     const financeId = staffApproval
       ? null
@@ -511,7 +540,7 @@ export async function approvePettyCashByDirectorInDatabase(
         decision: { create: { decision_code: 'APPROVED', decided_by_user_id: directorId } },
       },
     });
-    const staffApproval = snapshot.requesterRole === 'staff';
+    const staffApproval = record.current_state_code === 'PENDING_DIRECTOR_APPROVAL';
     const legacyState = !staffApproval && ['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL', 'PENDING_FINANCE_REVIEW'].includes(record.current_state_code);
     const financeId = snapshot.requesterRole === 'finance' ? snapshot.requesterId : await activeFinanceUser(tx, record.organization_id);
     return mapPettyCash(await tx.submission.update({
@@ -636,14 +665,17 @@ export const returnPettyCashByFinanceInDatabase = (id: string, financeId: string
   returnToStaff(id, financeId, reason, OrgRole.FINANCE_ADMIN);
 
 export async function resubmitPettyCashInDatabase(id: string, input: CreatePettyCashInput) {
-  const validation = validatePettyCashInput(input);
-  if (validation) throw new Error(validation);
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
     if (record.current_state_code !== 'RETURNED_TO_STAFF') throw new Error('Only a returned request can be resubmitted.');
     if (record.submitted_by_id !== input.requesterId) throw new Error('Only the original requester can resubmit this request.');
     await requireActiveMembership(tx, record.organization_id, input.requesterId);
-    const routing = await prepareRouting(tx, input);
+    const originalRoute = record.transitions.find((item) => item.action_code === 'CREATE')?.to_state_code;
+    const validation = validatePettyCashInput(input, { legacyRoute: originalRoute !== 'PENDING_DIRECTOR_APPROVAL' });
+    if (validation) throw new Error(validation);
+    const routing = originalRoute === 'PENDING_DIRECTOR_APPROVAL'
+      ? await prepareRouting(tx, input)
+      : await prepareLegacyRouting(tx, input);
     const float = await getOrCreateFloat(tx, record.organization_id, input.location);
     const total = pettyCashTotal(input.lines);
     await tx.submissionLine.deleteMany({ where: { submission_id: record.id } });

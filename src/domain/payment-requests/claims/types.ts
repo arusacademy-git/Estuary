@@ -33,6 +33,7 @@ export type CreateClaimInput = {
   requesterPosition: string;
   requesterRole: BetaRole;
   managerApproverId?: string;
+  managerApproverIds?: string[];
   directorApproverId?: string;
   requesterContact: string;
   claimDate: string;
@@ -46,6 +47,7 @@ export type ClaimStatus =
   | "DRAFT"
   | "CLAIM_SUBMITTED"
   | "PENDING_FINANCE_VERIFICATION"
+  | "PENDING_MANAGER_APPROVAL"
   | "PENDING_DIRECTOR_APPROVAL"
   | "RETURNED_TO_CLAIMANT"
   | "PAYMENT_REJECTED"
@@ -55,6 +57,8 @@ export type ClaimStatus =
   | "COMPLETED";
 
 export type ClaimRecord = CreateClaimInput & {
+  approvalRoute?: "MANAGER" | "DIRECTOR";
+  managerApprovals?: Array<{ managerId: string; approvedAt?: string }>;
   id: string;
   claimNumber: string;
   requestType: "CLAIM_REQUEST";

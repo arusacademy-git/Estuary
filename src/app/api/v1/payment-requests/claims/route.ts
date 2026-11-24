@@ -36,6 +36,7 @@ const claimSchema = z.object({
   requesterPosition: z.string().trim().min(1),
   requesterRole: z.enum(['staff', 'manager', 'director', 'finance']),
   managerApproverId: z.string().trim().optional(),
+  managerApproverIds: z.array(z.string().trim().min(1)).optional(),
   directorApproverId: z.string().trim().optional(),
   requesterContact: z.string(),
   claimDate: z.string().trim().min(1),

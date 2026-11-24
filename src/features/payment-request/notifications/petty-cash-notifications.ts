@@ -18,6 +18,33 @@ const recordHref = (record: PettyCashRecord) =>
   `/beta/payment-records/petty-cash/${encodeURIComponent(record.requestNumber)}`;
 
 export function notifyPettyCashSubmitted(record: PettyCashRecord, actor: BetaAccount) {
+  if (record.status === 'PENDING_DIRECTOR_APPROVAL') {
+    createSafely({
+      recipientId: record.directorApproverId,
+      actorId: actor.id,
+      type: 'PETTY_CASH_SUBMITTED',
+      entityType: 'PETTY_CASH',
+      entityId: record.id,
+      referenceNumber: record.requestNumber,
+      title: 'Petty Cash request requires Director approval',
+      message: `${actor.name} submitted ${record.requestNumber}. Your approval is required before Finance processing.`,
+      href: `/beta/director/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`,
+    });
+    (record.managerApproverIds?.length ? record.managerApproverIds : [record.managerApproverId]).filter((id) => id && id !== actor.id).forEach((managerId) => {
+      createSafely({
+        recipientId: managerId,
+        actorId: actor.id,
+        type: 'PETTY_CASH_SUBMITTED',
+        entityType: 'PETTY_CASH',
+        entityId: record.id,
+        referenceNumber: record.requestNumber,
+        title: 'Petty Cash request available to view',
+        message: `${actor.name} submitted ${record.requestNumber}. Director approval is required; your Manager view is informational.`,
+        href: `/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`,
+      });
+    });
+    return;
+  }
   if (record.requesterRole === 'staff') {
     createSafely({
       recipientId: record.managerApproverId,
@@ -121,6 +148,7 @@ export function notifyPettyCashManagerApproved(record: PettyCashRecord, actor: B
 }
 
 export function notifyPettyCashDirectorApproved(record: PettyCashRecord, actor: BetaAccount) {
+  const forwardedToFinance = record.status === 'PENDING_FINANCE_PAYMENT';
   createSafely({
     recipientId: record.requesterId,
     actorId: actor.id,
@@ -129,17 +157,17 @@ export function notifyPettyCashDirectorApproved(record: PettyCashRecord, actor: 
     entityId: record.id,
     referenceNumber: record.requestNumber,
     title:
-      record.requesterRole === 'staff'
+      forwardedToFinance
         ? 'Director approved Petty Cash request'
         : 'Director preview recorded',
     message:
-      record.requesterRole === 'staff'
+      forwardedToFinance
         ? `${actor.name} approved ${record.requestNumber}. It is now waiting for Finance processing.`
         : `${actor.name} previewed ${record.requestNumber}. Finance processing continues independently.`,
     href: recordHref(record),
   });
 
-  if (record.requesterRole === 'staff') {
+  if (forwardedToFinance) {
     betaAccounts
       .filter((item) => item.role === 'finance')
       .forEach((finance) =>
