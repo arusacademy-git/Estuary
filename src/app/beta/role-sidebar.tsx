@@ -137,7 +137,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
           href: "/beta/payment-records?scope=mine",
           actionType: "MY_REQUESTS",
         },
-        { label: "Team Records", href: "/beta/payment-records" },
+        { label: "Team Records", href: "/beta/team-records" },
       ],
     },
   ],
@@ -168,7 +168,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
           href: "/beta/payment-records?scope=mine",
           actionType: "MY_REQUESTS",
         },
-        { label: "Team Records", href: "/beta/payment-records" },
+        { label: "Team Records", href: "/beta/team-records" },
       ],
     },
   ],
@@ -203,7 +203,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
           href: "/beta/payment-records?scope=mine",
           actionType: "MY_REQUESTS",
         },
-        { label: "Team Records", href: "/beta/payment-records" },
+        { label: "Team Records", href: "/beta/team-records" },
       ],
     },
   ],
@@ -230,7 +230,7 @@ export function navigationForRole(
           ...group,
           items: [
             ...group.items,
-            { label: "Team Records", href: "/beta/payment-records" },
+            { label: "Team Records", href: "/beta/team-records" },
           ],
         },
       ];
@@ -279,16 +279,29 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const currentQuery = searchParameters.toString();
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
   const projectManager = isProjectManagerAccount(account);
+  const adminWorkspace =
+    account.role === "director" &&
+    account.isAdministrator &&
+    pathname.startsWith("/beta/administration");
   const baseGroups = navigationForRole(account.role, projectManager);
-  const groups = account.isAdministrator
+  const groups = adminWorkspace
     ? [
-        ...baseGroups,
         {
-          label: "System",
-          items: [{ label: "Settings", href: "/beta/settings" }],
+          items: [
+            { label: "Overview", href: "/beta/administration/overview" },
+            { label: "Settings", href: "/beta/administration" },
+          ],
         },
       ]
-    : baseGroups;
+    : account.isAdministrator && account.role !== "director"
+      ? [
+          ...baseGroups,
+          {
+            label: "System",
+            items: [{ label: "Settings", href: "/beta/settings" }],
+          },
+        ]
+      : baseGroups;
   const hrefs = groups.flatMap((group) => collectHrefs(group.items));
   const activeHref = hrefs
     .filter((href) =>
@@ -312,6 +325,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   );
   const [expanded, setExpanded] =
     useState<Record<string, boolean>>(initiallyExpanded);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [actionCounts, setActionCounts] = useState(
     createEmptySidebarActionCounts,
   );
@@ -449,7 +463,12 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarIdentity}>
-        <Link className={styles.brand} href="/beta/dashboard">
+        <Link
+          className={styles.brand}
+          href={
+            adminWorkspace ? "/beta/administration/overview" : "/beta/dashboard"
+          }
+        >
           <Image
             alt=""
             aria-hidden="true"
@@ -464,6 +483,54 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
             ? "Staff · Project Manager"
             : roleLabels[account.role]}
         </p>
+        {account.role === "director" && account.isAdministrator && (
+          <div className={styles.workspaceSwitcher}>
+            <button
+              aria-expanded={workspaceMenuOpen}
+              onClick={() => setWorkspaceMenuOpen((open) => !open)}
+              type="button"
+            >
+              <span>{adminWorkspace ? "ADM" : "DIR"}</span>
+              <div>
+                <small>Workspace</small>
+                <strong>{adminWorkspace ? "Admin" : "Director"}</strong>
+              </div>
+              <i aria-hidden="true">⇅</i>
+            </button>
+            {workspaceMenuOpen && (
+              <div className={styles.workspaceMenu}>
+                <p>Switch workspace</p>
+                <Link
+                  href="/beta/dashboard"
+                  onClick={() => setWorkspaceMenuOpen(false)}
+                >
+                  <b>DIR</b>
+                  <span>
+                    <strong>Director workspace</strong>
+                    <small>Approvals, team records and your own requests</small>
+                  </span>
+                  {!adminWorkspace && <i>✓</i>}
+                </Link>
+                <Link
+                  href="/beta/administration/overview"
+                  onClick={() => setWorkspaceMenuOpen(false)}
+                >
+                  <b>ADM</b>
+                  <span>
+                    <strong>Admin workspace</strong>
+                    <small>
+                      Programmes, accounting codes, employees and entitlements
+                    </small>
+                  </span>
+                  {adminWorkspace && <i>✓</i>}
+                </Link>
+                <small>
+                  Only accounts with admin access see this workspace.
+                </small>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <nav
         aria-label={`${roleLabels[account.role]} navigation`}
@@ -496,7 +563,11 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
         </span>
         <div>
           <strong>{account.name}</strong>
-          <small>{account.position}</small>
+          <small>
+            {adminWorkspace
+              ? `${account.position} · Admin access`
+              : account.position}
+          </small>
         </div>
         <i aria-hidden="true">‹</i>
       </div>

@@ -60,7 +60,13 @@ type Row = {
   forms: PaymentRecordZipEntry[];
   receipts: PaymentRecordZipEntry[];
 };
-type SummaryFilter = "ALL" | "DRAFT" | "PROGRESS" | "ACTION" | "COMPLETED";
+type SummaryFilter =
+  | "ALL"
+  | "DRAFT"
+  | "PROGRESS"
+  | "ACTION"
+  | "COMPLETED"
+  | "REJECTED";
 
 const types: Array<{ value: PaymentType; label: string; code: string }> = [
   { value: "PAYMENT_VOUCHER", label: "Payment Vouchers", code: "PV" },
@@ -118,8 +124,16 @@ const summaryIcons: Record<Exclude<SummaryFilter, "ALL">, string> = {
   PROGRESS: "/assets/icons/in-progress-clock-white.png",
   ACTION: "/assets/icons/requires-action-bell-white.png",
   COMPLETED: "/assets/icons/completed-check-white.png",
+  REJECTED: "/assets/icons/rejected-inactive-shield-white.png",
 };
 const completed = new Set(["COMPLETED", "PAID", "RECONCILED", "CLOSED"]);
+const rejected = new Set([
+  "REJECTED",
+  "PAYMENT_REJECTED",
+  "RETURNED_TO_STAFF",
+  "RETURNED_TO_CLAIMANT",
+  "INACTIVE",
+]);
 const actionStatuses = new Set([
   "DRAFT",
   "REJECTED",
@@ -454,13 +468,14 @@ export function MyRequests() {
     [exactDate, setExactDate] = useState(""),
     [sort, setSort] = useState("UPDATED_DESC"),
     [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() =>
-      ["DRAFT", "PROGRESS", "ACTION", "COMPLETED"].includes(
+      ["DRAFT", "PROGRESS", "ACTION", "COMPLETED", "REJECTED"].includes(
         requestedSummary ?? "",
       )
         ? (requestedSummary as SummaryFilter)
         : "ALL",
     ),
-    [paymentMenuOpen, setPaymentMenuOpen] = useState(false);
+    [paymentMenuOpen, setPaymentMenuOpen] = useState(false),
+    [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     if (!account) {
@@ -626,10 +641,15 @@ export function MyRequests() {
             : summaryFilter === "DRAFT"
               ? row.draft
               : summaryFilter === "ACTION"
-                ? row.action && !row.draft
+                ? row.action && !row.draft && !rejected.has(row.status)
                 : summaryFilter === "COMPLETED"
                   ? completed.has(row.status)
-                  : !row.draft && !row.action && !completed.has(row.status),
+                  : summaryFilter === "REJECTED"
+                    ? rejected.has(row.status)
+                    : !row.draft &&
+                      !row.action &&
+                      !completed.has(row.status) &&
+                      !rejected.has(row.status),
         )
         .filter((row) => type === "ALL" || row.type === type)
         .filter(
@@ -642,7 +662,13 @@ export function MyRequests() {
         .filter(
           (row) =>
             !search.trim() ||
-            [row.reference, row.purpose, row.statusLabel].some((value) =>
+            [
+              row.reference,
+              row.purpose,
+              row.statusLabel,
+              types.find((item) => item.value === row.type)?.label ?? row.type,
+              account?.name ?? "",
+            ].some((value) =>
               value.toLowerCase().includes(search.trim().toLowerCase()),
             ),
         )
@@ -658,9 +684,26 @@ export function MyRequests() {
               ? b.amount - a.amount
               : sort === "AMOUNT_ASC"
                 ? a.amount - b.amount
-                : b.updatedAt.localeCompare(a.updatedAt);
+                : sort === "REFERENCE_ASC"
+                  ? a.reference.localeCompare(b.reference, "en-MY", {
+                      numeric: true,
+                    })
+                  : sort === "REFERENCE_DESC"
+                    ? b.reference.localeCompare(a.reference, "en-MY", {
+                        numeric: true,
+                      })
+                    : sort === "PURPOSE_ASC"
+                      ? a.purpose.localeCompare(b.purpose)
+                      : sort === "PURPOSE_DESC"
+                        ? b.purpose.localeCompare(a.purpose)
+                        : sort === "STATUS_ASC"
+                          ? a.statusLabel.localeCompare(b.statusLabel)
+                          : sort === "STATUS_DESC"
+                            ? b.statusLabel.localeCompare(a.statusLabel)
+                            : b.updatedAt.localeCompare(a.updatedAt);
         }),
     [
+      account?.name,
       effectiveStatus,
       exactDate,
       month,
@@ -678,8 +721,11 @@ export function MyRequests() {
     progress: rows.filter(
       (row) => !row.draft && !row.action && !completed.has(row.status),
     ).length,
-    action: rows.filter((row) => row.action && !row.draft).length,
+    action: rows.filter(
+      (row) => row.action && !row.draft && !rejected.has(row.status),
+    ).length,
     completed: rows.filter((row) => completed.has(row.status)).length,
+    rejected: rows.filter((row) => rejected.has(row.status)).length,
   };
   if (!account || loading || voucherLoading)
     return (
@@ -706,6 +752,23 @@ export function MyRequests() {
       current === nextFilter ? "ALL" : nextFilter,
     );
   };
+  const toggleColumnSort = (
+    ascending: string,
+    descending: string,
+    defaultDirection: "ASC" | "DESC" = "ASC",
+  ) => {
+    setSort((current) =>
+      current === ascending
+        ? descending
+        : current === descending
+          ? ascending
+          : defaultDirection === "ASC"
+            ? ascending
+            : descending,
+    );
+  };
+  const sortIndicator = (ascending: string, descending: string) =>
+    sort === ascending ? "▲" : sort === descending ? "▼" : "↕";
   const visibleCreateOptions = createOptions.filter((option) => {
     if (option.type === "TRAVEL_ALLOWANCE") return account.role === "manager";
     if (option.type === "PAYMENT_VOUCHER") return account.role !== "director";
@@ -859,6 +922,24 @@ export function MyRequests() {
           <strong>{counts.completed}</strong>
           <small>Paid or fully closed</small>
         </button>
+        <button
+          data-active={summaryFilter === "REJECTED"}
+          data-tone="rejected"
+          onClick={() => selectSummary("REJECTED")}
+          type="button"
+        >
+          {summaryFilter === "REJECTED" && <em>Showing</em>}
+          <Image
+            alt=""
+            className={styles.summaryIcon}
+            height={96}
+            src={summaryIcons.REJECTED}
+            width={96}
+          />
+          <span>Rejected</span>
+          <strong>{counts.rejected}</strong>
+          <small>Rejected or inactive</small>
+        </button>
       </section>
       <section className={styles.records}>
         <header>
@@ -873,102 +954,170 @@ export function MyRequests() {
                       ? "In progress"
                       : summaryFilter === "ACTION"
                         ? "Requires action"
-                        : "Completed"
+                        : summaryFilter === "COMPLETED"
+                          ? "Completed"
+                          : "Rejected"
                 : types.find((item) => item.value === type)?.label}
             </h2>
             <p>Showing {filtered.length} matching requests</p>
           </div>
         </header>
-        <div className={styles.typeTabs}>
+        <div className={styles.filterBar}>
+          <input
+            aria-label="Search requests"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search reference, type or requestor..."
+            type="search"
+            value={search}
+          />
+          <select
+            aria-label="Payment type"
+            onChange={(event) =>
+              selectType(event.target.value as "ALL" | PaymentType)
+            }
+            value={type}
+          >
+            <option value="ALL">All payment types</option>
+            {types.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
           <button
-            data-active={type === "ALL"}
-            onClick={() => selectType("ALL")}
+            aria-expanded={filtersOpen}
+            className={styles.filterToggle}
+            data-active={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
             type="button"
           >
-            All types <span>{rows.length}</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" />
+            </svg>
+            Filters
           </button>
-          {types.map((item) => (
-            <button
-              data-active={type === item.value}
-              data-type={item.value}
-              key={item.value}
-              onClick={() => selectType(item.value)}
-              type="button"
-            >
-              <i />
-              {item.code}{" "}
-              <span>
-                {rows.filter((row) => row.type === item.value).length}
-              </span>
+        </div>
+        {filtersOpen && (
+          <div className={styles.advancedFilters}>
+            <label>
+              <span>Status</span>
+              <select
+                onChange={(event) => setStatus(event.target.value)}
+                value={effectiveStatus}
+              >
+                <option value="ALL">All statuses</option>
+                {statuses.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Month</span>
+              <input
+                onChange={(event) => setMonth(event.target.value)}
+                type="month"
+                value={month}
+              />
+            </label>
+            <label>
+              <span>Exact date</span>
+              <input
+                onChange={(event) => setExactDate(event.target.value)}
+                type="date"
+                value={exactDate}
+              />
+            </label>
+            <label>
+              <span>Sort by</span>
+              <select
+                onChange={(event) => setSort(event.target.value)}
+                value={sort}
+              >
+                <option value="UPDATED_DESC">Newest updated</option>
+                <option value="UPDATED_ASC">Oldest updated</option>
+                <option value="AMOUNT_DESC">Highest amount</option>
+                <option value="AMOUNT_ASC">Lowest amount</option>
+                <option value="REFERENCE_ASC">Reference A–Z</option>
+                <option value="REFERENCE_DESC">Reference Z–A</option>
+                <option value="PURPOSE_ASC">Purpose A–Z</option>
+                <option value="PURPOSE_DESC">Purpose Z–A</option>
+                <option value="STATUS_ASC">Status A–Z</option>
+                <option value="STATUS_DESC">Status Z–A</option>
+              </select>
+            </label>
+            <button onClick={clear} type="button">
+              Clear filters
             </button>
-          ))}
-        </div>
-        <div className={styles.filters}>
-          <label>
-            <span>Search</span>
-            <input
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Request no. or purpose"
-              type="search"
-              value={search}
-            />
-          </label>
-          <label>
-            <span>Status</span>
-            <select
-              onChange={(event) => setStatus(event.target.value)}
-              value={effectiveStatus}
-            >
-              <option value="ALL">All statuses</option>
-              {statuses.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Month</span>
-            <input
-              onChange={(event) => setMonth(event.target.value)}
-              type="month"
-              value={month}
-            />
-          </label>
-          <label>
-            <span>Exact date</span>
-            <input
-              onChange={(event) => setExactDate(event.target.value)}
-              type="date"
-              value={exactDate}
-            />
-          </label>
-          <label>
-            <span>Sort by</span>
-            <select
-              onChange={(event) => setSort(event.target.value)}
-              value={sort}
-            >
-              <option value="UPDATED_DESC">Newest updated</option>
-              <option value="UPDATED_ASC">Oldest updated</option>
-              <option value="AMOUNT_DESC">Highest amount</option>
-              <option value="AMOUNT_ASC">Lowest amount</option>
-            </select>
-          </label>
-          <button onClick={clear} type="button">
-            Clear filters
-          </button>
-        </div>
+          </div>
+        )}
         <div className={styles.tableWrap}>
           <table>
             <thead>
               <tr>
-                <th>Request no.</th>
-                <th>Type</th>
-                <th>Purpose</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                <th>Amount</th>
+                <th>
+                  <button
+                    className={styles.sortHeader}
+                    onClick={() =>
+                      toggleColumnSort("REFERENCE_ASC", "REFERENCE_DESC")
+                    }
+                    type="button"
+                  >
+                    Request no.
+                    <span>
+                      {sortIndicator("REFERENCE_ASC", "REFERENCE_DESC")}
+                    </span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    className={styles.sortHeader}
+                    onClick={() =>
+                      toggleColumnSort("PURPOSE_ASC", "PURPOSE_DESC")
+                    }
+                    type="button"
+                  >
+                    Purpose
+                    <span>{sortIndicator("PURPOSE_ASC", "PURPOSE_DESC")}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    className={styles.sortHeader}
+                    onClick={() =>
+                      toggleColumnSort("UPDATED_ASC", "UPDATED_DESC", "DESC")
+                    }
+                    type="button"
+                  >
+                    Submitted
+                    <span>{sortIndicator("UPDATED_ASC", "UPDATED_DESC")}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    className={styles.sortHeader}
+                    onClick={() =>
+                      toggleColumnSort("STATUS_ASC", "STATUS_DESC")
+                    }
+                    type="button"
+                  >
+                    Status
+                    <span>{sortIndicator("STATUS_ASC", "STATUS_DESC")}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    className={styles.sortHeader}
+                    onClick={() =>
+                      toggleColumnSort("AMOUNT_ASC", "AMOUNT_DESC", "DESC")
+                    }
+                    type="button"
+                  >
+                    Amount
+                    <span>{sortIndicator("AMOUNT_ASC", "AMOUNT_DESC")}</span>
+                  </button>
+                </th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -977,11 +1126,9 @@ export function MyRequests() {
                 <tr key={`${row.type}-${row.id}`}>
                   <td>
                     <strong>{row.reference}</strong>
-                  </td>
-                  <td>
-                    <span className={styles.typeCode} data-type={row.type}>
-                      {types.find((item) => item.value === row.type)?.code}
-                    </span>
+                    <small className={styles.referenceType}>
+                      {types.find((item) => item.value === row.type)?.label}
+                    </small>
                   </td>
                   <td>{row.purpose}</td>
                   <td>
