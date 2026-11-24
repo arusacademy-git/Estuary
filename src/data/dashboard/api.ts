@@ -16,3 +16,15 @@ export async function fetchDashboardSummary(input: {
   if (!response.ok) throw new Error(body?.message ?? `Dashboard summary failed (${response.status}).`);
   return body?.data ?? [];
 }
+
+export function fetchStaffDashboardSummary(userId: string) {
+  return fetchDashboardSummary({ role: 'staff', userId });
+}
+
+export function fetchManagerDashboardSummary(userId: string) {
+  return fetchDashboardSummary({ role: 'manager', userId });
+}
+
+export function fetchDirectorDashboardSummary(userId: string) {
+  return fetchDashboardSummary({ role: 'director', userId });
+}

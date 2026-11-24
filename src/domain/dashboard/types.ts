@@ -14,7 +14,10 @@ export type DashboardSummaryRecord = {
   requesterName: string;
   status: string;
   amount: number;
+  submittedAt: string;
   updatedAt: string;
+  projectCode?: string;
+  projectName?: string;
   currentAssigneeId?: string;
   approverIds: string[];
   managerViewed: boolean;

@@ -214,11 +214,13 @@ export function ClaimForm({
   }
 
   function openNewEntry() {
+    setError("");
     setEntryReceipt(undefined);
     setEntryModal({ line: makeLine(), mode: "ADD" });
   }
 
   function openEditEntry(line: ClaimLine) {
+    setError("");
     setEntryReceipt(receiptFiles[line.id]);
     setEntryModal({ line: { ...line }, mode: "EDIT" });
   }
@@ -231,6 +233,10 @@ export function ClaimForm({
   function saveEntry(addAnother = false) {
     if (!entryModal) return;
     const line = entryModal.line;
+    if (!line.accountType?.trim()) {
+      setError("Choose an account code before saving this claim entry.");
+      return;
+    }
     const hasReceipt = Boolean(
       entryReceipt ||
       line.receiptDocumentId ||
@@ -248,8 +254,7 @@ export function ClaimForm({
         : !line.supplier.trim() ||
           !hasReceipt ||
           line.amount <= 0 ||
-          (claimType === "EXPENSE" &&
-            (!line.accountType.trim() || !line.division.trim())));
+          (claimType === "EXPENSE" && !line.division.trim()));
     if (incomplete) {
       setError(
         claimType === "MILEAGE"
@@ -542,7 +547,7 @@ export function ClaimForm({
         </div>
       </header>
       <form className={styles.claimForm} onSubmit={review}>
-        {error && (
+        {error && !entryModal && (
           <div className={styles.error} role="alert">
             {error}
           </div>
@@ -860,6 +865,7 @@ export function ClaimForm({
           claimType={claimType}
           line={entryModal.line}
           mode={entryModal.mode}
+          error={error}
           receipt={entryReceipt}
           onCancel={closeEntryModal}
           onChange={(patch) =>
@@ -956,6 +962,7 @@ function ClaimEntriesTable({
                     ? `${line.from} → ${line.to}`
                     : line.supplier}
                 </span>
+                <span>{line.accountType || "Account code needed"}</span>
               </td>
               <td>
                 {claimType === "MILEAGE" ? (
@@ -999,6 +1006,7 @@ function ClaimEntryModal({
   claimType,
   line,
   mode,
+  error,
   receipt,
   onCancel,
   onChange,
@@ -1008,6 +1016,7 @@ function ClaimEntryModal({
   claimType: ClaimType;
   line: ClaimLine;
   mode: "ADD" | "EDIT";
+  error: string;
   receipt?: File;
   onCancel: () => void;
   onChange: (patch: Partial<ClaimLine>) => void;
@@ -1159,24 +1168,6 @@ function ClaimEntryModal({
                 <>
                   <label>
                     <span>
-                      Type of account <em>*</em>
-                    </span>
-                    <select
-                      value={line.accountType}
-                      onChange={(event) =>
-                        onChange({ accountType: event.target.value })
-                      }
-                    >
-                      <option value="">Choose account</option>
-                      {CLAIM_ACCOUNT_TYPES.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>
                       Division <em>*</em>
                     </span>
                     <select
@@ -1197,6 +1188,24 @@ function ClaimEntryModal({
               )}
             </>
           )}
+          <label className={styles.modalFullField}>
+            <span>
+              Account code <em>*</em>
+            </span>
+            <select
+              value={line.accountType ?? ""}
+              onChange={(event) =>
+                onChange({ accountType: event.target.value })
+              }
+            >
+              <option value="">Choose account code</option>
+              {CLAIM_ACCOUNT_TYPES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className={styles.modalFullField}>
             <span>
               Description & purpose <em>*</em>
@@ -1284,6 +1293,7 @@ function ClaimEntryModal({
           )}
         </div>
 
+        {error && <div className={styles.error} role="alert">{error}</div>}
         <footer>
           <span>
             {mode === "EDIT"

@@ -8,7 +8,7 @@ import {
   requiresTechManagerApproval,
   validateClaimInput,
 } from './policy';
-import type { ClaimLine, CreateClaimInput } from './types';
+import type { ClaimLine, ClaimType, CreateClaimInput } from './types';
 
 function line(amount: number): ClaimLine {
   return {
@@ -20,7 +20,7 @@ function line(amount: number): ClaimLine {
     receiptFileName: '',
     receiptMimeType: '',
     receiptFileSize: 0,
-    accountType: '',
+    accountType: '906-000 STAFF BENEFITS',
     division: '',
     amount,
     from: '',
@@ -28,6 +28,30 @@ function line(amount: number): ClaimLine {
     kilometers: 0,
   };
 }
+
+describe('Claim account codes', () => {
+  it.each<ClaimType>(['EXPENSE', 'INTERNET_COMMUTE', 'MEDICAL', 'MILEAGE', 'PD', 'TECH'])(
+    'requires an account code on %s entries',
+    (claimType) => {
+      const input = techClaim(50);
+      input.claimType = claimType;
+      input.lines[0] = {
+        ...input.lines[0],
+        division: 'O-MANAGEMENT-ARUS',
+        from: 'Office',
+        to: 'Project site',
+        kilometers: 10,
+        accountType: '',
+      };
+
+      expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe(
+        'Choose an account code for every claim entry.',
+      );
+      input.lines[0].accountType = '906-000 STAFF BENEFITS';
+      expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
+    },
+  );
+});
 
 function techClaim(amount: number): CreateClaimInput {
   return {

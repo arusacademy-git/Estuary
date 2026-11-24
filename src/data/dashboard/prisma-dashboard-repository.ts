@@ -88,13 +88,15 @@ function fallbackReference(record: StoredSummary) {
   return `${prefixes[normalizedType(record.payment_type)]}-DRAFT-${record.id.slice(-6)}`;
 }
 
-function roleWhere(scope: DashboardScope): Prisma.SubmissionWhereInput {
+export function dashboardRoleWhere(
+  scope: DashboardScope,
+): Prisma.SubmissionWhereInput {
   if (scope.view === "ORGANIZATION_COMPLETED") {
     return {
       current_state_code: { in: ["COMPLETED", "COMPLETE", "CLOSED", "PAID"] },
     };
   }
-  if (scope.role === "finance") return {};
+  if (scope.role === "finance" || scope.role === "director") return {};
   if (scope.role === "staff") return { submitted_by_id: scope.userId };
   return {
     OR: [
@@ -109,7 +111,7 @@ export async function listDashboardSummaryFromDatabase(scope: DashboardScope) {
   const records = await prisma.submission.findMany({
     where: {
       payment_type: { in: supportedTypes },
-      ...roleWhere(scope),
+      ...dashboardRoleWhere(scope),
     },
     select,
     orderBy: { updated_at: "desc" },

@@ -5,13 +5,11 @@ import { useEffect, useState } from "react";
 
 import {
     directorNeedsApproval,
+    directorRequesterAction,
     fetchDirectorDashboard,
+    type DirectorDashboardRecord,
+    type DirectorProjectOption,
 } from "@/data/dashboard/director-dashboard-api";
-import {
-    managerRequesterAction,
-    type ManagerDashboardRecord,
-    type ManagerProjectOption,
-} from "@/data/dashboard/manager-dashboard-api";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
 
 import { ManagerDashboardMyRequest } from "../manager/manager-dashboard-my-request";
@@ -62,8 +60,8 @@ const createOptions = [
 
 export function DirectorDashboard({ account }: { account: BetaAccount }) {
     const [tab, setTab] = useState<DirectorTab>("ORG");
-    const [records, setRecords] = useState<ManagerDashboardRecord[]>([]);
-    const [projects, setProjects] = useState<ManagerProjectOption[]>([]);
+    const [records, setRecords] = useState<DirectorDashboardRecord[]>([]);
+    const [projects, setProjects] = useState<DirectorProjectOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [now, setNow] = useState(() => new Date());
     const [paymentMenuOpen, setPaymentMenuOpen] = useState(false);
@@ -91,7 +89,7 @@ export function DirectorDashboard({ account }: { account: BetaAccount }) {
 
     const mine = records.filter((record) => record.requesterId === account.id);
     const approvals = records.filter(directorNeedsApproval).length;
-    const myActions = mine.filter(managerRequesterAction).length;
+    const myActions = mine.filter(directorRequesterAction).length;
     const lastUsedType = [...mine].sort((left, right) =>
         right.updatedAt.localeCompare(left.updatedAt),
     )[0]?.type;

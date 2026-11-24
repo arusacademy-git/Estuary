@@ -1,4 +1,4 @@
-import { fetchDashboardSummary } from "@/data/dashboard/api";
+import { fetchManagerDashboardSummary } from "@/data/dashboard/api";
 import { getPaymentVoucherStatusLabel } from "@/domain/payment-vouchers/status";
 import type { PaymentVoucherRecord } from "@/domain/payment-vouchers/types";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
@@ -101,10 +101,7 @@ function detailHref(type: ManagerDashboardType, id: string) {
 }
 
 export async function fetchManagerDashboard(account: BetaAccount) {
-    const records = await fetchDashboardSummary({
-        role: "manager",
-        userId: account.id,
-    });
+    const records = await fetchManagerDashboardSummary(account.id);
 
     return {
         records: records.map<ManagerDashboardRecord>((record) => ({
