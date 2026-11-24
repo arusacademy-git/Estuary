@@ -17,7 +17,8 @@ import {
   PAYMENT_METHOD_OPTIONS as paymentMethodOptions,
   PAYMENT_VOUCHER_ACCOUNT_CODES as knownAccountCodes,
 } from "@/shared/constants/payment-options";
-import { useAdminAccountingOptions } from "@/features/administration/admin-settings";
+import { projectManagerFor } from "@/features/administration/admin-settings";
+import { useAdminAccountingOptions } from '@/features/administration/use-admin-accounting-options';
 import { parsePaymentAmountInput } from "@/shared/utils/payment-amount";
 import { PaymentAmountInput } from "@/shared/payment-amount-input";
 import {
@@ -357,7 +358,7 @@ export function PaymentVoucherForm({
        */
       directorId: isAmendment ? initialVoucher.directorId : directorId,
 
-      projectManagerId: initialVoucher?.projectManagerId ?? "nadia-hassan",
+      projectManagerId: initialVoucher?.projectManagerId ?? projectManagerFor(divisionValue),
 
       pvDate: String(formData.get("pvDate") ?? "").trim(),
 

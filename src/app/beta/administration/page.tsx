@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { readBetaSession } from '@/lib/auth/beta-accounts';
+import { getBetaAccount, readBetaSession } from '@/lib/auth/beta-accounts';
 import { canAccessAdministration, createDefaultAdminSettings, effectiveClaimPolicy, readAdminSettings, saveAdminSettings, type AdminAccountingCode, type AdminClaimPolicy, type AdminEmployee, type AdminProgramme, type AdminSettings } from '@/features/administration/admin-settings';
 import { ACCOUNTING_IMPORT_HEADERS, PROGRAMME_IMPORT_HEADERS, upsertAccountingCodesFromCsv, upsertProgrammesFromCsv } from '@/features/administration/admin-settings-import';
 import styles from './administration.module.css';
@@ -22,9 +22,9 @@ export default function AdministrationPage() {
   const [query, setQuery] = useState(''), [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all'), [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1), [message, setMessage] = useState('');
   const [sheetUrl, setSheetUrl] = useState(''), [importing, setImporting] = useState(false), [importError, setImportError] = useState('');
-  const managers = useMemo(() => settings.employees.filter((item) => item.active && item.role === 'staff'), [settings.employees]);
+  const managers = useMemo(() => settings.employees.filter((item) => item.active && getBetaAccount(item.id)), [settings.employees]);
   useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; const access = canAccessAdministration(readBetaSession()); setAllowed(access); if (access) setSettings(readAdminSettings()); setChecked(true); }); return () => { active = false; }; }, []);
-  const commit = (next: AdminSettings, text: string) => { if (!canAccessAdministration(readBetaSession())) return; setSettings(next); saveAdminSettings(next); setMessage(text); setModal(null); };
+  const commit = async (next: AdminSettings, text: string) => { if (!canAccessAdministration(readBetaSession())) return; setMessage('Saving settings…'); try { await saveAdminSettings(next); setSettings(next); setMessage(text); setModal(null); } catch (error) { setMessage(error instanceof Error ? error.message : 'Settings could not be saved.'); } };
   const matches = <T extends { active: boolean }>(items: T[], text: (item: T) => string) => items.filter((item) => (status === 'all' || item.active === (status === 'active')) && (!query.trim() || text(item).toLowerCase().includes(query.trim().toLowerCase())));
   const slice = <T,>(items: T[]) => items.slice((Math.min(page, Math.max(1, Math.ceil(items.length / PAGE_SIZE))) - 1) * PAGE_SIZE, Math.min(page, Math.max(1, Math.ceil(items.length / PAGE_SIZE))) * PAGE_SIZE);
   async function importSheet(kind: 'programmes' | 'accounting') {
@@ -35,10 +35,10 @@ export default function AdministrationPage() {
       if (!response.ok || !body.data?.csv) throw new Error(body.error?.message ?? 'Unable to read the Google Sheet.');
       if (kind === 'programmes') {
         const result = upsertProgrammesFromCsv(body.data.csv, settings.programmes, settings.employees);
-        commit({ ...settings, programmes: result.items }, `Programme import complete: ${result.created} created, ${result.updated} updated.`);
+        await commit({ ...settings, programmes: result.items }, `Programme import complete: ${result.created} created, ${result.updated} updated.`);
       } else {
         const result = upsertAccountingCodesFromCsv(body.data.csv, settings.accountingCodes);
-        commit({ ...settings, accountingCodes: result.items }, `Accounting-code import complete: ${result.created} created, ${result.updated} updated.`);
+        await commit({ ...settings, accountingCodes: result.items }, `Accounting-code import complete: ${result.created} created, ${result.updated} updated.`);
       }
     } catch (error) { setImportError(error instanceof Error ? error.message : 'Unable to import this sheet.'); }
     finally { setImporting(false); }
@@ -52,7 +52,7 @@ export default function AdministrationPage() {
   const employees = matches(settings.employees.filter((x) => filter === 'all' || x.role === filter), (x) => `${x.name} ${x.email} ${x.role}`);
   return <main className={styles.page}>
     <header className={styles.header}><div><p>Restricted workspace</p><h1>Settings</h1><span>Maintain programme ownership, employees, claim entitlements and accounting reference data.</span></div><aside><strong>Administrator access</strong><small>Available to assigned administrator accounts.</small></aside></header>
-    <section className={styles.notice}><strong>Beta settings preview</strong><span>Changes here are saved in this browser only. Shared organization settings will be connected to the database later.</span></section>
+    <section className={styles.notice}><strong>Beta settings</strong><span>Programme and Manager assignments are shared across Arus organizations. Other beta settings remain in this browser.</span></section>
     <div className={styles.tabs} role="tablist">{([['programmes', 'Programmes & managers'], ['accounting', 'Accounting codes'], ['employees', 'Employees'], ['claims', 'Claim entitlements']] as const).map(([key, label]) => <button aria-selected={section === key} data-active={section === key} key={key} onClick={() => { setSection(key); setFilter('all'); setMessage(''); }} role="tab" type="button">{label}</button>)}</div>
     {message && <div className={styles.feedback} role="status">{message}</div>}
     {section === 'programmes' && <><SheetImport url={sheetUrl} setUrl={setSheetUrl} headers={PROGRAMME_IMPORT_HEADERS} importing={importing} error={importError} run={() => importSheet('programmes')} /><Directory title="Programme directory" count={programmes.length} noun="programmes" action="+ Add programme" add={() => setModal({ kind: 'programme', item: blankProgramme() })} query={query} setQuery={setQuery} placeholder="Search code or programme" status={status} setStatus={setStatus} filter={<select value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Manager: All</option><option value="unassigned">Unassigned</option>{managers.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>} page={page} setPage={setPage}><Table headers={['Code', 'Programme', 'Manager', 'Status', 'Actions']}>{slice(programmes).map((x) => <tr key={x.id}><td><strong>{x.code}</strong></td><td>{x.name}</td><td>{managers.find((m) => m.id === x.managerId)?.name ?? <span className={styles.muted}>Unassigned</span>}</td><Status active={x.active} /><Actions edit={() => setModal({ kind: 'programme', item: x })} remove={() => remove('programme', x.id, `programme ${x.code}`)} /></tr>)}</Table></Directory></>}

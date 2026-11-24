@@ -17,6 +17,7 @@ const date = (value: string) => {
 
 export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord }) {
   const [copied, setCopied] = useState(false);
+  const managerFirst = record.status === 'PENDING_MANAGER_APPROVAL';
   async function copyReference() {
     try {
       await navigator.clipboard.writeText(record.requestNumber);
@@ -39,9 +40,9 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
               <small>REF ID</small><strong>{record.requestNumber}</strong>
               <button type="button" onClick={copyReference}>{copied ? 'Copied' : 'Copy'}</button>
             </span>
-            <span className={styles.confirmationStatus}><i />Pending Manager Approval</span>
+            <span className={styles.confirmationStatus}><i />{managerFirst ? 'Pending Manager Approval' : 'Pending Director Approval'}</span>
           </div>
-          <p>Your signed request was routed to {accountName(record.managerApproverId)} for review.</p>
+          <p>Your signed request was routed to {accountName(managerFirst ? record.managerApproverId : record.directorApproverId)} for approval. {managerFirst ? '' : 'The assigned Manager was notified for information.'}</p>
         </header>
 
         <section className={styles.confirmationSection}>
@@ -50,7 +51,7 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
             <div><dt>Amount requested</dt><dd className={styles.confirmationAmount}>{money(record.totalAmount)}</dd><small>{record.lines.length} expense {record.lines.length === 1 ? 'entry' : 'entries'}</small></div>
             <div><dt>Project</dt><dd>{record.projectName}</dd><small>Submitted by {record.requesterName}</small></div>
             <div><dt>Request date</dt><dd>{date(record.requestDate)}</dd><small>Cash Advance request</small></div>
-            <div><dt>Next reviewer</dt><dd>{accountName(record.managerApproverId)}</dd><small>Manager reviewer</small></div>
+            <div><dt>Next reviewer</dt><dd>{accountName(managerFirst ? record.managerApproverId : record.directorApproverId)}</dd><small>{managerFirst ? 'Manager reviewer' : 'Director approver'}</small></div>
           </dl>
         </section>
 
@@ -58,8 +59,8 @@ export function CashAdvanceConfirmation({ record }: { record: CashAdvanceRecord 
           <h2>Workflow progress</h2>
           <ol className={styles.confirmationWorkflow}>
             <ConfirmationStep state="complete" title="Request Submitted" copy={record.requesterName} />
-            <ConfirmationStep state="active" title="Manager Review" copy={`Assigned to ${accountName(record.managerApproverId)}`} />
-            <ConfirmationStep title="Director Review" copy="Awaiting Manager review" />
+            {managerFirst && <ConfirmationStep state="active" title="Manager Review" copy={`Assigned to ${accountName(record.managerApproverId)}`} />}
+            <ConfirmationStep state={managerFirst ? undefined : 'active'} title="Director Review" copy={managerFirst ? 'Awaiting Manager review' : `Assigned to ${accountName(record.directorApproverId)}`} />
             <ConfirmationStep title="Finance Payment" copy="Awaiting Director approval" />
             <ConfirmationStep title="Payment transaction proof uploaded" copy="Awaiting Finance payment proof" />
             <ConfirmationStep title="Reconciliation" copy="After payment" />

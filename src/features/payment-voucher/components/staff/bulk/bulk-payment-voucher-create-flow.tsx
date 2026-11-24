@@ -6,6 +6,7 @@ import {
 } from 'react';
 
 import Link from 'next/link';
+import { projectManagerFor } from '@/features/administration/admin-settings';
 
 import {
   useRouter,
@@ -240,18 +241,18 @@ export function BulkPaymentVoucherCreateFlow() {
         'Select at least one valid Payment Voucher.',
       );
     }
+    const unassigned = selectedRows.find((row) => !projectManagerFor(row.division));
+    if (unassigned) throw new Error(`Assign a Manager to programme ${unassigned.division} in Settings before submitting this batch.`);
 
     /*
      * Validate and convert all selected rows
      * before saving anything.
      */
     const voucherInputs =
-      selectedRows.map((row) =>
-        convertBulkRowToCreatePaymentVoucherInput(
-          row,
-          account.id,
-        ),
-      );
+      selectedRows.map((row) => ({
+        ...convertBulkRowToCreatePaymentVoucherInput(row, account.id),
+        projectManagerId: projectManagerFor(row.division),
+      }));
 
     const newVouchers:
       PaymentVoucherRecord[] = [];
@@ -286,6 +287,19 @@ export function BulkPaymentVoucherCreateFlow() {
           message: `${createdVoucher.voucherNumber} was submitted by ${account.name} and requires your approval.`,
           href: `/beta/payment-vouchers/${createdVoucher.id}`,
         });
+        if (createdVoucher.projectManagerId && createdVoucher.projectManagerId !== account.id) {
+          createLocalNotification({
+            recipientId: createdVoucher.projectManagerId,
+            actorId: account.id,
+            type: 'PAYMENT_VOUCHER_SUBMITTED',
+            entityType: 'PAYMENT_VOUCHER',
+            entityId: createdVoucher.id,
+            referenceNumber: createdVoucher.voucherNumber,
+            title: 'Payment Voucher submitted for your information',
+            message: `${createdVoucher.voucherNumber} was submitted by ${account.name}. Director approval is required; no Manager action is needed.`,
+            href: `/beta/payment-vouchers/${createdVoucher.id}`,
+          });
+        }
       } catch (notificationError) {
         console.error(
           'The Payment Voucher was submitted, but the Director notification could not be created.',

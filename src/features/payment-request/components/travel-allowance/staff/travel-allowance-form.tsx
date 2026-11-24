@@ -25,6 +25,7 @@ import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
 import {
   isProjectManagerAccount,
   projectManagerFor,
+  readAdminSettings,
   travelProjectCodesFor,
 } from "@/features/administration/admin-settings";
 import { EMPLOYEE_OPTIONS } from "@/shared/constants/employee-options";
@@ -147,7 +148,9 @@ export function TravelAllowanceForm({
 
   const directors = betaAccounts.filter((item) => item.role === "director");
   const isDirector = account?.role === "director";
-  const availableProjects = travelProjectCodesFor(account);
+  const availableProjects = requestMode === "staff"
+    ? readAdminSettings().programmes.filter((item) => item.active).map((item) => item.code)
+    : travelProjectCodesFor(account);
   const assignedManagerIds = useMemo(
     () => [
       ...new Set(
@@ -169,7 +172,7 @@ export function TravelAllowanceForm({
     if (initialRecord || requestMode === "manager") return;
     queueMicrotask(() =>
       setManagerApproverId(
-        assignedManagerIds.length === 1 ? assignedManagerIds[0] : "",
+        assignedManagerIds[0] ?? "",
       ),
     );
   }, [assignedManagerIds, initialRecord, requestMode]);
@@ -313,10 +316,8 @@ export function TravelAllowanceForm({
       return `Sign in using a ${requestMode === "staff" ? "Staff" : "Manager"} account.`;
     if (!requestDate || !contact.trim() || !projectDirectorId)
       return "Complete the request date, contact and Project Director.";
-    if (requestMode === "staff" && assignedManagerIds.length !== 1)
-      return assignedManagerIds.length > 1
-        ? "The selected projects have different managers. Submit separate requests per project manager."
-        : "Assign a manager to the selected project in Settings first.";
+    if (requestMode === "staff" && lines.some((line) => line.projectName && !projectManagerFor(line.projectName)))
+      return "Assign a Manager to every selected programme in Settings first.";
     if (!lines.length) return "Add at least one travel entry.";
     if (
       !isDirector &&
@@ -369,8 +370,10 @@ export function TravelAllowanceForm({
         requesterRole: requestMode,
         requesterPosition: account.position,
         contact: contact.trim(),
-        managerApproverId:
-          requestMode === "staff" ? managerApproverId : account.id,
+        managerApproverId: initialRecord?.managerReviewRequired
+          ? managerApproverId
+          : assignedManagerIds[0] ?? managerApproverId,
+        managerApproverIds: assignedManagerIds,
         projectDirectorId,
         currency: "MYR",
         lines: lines.map(submissionLine),
@@ -528,25 +531,12 @@ export function TravelAllowanceForm({
               </label>
               <label>
                 <span>
-                  Manager reviewer <em>*</em>
+                  Programme Manager(s) notified <em>*</em>
                 </span>
                 {requestMode === "manager" ? (
                   <input disabled value={account?.name ?? "Loading…"} />
                 ) : (
-                  <select
-                    required
-                    value={managerApproverId}
-                    onChange={(event) =>
-                      setManagerApproverId(event.target.value)
-                    }
-                  >
-                    <option value="">Choose a Manager</option>
-                    {managers.map((manager) => (
-                      <option key={manager.id} value={manager.id}>
-                        {manager.name} - {manager.position}
-                      </option>
-                    ))}
-                  </select>
+                  <input disabled value={managers.map((manager) => manager.name).join(", ") || "Unassigned"} />
                 )}
               </label>
               <label>

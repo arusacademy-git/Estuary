@@ -54,7 +54,7 @@ export function TravelAllowanceManagerReview({ requestId }: { requestId: string 
     if (!checked) return <State title="Loading Travel Allowance" copy="Reading the request from the database…" />;
     if (!account || !isProjectManagerAccount(account)) return <State title="Manager access required" copy="You need an active project manager assignment." />;
     if (!record) return <State title="Travel Allowance not found" copy={error || 'The request could not be found.'} />;
-    if (record.managerApproverId !== account.id && record.requesterId !== account.id) return <State title="Travel Allowance unavailable" copy="This request is not assigned to or created by your Manager account." />;
+    if (!(record.managerApproverIds ?? [record.managerApproverId]).includes(account.id) && record.requesterId !== account.id) return <State title="Travel Allowance unavailable" copy="This request is not assigned to or created by your Manager account." />;
 
     const canAct = record.status === 'PENDING_MANAGER_REVIEW' && record.managerApproverId === account.id;
     const isOwnRequest = record.requesterRole === 'manager';

@@ -23,11 +23,11 @@
 | Type | Approval | Notes |
 |------|----------|-------|
 | Payment Voucher | Director (1 step) | Phase 2 MVP priority |
-| Invoice Payment | None (direct to payment) | Phase 5 |
-| Cash Advance | Manager → Director (2 steps) | 3-checkpoint reconciliation; Phase 4 |
-| Travel Allowance | Manager → Director (2 steps) | Phase 4 |
-| Expense Claim | None (direct to payment) | Phase 5; Kakitangan until mid-2027 |
-| Petty Cash Top-up | Manager → Director (2 steps) | Phase 5; OQ-PettyCashConfirm pending |
+| Invoice Payment | Assigned programme Manager; Director informed | Phase 5 |
+| Cash Advance | Director; assigned programme Manager informed | 3-checkpoint reconciliation; Phase 4 |
+| Travel Allowance | Director; each assigned programme Manager informed | Phase 4 |
+| Expense Claim and all other Claims | Each assigned programme Manager; Director informed | A Manager's own Claim requires Director approval |
+| Petty Cash Top-up | Director; each assigned programme Manager informed | Phase 5 |
 
 ## Run, Test, And Format Commands
 - Package manager: pnpm
@@ -57,8 +57,8 @@
 - Workflow state: `current_state_code` (type-prefixed string e.g. "PV_DRAFT") + `current_state_group` (reporting enum). Every state change writes an immutable `SubmissionTransition` row.
 - Internal approvals (Director, Manager) require SSO-authenticated session — no token links. Email notifications are deep-links to the approval page only.
 - External recipients (PV signature) use `ExternalActionToken` — one-use, SHA-256 hashed, bound to email, expiring.
-- Travel Allowance and Cash Advance: sequential 2-step approval (Manager → Director); both steps require authenticated session
-- Cash Advance: 2-step approval + 3-checkpoint reconciliation (2w/3w/4w); overspend creates parent-child CA link
+- New Travel Allowance and Cash Advance submissions require Director approval while programme Managers receive information notifications. Existing in-progress requests retain their recorded approval steps.
+- Cash Advance: Director approval + 3-checkpoint reconciliation (2w/3w/4w); overspend creates parent-child CA link
 - Unreconciled CA past Checkpoint 3 blocks the submitter from all new CA submissions in that org
 - Multi-entity model: Organization → UserOrgMembership → User (many-to-many with role)
 - A user can hold multiple roles in the same org (e.g. MANAGER + PETTY_CASH_CUSTODIAN)

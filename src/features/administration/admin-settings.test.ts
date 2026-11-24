@@ -14,10 +14,17 @@ describe('project-scoped manager settings', () => {
   it('keeps a project manager as Staff at organization level', () => {
     const nadia = getBetaAccount('nadia-hassan');
     const settings = createDefaultAdminSettings();
+    settings.programmes[0].managerId = nadia!.id;
 
     expect(nadia?.role).toBe('staff');
     expect(isProjectManagerAccount(nadia, settings)).toBe(true);
     expect(managedProgrammesFor(nadia!.id, settings).length).toBeGreaterThan(0);
+  });
+
+  it('does not assign one general Manager to every programme by default', () => {
+    const settings = createDefaultAdminSettings();
+    expect(settings.programmes.every((programme) => !programme.managerId)).toBe(true);
+    expect(projectManagerFor(settings.programmes[0].code, settings)).toBeUndefined();
   });
 
   it('grants authority only for explicitly assigned active projects', () => {

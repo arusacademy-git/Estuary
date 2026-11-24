@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
+import { programmeManagerIds, requireSameManagerIds } from '@/data/payment-requests/shared/programme-managers';
 import type {
   CreateTravelAllowanceInput,
   PaymentRequestDocument,
@@ -104,6 +105,7 @@ function mapTravelAllowance(record: StoredTravelAllowance): TravelAllowanceRecor
     totalAmount: Number(record.total_amount),
     paymentDueDate: previousBusinessDay(earliestTravelDate),
     managerReviewedAt: managerDecision?.created_at.toISOString(),
+    managerReviewRequired: record.approval_steps.some((step) => step.required_role === 'MANAGER' && step.status_code !== 'BYPASSED'),
     managerReviewedById: managerDecision?.decided_by_user_id,
     managerReturnedAt: managerReturn?.created_at.toISOString(),
     managerReturnedById: managerReturn?.actor_user_id ?? undefined,
@@ -204,7 +206,7 @@ export async function listTravelAllowancesFromDatabase(scope?: {
   if (scope.role === 'manager') {
     return mapped.filter(
       (record) =>
-        record.managerApproverId === scope.userId ||
+        (record.managerApproverIds ?? [record.managerApproverId]).includes(scope.userId) ||
         record.requesterId === scope.userId,
     );
   }
@@ -271,6 +273,10 @@ export async function createTravelAllowanceInDatabase(
     }
     if (!director) throw new Error('The assigned Director was not found in PostgreSQL.');
 
+    const assignedManagers = await programmeManagerIds(transaction, input.organizationId, input.lines.map((line) => line.projectName));
+    requireSameManagerIds(assignedManagers, input.managerApproverIds?.length ? input.managerApproverIds : [input.managerApproverId ?? '']);
+    if (input.managerApproverId !== assignedManagers[0]) throw new Error('The primary programme Manager changed. Reload the form.');
+
     const projectCodes = [...new Set(input.lines.map((line) => line.projectName))];
     const projects = await transaction.project.findMany({
       where: { organization_id: input.organizationId, code: { in: projectCodes } },
@@ -279,13 +285,8 @@ export async function createTravelAllowanceInDatabase(
     const projectIdByCode = new Map(projects.map((project) => [project.code, project.id]));
     const requestNumber = await nextTravelAllowanceNumber(transaction, input.organizationId, new Date(`${input.requestDate}T12:00:00Z`));
 
-    const isManagerRequest = input.requesterRole === 'manager';
-    const initialState = isManagerRequest
-      ? 'PENDING_DIRECTOR_APPROVAL'
-      : 'PENDING_MANAGER_REVIEW';
-    const initialAssigneeId = isManagerRequest
-      ? input.projectDirectorId
-      : input.managerApproverId;
+    const initialState = 'PENDING_DIRECTOR_APPROVAL';
+    const initialAssigneeId = input.projectDirectorId;
 
     const record = await transaction.submission.create({
       data: {
@@ -326,13 +327,13 @@ export async function createTravelAllowanceInDatabase(
               step_number: 1,
               required_role: 'MANAGER',
               assigned_user_id: input.managerApproverId,
-              status_code: isManagerRequest ? 'BYPASSED' : 'ACTIVE',
+              status_code: 'BYPASSED',
             },
             {
               step_number: 2,
               required_role: 'DIRECTOR',
               assigned_user_id: input.projectDirectorId,
-              status_code: isManagerRequest ? 'ACTIVE' : 'PENDING',
+              status_code: 'ACTIVE',
             },
           ],
         },
@@ -403,17 +404,21 @@ export async function resubmitTravelAllowanceInDatabase(
     const projectCodes = [...new Set(input.lines.map((line) => line.projectName))];
     const projects = await transaction.project.findMany({ where: { organization_id: current.organization_id, code: { in: projectCodes } }, select: { id: true, code: true } });
     const projectIdByCode = new Map(projects.map((project) => [project.code, project.id]));
-    const isManagerRequest = input.requesterRole === 'manager';
-    const nextState = isManagerRequest ? 'PENDING_DIRECTOR_APPROVAL' : 'PENDING_MANAGER_REVIEW';
-    const nextAssignee = isManagerRequest ? input.projectDirectorId : input.managerApproverId;
-
     const stepIds = current.approval_steps.map((step) => step.id);
     await transaction.approvalDecision.deleteMany({ where: { approval_step_id: { in: stepIds } } });
     const managerStep = current.approval_steps.find((step) => step.required_role === 'MANAGER');
     const directorStep = current.approval_steps.find((step) => step.required_role === 'DIRECTOR');
     if (!managerStep || !directorStep) throw new Error('Travel Allowance approval steps are incomplete.');
-    await transaction.approvalStep.update({ where: { id: managerStep.id }, data: { assigned_user_id: input.managerApproverId, status_code: isManagerRequest ? 'BYPASSED' : 'ACTIVE' } });
-    await transaction.approvalStep.update({ where: { id: directorStep.id }, data: { assigned_user_id: input.projectDirectorId, status_code: isManagerRequest ? 'ACTIVE' : 'PENDING' } });
+    const managerReviewRequired = managerStep.status_code !== 'BYPASSED';
+    if (!managerReviewRequired) {
+      const assignedManagers = await programmeManagerIds(transaction, current.organization_id, input.lines.map((line) => line.projectName));
+      requireSameManagerIds(assignedManagers, input.managerApproverIds?.length ? input.managerApproverIds : [input.managerApproverId ?? '']);
+      if (input.managerApproverId !== assignedManagers[0]) throw new Error('The primary programme Manager changed. Reload the form.');
+    }
+    const nextState = managerReviewRequired ? 'PENDING_MANAGER_REVIEW' : 'PENDING_DIRECTOR_APPROVAL';
+    const nextAssignee = managerReviewRequired ? input.managerApproverId : input.projectDirectorId;
+    await transaction.approvalStep.update({ where: { id: managerStep.id }, data: { assigned_user_id: input.managerApproverId, status_code: managerReviewRequired ? 'ACTIVE' : 'BYPASSED' } });
+    await transaction.approvalStep.update({ where: { id: directorStep.id }, data: { assigned_user_id: input.projectDirectorId, status_code: managerReviewRequired ? 'PENDING' : 'ACTIVE' } });
 
     await transaction.travelAllowanceDetail.update({ where: { submission_id: id }, data: { purpose_text: input.remarks, travel_start_date: new Date(`${startDate}T12:00:00Z`), travel_end_date: new Date(`${endDate}T12:00:00Z`), manager_user_id: input.managerApproverId, director_user_id: input.projectDirectorId, paid_at: null, paid_reference: null } });
     await transaction.submissionLine.deleteMany({ where: { submission_id: id } });

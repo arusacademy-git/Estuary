@@ -80,6 +80,18 @@ model PaymentRequestDraft {
   @@map("payment_request_drafts")
 }
 
+// Shared beta programme directory. The mapping applies across Arus organizations.
+model BetaProgramme {
+  id         String   @id
+  code       String   @unique
+  name       String
+  manager_id String?
+  is_active  Boolean  @default(true)
+  updated_at DateTime @updatedAt
+
+  @@map("beta_programmes")
+}
+
 model UserOrgMembership {
   id                String           @id @default(cuid())
   user_id           String

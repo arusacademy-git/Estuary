@@ -10,20 +10,15 @@ export function pettyCashTotal(lines: PettyCashRequestLine[]) {
   return lines.reduce((sum, line) => sum + Number(line.amount || 0), 0);
 }
 
-export function validatePettyCashInput(input: CreatePettyCashInput) {
+export function validatePettyCashInput(input: CreatePettyCashInput, options: { legacyRoute?: boolean } = {}) {
   if (!input.requestDate || !input.requesterContact.trim()) {
     return 'Complete the request date and contact number.';
   }
   if (!input.location) return 'Select the Petty Cash location.';
-  if (input.requesterRole === 'staff' && (!input.managerApproverId || !input.directorApproverId)) {
-    return 'Select the Manager reviewer and Director previewer.';
-  }
-  if (input.requesterRole === 'manager' && !input.directorApproverId) {
-    return 'Select the Director previewer.';
-  }
-  if (input.requesterRole === 'director' && !input.directorApproverId) {
-    return 'The Director requester could not be identified.';
-  }
+  if (!input.directorApproverId) return 'Select the mandatory Director approver.';
+  if (!input.managerApproverId) return 'Choose a project with an assigned Manager.';
+  if (!options.legacyRoute && input.requesterRole === 'director' && input.directorApproverId === input.requesterId)
+    return 'A Director requester must select another Director to approve the request.';
   if (input.requesterRole === 'finance') {
     if (!input.financeReviewerId || !input.financeReviewerRole) {
       return 'Select another Finance user, Manager or Director to preview this request.';

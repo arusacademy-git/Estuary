@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useState,
   useSyncExternalStore,
 } from 'react';
 
@@ -22,6 +23,7 @@ import {
 } from '@/lib/auth/beta-accounts';
 
 import styles from './beta.module.css';
+import { loadSharedProgrammes } from '@/features/administration/admin-settings';
 
 const BETA_SESSION_EVENT = 'estuary-beta-session-change';
 
@@ -85,6 +87,15 @@ export default function BetaShell({
     betaAccounts.find((candidate) => candidate.id === accountId) ?? null;
   const isSessionHydrated = accountId !== undefined;
   const currentPaymentContext = paymentContext(pathname);
+  const [programmeState, setProgrammeState] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  useEffect(() => {
+    if (!accountId) return;
+    let active = true;
+    loadSharedProgrammes().then(() => { if (active) setProgrammeState('ready'); })
+      .catch(() => { if (active) setProgrammeState('error'); });
+    return () => { active = false; };
+  }, [accountId]);
 
   useEffect(() => {
     if (isSessionHydrated && !isPublicPage && !account) {
@@ -105,10 +116,10 @@ export default function BetaShell({
     return children;
   }
 
-  if (!isSessionHydrated || !account) {
+  if (!isSessionHydrated || !account || programmeState !== 'ready') {
     return (
       <main className={styles.sessionLoading}>
-        Loading your Estuary workspace…
+        {programmeState === 'error' ? 'Shared programme settings are unavailable. Reload to try again.' : 'Loading your Estuary workspace…'}
       </main>
     );
   }
