@@ -28,17 +28,21 @@ import {
 } from "@/lib/auth/beta-accounts";
 
 import styles from "./dashboard.module.css";
+import { DirectorDashboard } from "./director/director-dashboard";
+import { ManagerDashboard } from "./manager/manager-dashboard";
+import { StaffDashboard } from "./staff/staff-dashboard";
 
 const dashboardKpiIcons = [
   "/assets/icons/submitted-doc-icon.png",
   "/assets/icons/in-progress-clock-icon.png",
   "/assets/icons/completed-check-icon.png",
-  "/assets/icons/reconciliation-sync-white.png",
+  "/assets/icons/reconciliation-sync-icon.png",
 ] as const;
 
 type DashboardType = DashboardSummaryPaymentType;
 type Tone = "blue" | "amber" | "green" | "red" | "gray";
 type AnalyticsRange = "LAST_6_MONTHS" | "THIS_YEAR" | "ALL_TIME";
+type RecentStatusFilter = "ALL" | "IN_PROGRESS" | "COMPLETED";
 type DashboardRecord = {
   id: string;
   reference: string;
@@ -556,6 +560,11 @@ export default function BetaDashboardPage() {
   const [selectedActionType, setSelectedActionType] =
     useState<DashboardType | null>(null);
   const [makePaymentOpen, setMakePaymentOpen] = useState(false);
+  const [recentStatusFilter, setRecentStatusFilter] =
+    useState<RecentStatusFilter>("ALL");
+  const [recentTypeFilter, setRecentTypeFilter] = useState<
+    "ALL" | DashboardType
+  >("ALL");
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
   const projectManager = account ? isProjectManagerAccount(account) : false;
   const effectiveRole: BetaRole = projectManager
@@ -570,6 +579,14 @@ export default function BetaDashboardPage() {
   useEffect(() => {
     if (!account) {
       router.replace("/beta");
+      return;
+    }
+
+    if (
+      (account.role === "staff" && !projectManager) ||
+      account.role === "manager" ||
+      projectManager
+    ) {
       return;
     }
 
@@ -604,7 +621,7 @@ export default function BetaDashboardPage() {
     return () => {
       active = false;
     };
-  }, [account, router]);
+  }, [account, projectManager, router]);
 
   useEffect(() => {
     if (!account || (account.role === "staff" && !projectManager)) return;
@@ -657,15 +674,37 @@ export default function BetaDashboardPage() {
     ).length;
     return { attention, completed, returned, inProgress };
   }, [account, effectiveRole, records]);
-  const recent = useMemo(
+  const recentMatching = useMemo(
     () =>
-      [...records]
+      records
+        .filter(
+          (record) =>
+            recentTypeFilter === "ALL" || record.type === recentTypeFilter,
+        )
+        .filter((record) => {
+          if (recentStatusFilter === "COMPLETED")
+            return completedStatuses.has(record.status);
+          if (recentStatusFilter === "IN_PROGRESS")
+            return (
+              !completedStatuses.has(record.status) &&
+              !returnedStatuses.has(record.status) &&
+              !inactiveStatuses.has(record.status)
+            );
+          return true;
+        })
         .sort(
           (a, b) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-        )
-        .slice(0, 8),
-    [records],
+        ),
+    [recentStatusFilter, recentTypeFilter, records],
+  );
+  const recent = useMemo(
+    () =>
+      recentMatching.slice(
+        0,
+        account?.role === "staff" && !projectManager ? 10 : 8,
+      ),
+    [account?.role, projectManager, recentMatching],
   );
   const actionRecords = useMemo(
     () =>
@@ -712,6 +751,15 @@ export default function BetaDashboardPage() {
     0,
   );
 
+  if (account?.role === "staff" && !projectManager)
+    return <StaffDashboard account={account} />;
+
+  if (account && (account.role === "manager" || projectManager))
+    return <ManagerDashboard account={account} />;
+
+  if (account && (["director"] as BetaRole[]).includes(account.role))
+    return <DirectorDashboard account={account} />;
+
   if (loading || !account)
     return (
       <div className={styles.loading}>Loading your Estuary workspace…</div>
@@ -720,6 +768,7 @@ export default function BetaDashboardPage() {
     effectiveRole === account.role
       ? account
       : { ...account, role: effectiveRole };
+  const isPlainStaff = account.role === "staff" && !projectManager;
   const copy = roleCopy[effectiveRole];
   const selectedActions = selectedActionType
     ? actionRecords.filter((record) => record.type === selectedActionType)
@@ -921,7 +970,8 @@ export default function BetaDashboardPage() {
             onClick={() => setMakePaymentOpen((open) => !open)}
             type="button"
           >
-            <span aria-hidden="true">＋</span> Request a payment
+            <span aria-hidden="true">＋</span>{" "}
+            {isPlainStaff ? "Request a payment" : "Make a payment"}
           </button>
           <Link
             className={styles.followUpLink}
@@ -985,180 +1035,272 @@ export default function BetaDashboardPage() {
         </div>
       )}
 
-      <section
-        className={styles.roleKpis}
-        data-count={kpis.length}
-        aria-label={`${account.position} dashboard metrics`}
-      >
-        {kpis.map((kpi, index) => {
-          const percentage =
-            typeof kpi.value === "string" && kpi.value.endsWith("%")
-              ? Math.min(100, Math.max(0, Number.parseFloat(kpi.value)))
-              : null;
-          const iconPath = dashboardKpiIcons[index];
+      {isPlainStaff ? (
+        <section className={styles.staffKpis} aria-label="My request summary">
+          <Link
+            className={styles.staffKpiCard}
+            data-tone="action"
+            href="/beta/payment-records?scope=mine&summary=ACTION"
+          >
+            <span>Needs your action</span>
+            <strong>{summary.attention}</strong>
+            <small>Requests waiting for your follow-up</small>
+            <i aria-hidden="true">!</i>
+          </Link>
+          <Link
+            className={styles.staffKpiCard}
+            data-tone="progress"
+            href="/beta/payment-records?scope=mine&summary=PROGRESS"
+          >
+            <span>In progress</span>
+            <strong>{summary.inProgress}</strong>
+            <small>Awaiting approval or processing</small>
+            <i aria-hidden="true">◷</i>
+          </Link>
+          <Link
+            className={styles.staffKpiCard}
+            data-tone="completed"
+            href="/beta/payment-records?scope=mine&summary=COMPLETED"
+          >
+            <span>Completed</span>
+            <strong>{summary.completed}</strong>
+            <small>Paid or fully closed</small>
+            <i aria-hidden="true">✓</i>
+          </Link>
+        </section>
+      ) : (
+        <section
+          className={styles.roleKpis}
+          data-count={kpis.length}
+          aria-label={`${account.position} dashboard metrics`}
+        >
+          {kpis.map((kpi, index) => {
+            const percentage =
+              typeof kpi.value === "string" && kpi.value.endsWith("%")
+                ? Math.min(100, Math.max(0, Number.parseFloat(kpi.value)))
+                : null;
+            const iconPath = dashboardKpiIcons[index];
 
-          return (
-            <article
-              data-tone={
-                percentage !== null
-                  ? "reconciliation"
-                  : index === 0
-                    ? "blue"
-                    : index === 1
-                      ? "amber"
-                      : index === 2
-                        ? "green"
-                        : "red"
-              }
-              key={kpi.label}
-            >
-              <span className={styles.kpiVisual} aria-hidden="true">
-                {percentage !== null ? (
-                  <svg className={styles.kpiRing} viewBox="0 0 36 36">
-                    <circle
-                      className={styles.kpiRingTrack}
-                      cx="18"
-                      cy="18"
-                      r="15.5"
-                    />
-                    <circle
-                      className={styles.kpiRingValue}
-                      cx="18"
-                      cy="18"
-                      pathLength="100"
-                      r="15.5"
-                      strokeDasharray={`${percentage} 100`}
-                    />
-                  </svg>
-                ) : iconPath ? (
-                  <Image
-                    className={styles.kpiIcon}
-                    src={iconPath}
-                    alt=""
-                    width={96}
-                    height={96}
-                  />
-                ) : null}
-              </span>
-              <span>{kpi.label}</span>
-              <strong>{kpi.value}</strong>
-              <small>{kpi.note}</small>
-              <Link
-                href={
-                  account.role === "staff" && !projectManager
-                    ? kpi.label === "My requests in progress"
-                      ? "/beta/payment-records?scope=mine&summary=PROGRESS"
-                      : kpi.label === "My requests completed" ||
-                          kpi.label === "Completion rate"
-                        ? "/beta/payment-records?scope=mine&summary=COMPLETED"
-                        : kpi.label === "Cash advance pending reconciliation"
-                          ? "/beta/payment-records?scope=mine&summary=ACTION&type=CASH_ADVANCE&status=PENDING_RECONCILIATION"
-                          : "/beta/payment-records?scope=mine"
-                    : index === 1
-                      ? projectManager || account.role === "manager"
-                        ? "/beta/project-manager/pending-approvals"
-                        : account.role === "director"
-                          ? "/beta/director/pending-approvals"
-                          : "/beta/finance/pending-processing"
-                      : kpi.label.toLowerCase().includes("completed")
-                        ? "/beta/payment-records?group=COMPLETED"
-                        : kpi.label.toLowerCase().includes("reconciliation")
-                          ? "/beta/payment-records?group=RECONCILED"
-                          : "/beta/payment-records"
-                }
-              >
-                {kpi.label === "Cash advance pending reconciliation"
-                  ? "Reconcile now"
-                  : "View list"}
-              </Link>
-            </article>
-          );
-        })}
-      </section>
-
-      <section
-        className={styles.actionPanel}
-        data-empty={summary.attention === 0}
-        aria-label="Needs your action"
-      >
-        <header>
-          <span>
-            {summary.attention === 0 ? "✓ All caught up" : "● Action required"}
-          </span>
-          <h2>
-            {summary.attention === 0
-              ? "Nothing needs your action right now"
-              : `Need your action (${summary.attention} item${summary.attention === 1 ? "" : "s"} waiting)`}
-          </h2>
-          <p>{actionCopy[effectiveRole].detail}</p>
-        </header>
-        <div className={styles.actionTypes}>
-          {typeOrder.map((type) => (
-            <button
-              aria-label={`${typeLabels[type]}: ${actionCounts[type]} actions`}
-              data-active={selectedActionType === type}
-              data-type={type}
-              disabled={actionCounts[type] === 0}
-              key={type}
-              onClick={() => setSelectedActionType(type)}
-              type="button"
-            >
-              <span>{typeLabels[type]}</span>
-              <strong>{actionCounts[type]}</strong>
-              <small>
-                {actionCounts[type]
-                  ? `${actionCounts[type]} item${actionCounts[type] === 1 ? "" : "s"}`
-                  : "No action"}
-              </small>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeading}>
-          <div>
-            <p>Payment portfolio</p>
-            <h2>Records by payment type</h2>
-            <span>Counts and action items update from live request data.</span>
-          </div>
-        </div>
-        <div className={styles.typeGrid}>
-          {typeOrder.map((type) => {
-            const items = records.filter((record) => record.type === type);
-            const attention = items.filter((record) =>
-              needsAction(record, effectiveRole, account.id),
-            ).length;
             return (
-              <Link
-                className={styles.typeCard}
-                data-type={type}
-                href={typeHref(type, effectiveRole)}
-                key={type}
+              <article
+                data-tone={
+                  percentage !== null
+                    ? "reconciliation"
+                    : index === 0
+                      ? "blue"
+                      : index === 1
+                        ? "amber"
+                        : index === 2
+                          ? "green"
+                          : "red"
+                }
+                key={kpi.label}
               >
-                <div className={styles.typeCardTop}>
-                  <i>{typeCodes[type]}</i>
-                  <span
-                    className={styles.actionBadge}
-                    data-attention={attention > 0}
-                  >
-                    {attention > 0
-                      ? `${attention} need${attention === 1 ? "s" : ""} your action`
-                      : "No action required"}
-                  </span>
-                </div>
-                <h3>{typeLabels[type]}</h3>
-                <small>
-                  {items.length} record{items.length === 1 ? "" : "s"} tracked
-                </small>
-                <footer>
-                  <b>View</b>
-                </footer>
-              </Link>
+                <span className={styles.kpiVisual} aria-hidden="true">
+                  {percentage !== null ? (
+                    <svg className={styles.kpiRing} viewBox="0 0 36 36">
+                      <circle
+                        className={styles.kpiRingTrack}
+                        cx="18"
+                        cy="18"
+                        r="15.5"
+                      />
+                      <circle
+                        className={styles.kpiRingValue}
+                        cx="18"
+                        cy="18"
+                        pathLength="100"
+                        r="15.5"
+                        strokeDasharray={`${percentage} 100`}
+                      />
+                    </svg>
+                  ) : iconPath ? (
+                    <Image
+                      className={styles.kpiIcon}
+                      src={iconPath}
+                      alt=""
+                      width={96}
+                      height={96}
+                    />
+                  ) : null}
+                </span>
+                <span>{kpi.label}</span>
+                <strong>{kpi.value}</strong>
+                <small>{kpi.note}</small>
+                <Link
+                  href={
+                    account.role === "staff" && !projectManager
+                      ? kpi.label === "My requests in progress"
+                        ? "/beta/payment-records?scope=mine&summary=PROGRESS"
+                        : kpi.label === "My requests completed" ||
+                            kpi.label === "Completion rate"
+                          ? "/beta/payment-records?scope=mine&summary=COMPLETED"
+                          : kpi.label === "Cash advance pending reconciliation"
+                            ? "/beta/payment-records?scope=mine&summary=ACTION&type=CASH_ADVANCE&status=PENDING_RECONCILIATION"
+                            : "/beta/payment-records?scope=mine"
+                      : index === 1
+                        ? projectManager || account.role === "manager"
+                          ? "/beta/project-manager/pending-approvals"
+                          : account.role === "director"
+                            ? "/beta/director/pending-approvals"
+                            : "/beta/finance/pending-processing"
+                        : kpi.label.toLowerCase().includes("completed")
+                          ? "/beta/payment-records?group=COMPLETED"
+                          : kpi.label.toLowerCase().includes("reconciliation")
+                            ? "/beta/payment-records?group=RECONCILED"
+                            : "/beta/payment-records"
+                  }
+                >
+                  {kpi.label === "Cash advance pending reconciliation"
+                    ? "Reconcile now"
+                    : "View list"}
+                </Link>
+              </article>
             );
           })}
-        </div>
-      </section>
+        </section>
+      )}
+
+      {isPlainStaff ? (
+        <section
+          className={styles.staffActionPanel}
+          data-empty={summary.attention === 0}
+          aria-label="Needs your action"
+        >
+          <header className={styles.staffActionHeader}>
+            <div>
+              <h2>
+                <span aria-hidden="true">!</span> Needs your action
+              </h2>
+              <p>
+                These requests need a response from you before they can move
+                forward.
+              </p>
+            </div>
+            <strong>
+              {summary.attention} request{summary.attention === 1 ? "" : "s"}
+            </strong>
+          </header>
+          <div className={styles.staffActionList}>
+            {typeOrder
+              .filter((type) => actionCounts[type] > 0)
+              .map((type) => (
+                <div
+                  className={styles.staffActionRow}
+                  data-type={type}
+                  key={type}
+                >
+                  <i>{typeCodes[type]}</i>
+                  <div>
+                    <strong>{typeLabels[type]}</strong>
+                    <span>
+                      {actionCounts[type]} request
+                      {actionCounts[type] === 1 ? "" : "s"} need follow-up
+                    </span>
+                  </div>
+                  <Link href={myRequestsHref(type, { actionOnly: true })}>
+                    Review {typeLabels[type].toLowerCase()} →
+                  </Link>
+                </div>
+              ))}
+            {summary.attention === 0 && (
+              <div className={styles.staffActionEmpty}>
+                All caught up. Nothing needs your action right now.
+              </div>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section
+          className={styles.actionPanel}
+          data-empty={summary.attention === 0}
+          aria-label="Needs your action"
+        >
+          <header>
+            <span>
+              {summary.attention === 0
+                ? "✓ All caught up"
+                : "● Action required"}
+            </span>
+            <h2>
+              {summary.attention === 0
+                ? "Nothing needs your action right now"
+                : `Need your action (${summary.attention} item${summary.attention === 1 ? "" : "s"} waiting)`}
+            </h2>
+            <p>{actionCopy[effectiveRole].detail}</p>
+          </header>
+          <div className={styles.actionTypes}>
+            {typeOrder.map((type) => (
+              <button
+                aria-label={`${typeLabels[type]}: ${actionCounts[type]} actions`}
+                data-active={selectedActionType === type}
+                data-type={type}
+                disabled={actionCounts[type] === 0}
+                key={type}
+                onClick={() => setSelectedActionType(type)}
+                type="button"
+              >
+                <span>{typeLabels[type]}</span>
+                <strong>{actionCounts[type]}</strong>
+                <small>
+                  {actionCounts[type]
+                    ? `${actionCounts[type]} item${actionCounts[type] === 1 ? "" : "s"}`
+                    : "No action"}
+                </small>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!isPlainStaff && (
+        <section className={styles.section}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <p>Payment portfolio</p>
+              <h2>Records by payment type</h2>
+              <span>
+                Counts and action items update from live request data.
+              </span>
+            </div>
+          </div>
+          <div className={styles.typeGrid}>
+            {typeOrder.map((type) => {
+              const items = records.filter((record) => record.type === type);
+              const attention = items.filter((record) =>
+                needsAction(record, effectiveRole, account.id),
+              ).length;
+              return (
+                <Link
+                  className={styles.typeCard}
+                  data-type={type}
+                  href={typeHref(type, effectiveRole)}
+                  key={type}
+                >
+                  <div className={styles.typeCardTop}>
+                    <i>{typeCodes[type]}</i>
+                    <span
+                      className={styles.actionBadge}
+                      data-attention={attention > 0}
+                    >
+                      {attention > 0
+                        ? `${attention} need${attention === 1 ? "s" : ""} your action`
+                        : "No action required"}
+                    </span>
+                  </div>
+                  <h3>{typeLabels[type]}</h3>
+                  <small>
+                    {items.length} record{items.length === 1 ? "" : "s"} tracked
+                  </small>
+                  <footer>
+                    <b>View</b>
+                  </footer>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {(account.role === "director" || account.role === "finance") && (
         <section className={`${styles.section} ${styles.analyticsSection}`}>
@@ -1290,6 +1432,49 @@ export default function BetaDashboardPage() {
             View all records
           </Link>
         </div>
+        {isPlainStaff && (
+          <div className={styles.recentFilters}>
+            <div
+              aria-label="Filter recent requests by status"
+              className={styles.recentStatusTabs}
+            >
+              {(
+                [
+                  ["ALL", "All requests"],
+                  ["IN_PROGRESS", "In progress"],
+                  ["COMPLETED", "Completed"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  aria-pressed={recentStatusFilter === value}
+                  key={value}
+                  onClick={() => setRecentStatusFilter(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className={styles.recentTypeFilter}>
+              <span>Payment type</span>
+              <select
+                onChange={(event) =>
+                  setRecentTypeFilter(
+                    event.target.value as "ALL" | DashboardType,
+                  )
+                }
+                value={recentTypeFilter}
+              >
+                <option value="ALL">All types</option>
+                {typeOrder.map((type) => (
+                  <option key={type} value={type}>
+                    {typeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
         {recent.length === 0 ? (
           <div className={styles.empty}>
             <h3>No records yet</h3>
@@ -1301,10 +1486,10 @@ export default function BetaDashboardPage() {
               <thead>
                 <tr>
                   <th>Reference</th>
-                  <th>Type</th>
+                  {!isPlainStaff && <th>Type</th>}
                   <th>Requester</th>
                   <th>Amount</th>
-                  <th>Updated</th>
+                  <th>{isPlainStaff ? "Submitted" : "Updated"}</th>
                   <th>Status</th>
                   <th />
                 </tr>
@@ -1314,8 +1499,13 @@ export default function BetaDashboardPage() {
                   <tr key={`${record.type}-${record.id}`}>
                     <td>
                       <strong>{record.reference}</strong>
+                      {isPlainStaff && (
+                        <small className={styles.referenceType}>
+                          {record.typeLabel}
+                        </small>
+                      )}
                     </td>
-                    <td>{record.typeLabel}</td>
+                    {!isPlainStaff && <td>{record.typeLabel}</td>}
                     <td>{record.requesterName}</td>
                     <td>
                       <strong>{money(record.amount)}</strong>
@@ -1351,6 +1541,11 @@ export default function BetaDashboardPage() {
                 ))}
               </tbody>
             </table>
+            {isPlainStaff && (
+              <div className={styles.recentTableFooter}>
+                Showing {recent.length} of {recentMatching.length} requests
+              </div>
+            )}
           </div>
         )}
       </section>

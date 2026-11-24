@@ -1,0 +1,12 @@
+.dashboard {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+}
+
+@media (max-width: 680px) {
+  .dashboard {
+    padding: 0;
+  }
+}
