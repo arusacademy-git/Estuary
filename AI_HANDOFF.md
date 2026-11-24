@@ -1,5 +1,9 @@
 # AI_HANDOFF.md
 
+## 2026-11-24 — Integrated dashboard updates from main
+
+- Merged `origin/main` at `ee0ee64` into `agent/payment-type-approval-routing` without Git conflicts. The new Workflow Health dashboard referenced a missing `workflow-reminder` module, so the branch now supplies the reminder action and a focused recipient-routing test. Production build, typecheck, and dashboard/reminder tests pass after integration.
+
 ## 2026-11-24 — Programme-scoped parallel approval routing
 
 - GitHub issue #183, branch `agent/payment-type-approval-routing`. New PV, Cash Advance, Travel Allowance and Petty Cash top-up requests go to Director approval with each relevant programme Manager informed at submission. New Invoice Payments and all six Claims go to their programme Manager for approval with the Director informed; a Manager's own Claim goes to a Director. Multi-programme Claims keep one request and wait for every assigned Manager. Existing submitted requests preserve their recorded route on resubmission.
