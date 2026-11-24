@@ -1,5 +1,10 @@
 # AI_HANDOFF.md
 
+## 2026-11-24 — Restore staff dashboard API for deployable main
+
+- GitHub issue #180: current `main` imported a missing `staff-dashboard-api` module, blocking TypeScript and Docker builds after the Claim account-code PR was merged. Added the client adapter that reads the existing dashboard summary API, maps staff records and status labels, and creates My Requests deep links and action counts.
+- Production build, repository-wide TypeScript, focused ESLint, and a focused dashboard mapping test pass. No database migration is needed. This fix must merge before the Penang app can rebuild from the latest `main`.
+
 ## 2026-11-24 — Account code required for every Claim entry
 
 - GitHub issue #179: the existing Claim account-code selector now appears for all six Claim types, including Mileage. The entry modal requires a selection before adding or updating a line, and the shared domain validator requires it before API submission. Old drafts and submitted snapshots remain readable; a draft without a code must be completed before submission.
