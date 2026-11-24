@@ -264,7 +264,7 @@ export function ManagerDashboardTeamRecords({
                   </td>
                   <td>
                     <MyRequestAction
-                      label={managerNeedsApproval(record) ? "Review" : "Open"}
+                      label={needsApproval(record) ? "Review" : "Open"}
                       onDraftDeleted={() => undefined}
                       organizationId="beta-arus-org"
                       record={{

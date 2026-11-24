@@ -1,4 +1,4 @@
-import { fetchDashboardSummary } from '@/data/dashboard/api';
+import { fetchStaffDashboardSummary } from '@/data/dashboard/api';
 import type { DashboardSummaryPaymentType } from '@/domain/dashboard/types';
 import { standardPaymentStatusLabel } from '@/domain/payment-requests/standard-payment-status';
 import type { BetaAccount } from '@/lib/auth/beta-accounts';
@@ -94,7 +94,7 @@ export function staffRequestsHref(
 }
 
 export async function fetchStaffDashboardRecords(account: BetaAccount): Promise<StaffDashboardRecord[]> {
-  const records = await fetchDashboardSummary({ role: 'staff', userId: account.id });
+  const records = await fetchStaffDashboardSummary(account.id);
   return records
     .filter((record) => record.requesterId === account.id)
     .map((record) => {
