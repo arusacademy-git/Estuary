@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -29,6 +29,7 @@ import {
 
 import styles from "./dashboard.module.css";
 import { DirectorDashboard } from "./director/director-dashboard";
+import { FinanceDashboard } from "./finance/finance-dashboard";
 import { ManagerDashboard } from "./manager/manager-dashboard";
 import { StaffDashboard } from "./staff/staff-dashboard";
 
@@ -547,7 +548,20 @@ function normalizeSummary(
 
 export default function BetaDashboardPage() {
   const router = useRouter();
+  const searchParameters = useSearchParams();
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
+  const [financeWorkspace] = useState<"finance" | "staff">(() =>
+    typeof window !== "undefined" &&
+    window.localStorage.getItem("estuary:finance-workspace") === "staff"
+      ? "staff"
+      : "finance",
+  );
+  const requestedFinanceWorkspace = searchParameters.get("workspace");
+  const activeFinanceWorkspace =
+    requestedFinanceWorkspace === "staff" ||
+    requestedFinanceWorkspace === "finance"
+      ? requestedFinanceWorkspace
+      : financeWorkspace;
   const [now, setNow] = useState(() => new Date());
   const [records, setRecords] = useState<DashboardRecord[]>([]);
   const [analyticsRecords, setAnalyticsRecords] = useState<DashboardRecord[]>(
@@ -759,6 +773,12 @@ export default function BetaDashboardPage() {
 
   if (account && (["director"] as BetaRole[]).includes(account.role))
     return <DirectorDashboard account={account} />;
+
+  if (account?.role === "finance" && activeFinanceWorkspace === "staff")
+    return <StaffDashboard account={{ ...account, role: "staff" }} />;
+
+  if (account?.role === "finance")
+    return <FinanceDashboard account={account} />;
 
   if (loading || !account)
     return (
@@ -1302,7 +1322,7 @@ export default function BetaDashboardPage() {
         </section>
       )}
 
-      {(account.role === "director" || account.role === "finance") && (
+      {(["director", "finance"] as BetaRole[]).includes(account.role) && (
         <section className={`${styles.section} ${styles.analyticsSection}`}>
           <div className={styles.analyticsHeading}>
             <div>

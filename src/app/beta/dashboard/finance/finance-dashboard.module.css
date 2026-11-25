@@ -1,0 +1,588 @@
+.loading {
+    display: grid;
+    min-height: 420px;
+    place-items: center;
+    color: #71849c;
+    font-weight: 700;
+}
+
+.dashboard {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    color: #17365f;
+}
+
+.hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 31px 38px;
+    border: 1px solid #dbe5f1;
+    border-radius: 17px;
+    background: #fff;
+    box-shadow: 0 6px 20px rgb(15 31 61 / 5%);
+}
+
+.hero p {
+    margin: 0 0 10px;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.hero h1 {
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.1;
+}
+
+.hero>div:first-child>span {
+    display: block;
+    margin-top: 13px;
+    color: #71849c;
+    font-size: 14px;
+}
+
+.hero>div:last-child {
+    display: grid;
+    width: 260px;
+    gap: 9px;
+}
+
+.hero>div:last-child a,
+.hero>div:last-child span {
+    display: grid;
+    min-height: 52px;
+    place-items: center;
+    border-radius: 11px;
+    font-weight: 750;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.hero>div:last-child a {
+    background: #1f3f6b;
+    color: #fff;
+}
+
+.hero>div:last-child span {
+    border: 1px solid #efc46f;
+    background: #fff8e8;
+    color: #9a5b00;
+}
+
+.tabs {
+    display: flex;
+    width: max-content;
+    padding: 5px;
+    border-radius: 11px;
+    background: #e8eef7;
+}
+
+.tabs button {
+    min-height: 42px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #526b8c;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tabs button[aria-pressed="true"] {
+    background: #fff;
+    color: #17365f;
+    box-shadow: 0 3px 9px rgb(15 31 61 / 9%);
+}
+
+.tabs span {
+    margin-left: 7px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #d8e3f2;
+}
+
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.kpis article {
+    position: relative;
+    min-height: 118px;
+    padding: 20px;
+    border: 1px solid #dbe5f1;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgb(15 31 61 / 5%);
+    transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
+}
+
+.kpis article:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgb(15 31 61 / 12%);
+}
+
+.kpis article[data-tone="pending"] {
+    border-color: #f0b55b;
+}
+
+.kpis span {
+    display: block;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.kpis article[data-tone="pending"] span {
+    color: #a34e07;
+}
+
+.kpis article[data-tone="completed"] span {
+    color: #087847;
+}
+
+.kpis article[data-tone="reconciliation"] span {
+    color: #c4254d;
+}
+
+.kpis strong {
+    display: block;
+    margin-top: 16px;
+    font-size: 32px;
+    line-height: 1;
+}
+
+.kpis small {
+    display: block;
+    margin-top: 10px;
+    color: #71849c;
+    font-size: 11px;
+}
+
+.kpis i {
+    position: absolute;
+    top: 17px;
+    right: 17px;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    background: transparent;
+}
+
+.kpis i img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+}
+
+.kpis article[data-tone="pending"] i {
+    background: transparent;
+}
+
+.kpis article[data-tone="completed"] i {
+    background: transparent;
+}
+
+.kpis article[data-tone="reconciliation"] i {
+    background: transparent;
+}
+
+.queueCard,
+.chartCard,
+.accountingCard,
+.budgetCard {
+    padding: 25px 28px;
+    border: 1px solid #dbe5f1;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgb(15 31 61 / 5%);
+}
+
+.queueCard header,
+.chartCard header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.queueCard h2,
+.chartCard h2,
+.accountingCard h2,
+.budgetCard h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.queueCard p,
+.chartCard p,
+.budgetCard header span {
+    margin: 6px 0 0;
+    color: #71849c;
+    font-size: 12px;
+}
+
+.queueCard header>span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #fff0df;
+    color: #a34e07;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.queueTable {
+    margin-top: 16px;
+    overflow-x: auto;
+    border: 1px solid #dbe5f1;
+    border-radius: 11px;
+}
+
+.queueTable>div {
+    display: grid;
+    grid-template-columns: 0.7fr 1fr 1.2fr 1fr 0.8fr;
+    align-items: center;
+    min-width: 720px;
+    min-height: 62px;
+    padding: 0 17px;
+    border-top: 1px solid #e4eaf2;
+    font-size: 13px;
+}
+
+.queueTable>div:first-child {
+    min-height: 43px;
+    border: 0;
+    background: #f1f5fa;
+    color: #526b8c;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.queueTable i {
+    display: grid;
+    width: 36px;
+    height: 31px;
+    place-items: center;
+    border-radius: 7px;
+    background: #0f4d73;
+    color: #fff;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.queueTable i[data-type="INVOICE_PAYMENT"] {
+    background: #0e8750;
+}
+
+.queueTable i[data-type="TRAVEL_ALLOWANCE"] {
+    background: #f59a23;
+}
+
+.queueTable i[data-type="CASH_ADVANCE"] {
+    background: #db224a;
+}
+
+.queueTable i[data-type="PETTY_CASH"] {
+    border: 1px solid #17365f;
+    background: #fff;
+    color: #17365f;
+}
+
+.queueTable i[data-type="EXPENSE_CLAIM"] {
+    background: #111827;
+}
+
+.queueTable em {
+    justify-self: start;
+    padding: 5px 9px;
+    border-radius: 7px;
+    background: #e3f7ec;
+    color: #087847;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.queueTable em[data-age="warning"] {
+    background: #fff0cf;
+    color: #9a5b00;
+}
+
+.queueTable em[data-age="late"] {
+    background: #fee7e8;
+    color: #c4252f;
+}
+
+.queueTable a {
+    justify-self: end;
+    padding: 10px 17px;
+    border-radius: 8px;
+    background: #1f3f6b;
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.chartCard header>strong {
+    color: #17365f;
+    font-size: 12px;
+    text-align: right;
+}
+
+.chart {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    align-items: end;
+    gap: 28px;
+    height: 195px;
+    margin-top: 22px;
+    padding: 15px 18px 0;
+    border-bottom: 1px solid #dbe5f1;
+}
+
+.chart>div {
+    display: grid;
+    grid-template-rows: 22px 120px 28px;
+    align-items: end;
+    text-align: center;
+}
+
+.chart strong {
+    color: #526b8c;
+    font-size: 10px;
+}
+
+.chart i {
+    display: block;
+    width: min(72px, 100%);
+    min-height: 5px;
+    margin: auto;
+    background: #a6c0e7;
+    border-radius: 9px 9px 0 0;
+}
+
+.chart i[data-current="true"] {
+    background: #1f3f6b;
+}
+
+.chart span {
+    padding-top: 10px;
+    color: #71849c;
+    font-size: 11px;
+}
+
+.accountingCard>div {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 13px;
+    margin-top: 16px;
+}
+
+.accountingCard a {
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 17px;
+    border: 1px solid #dbe5f1;
+    border-radius: 11px;
+    color: #17365f;
+    text-decoration: none;
+}
+
+.accountingCard a>i {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 9px;
+    background: transparent;
+    font-style: normal;
+}
+
+.accountingCard a:last-child>i {
+    background: transparent;
+}
+
+.accountingCard a>i img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+}
+
+.accountingCard span {
+    display: grid;
+    gap: 4px;
+}
+
+.accountingCard small {
+    color: #71849c;
+}
+
+.accountingCard b {
+    font-size: 24px;
+}
+
+.orgOverview {
+    display: grid;
+    gap: 16px;
+}
+
+.budgetCard header p {
+    margin: 0 0 6px;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.budgetTable {
+    margin-top: 17px;
+    overflow-x: auto;
+    border: 1px solid #dbe5f1;
+    border-radius: 11px;
+}
+
+.budgetTable>div {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(4, 1fr);
+    align-items: center;
+    min-width: 760px;
+    min-height: 50px;
+    padding: 7px 15px;
+    border-top: 1px solid #e4eaf2;
+    font-size: 11px;
+}
+
+.budgetTable>div:first-child {
+    min-height: 42px;
+    border: 0;
+    background: #f1f5fa;
+    color: #526b8c;
+    font-size: 9px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.budgetTable strong small {
+    display: block;
+    margin-top: 3px;
+    color: #71849c;
+    font-weight: 500;
+}
+
+.budgetTable span[data-negative="true"] {
+    color: #c4252f;
+    font-weight: 700;
+}
+
+.budgetUsage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.budgetUsage>i {
+    width: 90px;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #e6edf5;
+}
+
+.budgetUsage>i>b {
+    display: block;
+    height: 100%;
+    background: #16a060;
+}
+
+.budgetUsage>i>b[data-tone="warning"] {
+    background: #e9a326;
+}
+
+.budgetUsage>i>b[data-tone="danger"] {
+    background: #c92932;
+}
+
+.budgetUsage em {
+    padding: 4px 7px;
+    border-radius: 99px;
+    background: #e5f7ed;
+    color: #087847;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.budgetUsage em[data-tone="warning"] {
+    background: #fff0cf;
+    color: #9a5b00;
+}
+
+.budgetUsage em[data-tone="danger"] {
+    background: #fee7e8;
+    color: #c4252f;
+}
+
+.budgetEmpty {
+    padding: 20px;
+    color: #71849c;
+    text-align: center;
+}
+
+@media (max-width: 1000px) {
+    .kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .chart {
+        gap: 12px;
+    }
+
+    .accountingCard>div {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .hero {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 22px;
+    }
+
+    .hero>div:last-child {
+        width: 100%;
+    }
+
+    .kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .chart {
+        overflow-x: auto;
+    }
+
+    .queueCard,
+    .chartCard,
+    .accountingCard,
+    .budgetCard {
+        padding: 18px;
+    }
+}
