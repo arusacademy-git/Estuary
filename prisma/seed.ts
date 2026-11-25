@@ -29,7 +29,7 @@ const betaUsers = [
     id: 'nadia-hassan',
     name: 'Nadia Hassan',
     email: 'nadia@arus.example',
-    roles: [OrgRole.MANAGER],
+    roles: [OrgRole.STAFF, OrgRole.MANAGER], // MANAGER supports requests already in the legacy approval route.
   },
   {
     id: 'amir-iskandar',
