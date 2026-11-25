@@ -479,21 +479,33 @@ export function AdminOverviewWorkspace() {
           <p>Needs attention</p>
           <h2>{attention.length} things to check</h2>
           <ul>
-            {attention.map((item) => (
-              <li data-tone={item.tone} key={item.key}>
+            {attention.length ? (
+              attention.map((item) => (
+                <li data-tone={item.tone} key={item.key}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.description}</span>
+                  </div>
+                  {item.action === "budget" ? (
+                    <button onClick={openBudgets} type="button">
+                      {item.label}
+                    </button>
+                  ) : (
+                    <a href={item.href}>{item.label}</a>
+                  )}
+                </li>
+              ))
+            ) : (
+              <li className={styles.attentionEmpty}>
                 <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.description}</span>
+                  <strong>Everything looks up to date</strong>
+                  <span>
+                    No budget, programme, employee or accounting-code issues
+                    need attention.
+                  </span>
                 </div>
-                {item.action === "budget" ? (
-                  <button onClick={openBudgets} type="button">
-                    {item.label}
-                  </button>
-                ) : (
-                  <a href={item.href}>{item.label}</a>
-                )}
               </li>
-            ))}
+            )}
           </ul>
         </section>
       </div>

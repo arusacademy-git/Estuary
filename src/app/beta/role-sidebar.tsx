@@ -175,10 +175,6 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
   finance: [
     { items: [{ label: "Overview", href: "/beta/dashboard" }] },
     {
-      label: "Create payments",
-      items: [paymentRequest(false)],
-    },
-    {
       label: "Payment processing",
       items: [
         {
@@ -197,14 +193,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     { label: "Petty cash", items: [pettyCash] },
     {
       label: "Records",
-      items: [
-        {
-          label: "My Requests",
-          href: "/beta/payment-records?scope=mine",
-          actionType: "MY_REQUESTS",
-        },
-        { label: "Team Records", href: "/beta/team-records" },
-      ],
+      items: [{ label: "Team Records", href: "/beta/team-records" }],
     },
   ],
 };
@@ -279,11 +268,23 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const currentQuery = searchParameters.toString();
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
   const projectManager = isProjectManagerAccount(account);
+  const [financeWorkspace, setFinanceWorkspace] = useState<"finance" | "staff">(
+    () =>
+      typeof window !== "undefined" &&
+      window.localStorage.getItem("estuary:finance-workspace") === "staff"
+        ? "staff"
+        : "finance",
+  );
+  const financeStaffWorkspace =
+    account.role === "finance" && financeWorkspace === "staff";
   const adminWorkspace =
     account.role === "director" &&
     account.isAdministrator &&
     pathname.startsWith("/beta/administration");
-  const baseGroups = navigationForRole(account.role, projectManager);
+  const baseGroups = navigationForRole(
+    financeStaffWorkspace ? "staff" : account.role,
+    projectManager,
+  );
   const groups = adminWorkspace
     ? [
         {
@@ -293,7 +294,9 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
           ],
         },
       ]
-    : account.isAdministrator && account.role !== "director"
+    : account.isAdministrator &&
+        account.role !== "director" &&
+        !financeStaffWorkspace
       ? [
           ...baseGroups,
           {
@@ -527,6 +530,63 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
                 <small>
                   Only accounts with admin access see this workspace.
                 </small>
+              </div>
+            )}
+          </div>
+        )}
+        {account.role === "finance" && (
+          <div className={styles.workspaceSwitcher}>
+            <button
+              aria-expanded={workspaceMenuOpen}
+              onClick={() => setWorkspaceMenuOpen((open) => !open)}
+              type="button"
+            >
+              <span>{financeStaffWorkspace ? "STF" : "FIN"}</span>
+              <div>
+                <small>Workspace</small>
+                <strong>{financeStaffWorkspace ? "Staff" : "Finance"}</strong>
+              </div>
+              <i aria-hidden="true">⇅</i>
+            </button>
+            {workspaceMenuOpen && (
+              <div className={styles.workspaceMenu}>
+                <p>Switch workspace</p>
+                <Link
+                  href="/beta/dashboard?workspace=finance"
+                  onClick={() => {
+                    window.localStorage.setItem(
+                      "estuary:finance-workspace",
+                      "finance",
+                    );
+                    setFinanceWorkspace("finance");
+                    setWorkspaceMenuOpen(false);
+                  }}
+                >
+                  <b>FIN</b>
+                  <span>
+                    <strong>Finance workspace</strong>
+                    <small>Process other employees’ payment requests</small>
+                  </span>
+                  {!financeStaffWorkspace && <i>✓</i>}
+                </Link>
+                <Link
+                  href="/beta/dashboard?workspace=staff"
+                  onClick={() => {
+                    window.localStorage.setItem(
+                      "estuary:finance-workspace",
+                      "staff",
+                    );
+                    setFinanceWorkspace("staff");
+                    setWorkspaceMenuOpen(false);
+                  }}
+                >
+                  <b>STF</b>
+                  <span>
+                    <strong>Staff workspace</strong>
+                    <small>Submit and track your own payment requests</small>
+                  </span>
+                  {financeStaffWorkspace && <i>✓</i>}
+                </Link>
               </div>
             )}
           </div>
