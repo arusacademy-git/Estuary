@@ -74,12 +74,13 @@ function reference(record: BulkRecord) {
 function isPending(record: BulkRecord, role: PreviewRole, accountId: string) {
   if (isClaim(record)) {
     const assigned = role === 'manager'
-      ? record.managerApproverId === accountId
+      ? (record.managerApproverIds ?? [record.managerApproverId]).includes(accountId)
       : record.directorApproverId === accountId;
     const previewed = role === 'manager'
-      ? Boolean(record.managerApprovedAt)
+      ? Boolean(record.managerApprovals?.some((item) => item.managerId === accountId && item.approvedAt) ?? record.managerApprovedAt)
       : Boolean(record.directorReviewedAt);
-    return assigned && !previewed && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status);
+    return assigned && !previewed && !['DRAFT', 'RETURNED_TO_CLAIMANT'].includes(record.status)
+      && (role === 'manager' ? record.approvalRoute !== 'DIRECTOR' && (record.approvalRoute !== 'MANAGER' || record.status === 'PENDING_MANAGER_APPROVAL') : record.approvalRoute !== 'MANAGER');
   }
 
   const assigned = role === 'manager'
@@ -89,7 +90,8 @@ function isPending(record: BulkRecord, role: PreviewRole, accountId: string) {
   const previewed = role === 'manager'
     ? Boolean(record.managerApprovedAt)
     : Boolean(record.directorApprovedAt);
-  return assigned && !previewed && record.status !== 'RETURNED_TO_STAFF';
+  return assigned && !previewed && record.status !== 'RETURNED_TO_STAFF'
+    && (role !== 'manager' || record.managerActionRequired !== false);
 }
 
 export function RequestBulkPreview({ role, kind }: Props) {

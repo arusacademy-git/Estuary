@@ -21,3 +21,15 @@ export async function fetchDashboardSummary(input: {
     );
   return body?.data ?? [];
 }
+
+export function fetchStaffDashboardSummary(userId: string) {
+  return fetchDashboardSummary({ role: 'staff', userId });
+}
+
+export function fetchManagerDashboardSummary(userId: string) {
+  return fetchDashboardSummary({ role: 'manager', userId });
+}
+
+export function fetchDirectorDashboardSummary(userId: string) {
+  return fetchDashboardSummary({ role: 'director', userId });
+}

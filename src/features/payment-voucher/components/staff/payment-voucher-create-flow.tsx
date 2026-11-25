@@ -101,6 +101,19 @@ export function PaymentVoucherCreateFlow({
           message: `${submittedVoucher.voucherNumber} was submitted by ${submitterName} and requires your approval.`,
           href: `/beta/payment-vouchers/${submittedVoucher.id}`,
         });
+        if (submittedVoucher.projectManagerId && submittedVoucher.projectManagerId !== submittedVoucher.submitterId) {
+          createLocalNotification({
+            recipientId: submittedVoucher.projectManagerId,
+            actorId: submittedVoucher.submitterId,
+            type: "PAYMENT_VOUCHER_SUBMITTED",
+            entityType: "PAYMENT_VOUCHER",
+            entityId: submittedVoucher.id,
+            referenceNumber: submittedVoucher.voucherNumber,
+            title: "Payment Voucher submitted for your information",
+            message: `${submittedVoucher.voucherNumber} was submitted by ${submitterName}. Director approval is required; no Manager action is needed.`,
+            href: `/beta/payment-vouchers/${submittedVoucher.id}`,
+          });
+        }
       } catch (notificationError) {
         console.error(
           "Payment Voucher was stored, but its Beta notification could not be created.",

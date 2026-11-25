@@ -8,7 +8,7 @@ import {
   requiresTechManagerApproval,
   validateClaimInput,
 } from './policy';
-import type { ClaimLine, CreateClaimInput } from './types';
+import type { ClaimLine, ClaimType, CreateClaimInput } from './types';
 
 function line(amount: number): ClaimLine {
   return {
@@ -20,14 +20,57 @@ function line(amount: number): ClaimLine {
     receiptFileName: '',
     receiptMimeType: '',
     receiptFileSize: 0,
-    accountType: '',
-    division: '',
+    accountType: '906-000 STAFF BENEFITS',
+    division: 'O-MANAGEMENT-ARUS',
     amount,
     from: '',
     to: '',
     kilometers: 0,
   };
 }
+
+describe('Claim account codes', () => {
+  it.each<ClaimType>(['EXPENSE', 'INTERNET_COMMUTE', 'MEDICAL', 'MILEAGE', 'PD', 'TECH'])(
+    'requires an account code on %s entries',
+    (claimType) => {
+      const input = techClaim(50);
+      input.claimType = claimType;
+      input.lines[0] = {
+        ...input.lines[0],
+        division: 'O-MANAGEMENT-ARUS',
+        from: 'Office',
+        to: 'Project site',
+        kilometers: 10,
+        accountType: '',
+      };
+
+      expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe(
+        'Choose an account code for every claim entry.',
+      );
+      input.lines[0].accountType = '906-000 STAFF BENEFITS';
+      expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
+    },
+  );
+});
+
+describe('Claim project routing', () => {
+  it.each<ClaimType>(['EXPENSE', 'INTERNET_COMMUTE', 'MEDICAL', 'MILEAGE', 'PD', 'TECH'])(
+    'requires a division on %s entries',
+    (claimType) => {
+      const input = techClaim(50);
+      input.claimType = claimType;
+      input.lines[0].division = '';
+      expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toContain('Choose a division');
+    },
+  );
+
+  it('allows a programme Manager to claim against their own code when a Director approves', () => {
+    const input = techClaim(50);
+    input.requesterId = 'manager-1';
+    input.requesterRole = 'manager';
+    expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
+  });
+});
 
 function techClaim(amount: number): CreateClaimInput {
   return {
@@ -55,11 +98,11 @@ describe('Tech Claim policy', () => {
     expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
   });
 
-  it('automatically uses the extended allowance and Manager approval above RM500', () => {
+  it('automatically uses the extended allowance without a separate Tech approval gate', () => {
     const input = normalizeTechAllowance(techClaim(800));
 
     expect(input.techExtended).toBe(true);
-    expect(requiresTechManagerApproval(input)).toBe(true);
+    expect(requiresTechManagerApproval(input)).toBe(false);
     expect(validateClaimInput(input, { medicalUsedThisYear: 0 })).toBe('');
   });
 

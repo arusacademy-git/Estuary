@@ -35,6 +35,7 @@ export type CreatePettyCashInput = {
   requestDate: string;
   location: PettyCashLocation;
   managerApproverId: string;
+  managerApproverIds?: string[];
   directorApproverId: string;
   financeReviewerId?: string;
   financeReviewerRole?: 'manager' | 'director' | 'finance';
@@ -43,6 +44,7 @@ export type CreatePettyCashInput = {
 };
 
 export type PettyCashRecord = CreatePettyCashInput & {
+  managerActionRequired?: boolean;
   id: string;
   requestNumber: string;
   requestType: 'PETTY_CASH_REQUEST';

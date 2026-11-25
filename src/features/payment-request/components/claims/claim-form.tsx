@@ -29,6 +29,7 @@ import {
   type CreateClaimInput,
 } from "@/domain/payment-requests/claims/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
+import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
 
 import { ClaimConfirmation } from "./claim-confirmation";
 import { ManualDraftConfirmation } from "../shared/manual-draft-confirmation";
@@ -180,6 +181,9 @@ export function ClaimForm({
   }, [account, claimDate]);
 
   const total = useMemo(() => claimTotal(claimType, lines), [claimType, lines]);
+  const legacyReturned = Boolean(initialRecord && !initialRecord.approvalRoute && ["RETURNED_TO_CLAIMANT", "PAYMENT_REJECTED"].includes(initialRecord.status));
+  const assignedManagerIds = [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))];
+  const managerRequester = isProjectManagerAccount(account);
   const limit = claimLimit({ claimType, techExtended }, context);
   const type = claimTypeDetails(claimType);
   const limitExceeded = limit !== null && total > limit;
@@ -192,8 +196,10 @@ export function ClaimForm({
       requesterId: currentAccount.id,
       requesterName: currentAccount.name,
       requesterPosition: currentAccount.position,
-      requesterRole: currentAccount.role,
+      requesterRole: managerRequester ? "manager" : currentAccount.role,
       requesterContact: contact.trim(),
+      managerApproverId: assignedManagerIds[0],
+      managerApproverIds: assignedManagerIds,
       directorApproverId: directorId,
       claimDate,
       claimType,
@@ -214,11 +220,13 @@ export function ClaimForm({
   }
 
   function openNewEntry() {
+    setError("");
     setEntryReceipt(undefined);
     setEntryModal({ line: makeLine(), mode: "ADD" });
   }
 
   function openEditEntry(line: ClaimLine) {
+    setError("");
     setEntryReceipt(receiptFiles[line.id]);
     setEntryModal({ line: { ...line }, mode: "EDIT" });
   }
@@ -231,6 +239,10 @@ export function ClaimForm({
   function saveEntry(addAnother = false) {
     if (!entryModal) return;
     const line = entryModal.line;
+    if (!line.accountType?.trim()) {
+      setError("Choose an account code before saving this claim entry.");
+      return;
+    }
     const hasReceipt = Boolean(
       entryReceipt ||
       line.receiptDocumentId ||
@@ -248,8 +260,7 @@ export function ClaimForm({
         : !line.supplier.trim() ||
           !hasReceipt ||
           line.amount <= 0 ||
-          (claimType === "EXPENSE" &&
-            (!line.accountType.trim() || !line.division.trim())));
+          (!legacyReturned && !line.division.trim()));
     if (incomplete) {
       setError(
         claimType === "MILEAGE"
@@ -305,8 +316,10 @@ export function ClaimForm({
   function review(event: FormEvent) {
     event.preventDefault();
     if (!account) return setError("Sign in before creating a claim.");
+    if (!legacyReturned && lines.some((line) => line.division && !projectManagerFor(line.division)))
+      return setError("Each Claim division must have an assigned Manager in Settings before submission.");
     const input = buildInput(account);
-    const validation = validateClaimInput(input, context);
+    const validation = validateClaimInput(input, context, { legacyApproval: legacyReturned });
     if (validation) return setError(validation);
     if (!confirmed)
       return setError(
@@ -319,6 +332,8 @@ export function ClaimForm({
 
   async function submit() {
     if (!account) return setError("Sign in before creating a claim.");
+    if (!legacyReturned && lines.some((line) => line.division && !projectManagerFor(line.division)))
+      return setError("Each Claim division must have an assigned Manager in Settings before submission.");
     const input = buildInput(account);
     setSaving(true);
     setError("");
@@ -542,7 +557,7 @@ export function ClaimForm({
         </div>
       </header>
       <form className={styles.claimForm} onSubmit={review}>
-        {error && (
+        {error && !entryModal && (
           <div className={styles.error} role="alert">
             {error}
           </div>
@@ -860,6 +875,7 @@ export function ClaimForm({
           claimType={claimType}
           line={entryModal.line}
           mode={entryModal.mode}
+          error={error}
           receipt={entryReceipt}
           onCancel={closeEntryModal}
           onChange={(patch) =>
@@ -956,6 +972,7 @@ function ClaimEntriesTable({
                     ? `${line.from} → ${line.to}`
                     : line.supplier}
                 </span>
+                <span>{line.accountType || "Account code needed"}</span>
               </td>
               <td>
                 {claimType === "MILEAGE" ? (
@@ -999,6 +1016,7 @@ function ClaimEntryModal({
   claimType,
   line,
   mode,
+  error,
   receipt,
   onCancel,
   onChange,
@@ -1008,6 +1026,7 @@ function ClaimEntryModal({
   claimType: ClaimType;
   line: ClaimLine;
   mode: "ADD" | "EDIT";
+  error: string;
   receipt?: File;
   onCancel: () => void;
   onChange: (patch: Partial<ClaimLine>) => void;
@@ -1015,7 +1034,6 @@ function ClaimEntryModal({
   onSave: (addAnother?: boolean) => void;
 }) {
   const mileage = claimType === "MILEAGE";
-  const generalExpense = claimType === "EXPENSE";
   const entryLabel = claimEntryLabel(claimType);
   const [proofMode, setProofMode] = useState<"UPLOAD" | "DRIVE">(() =>
     line.receiptLink ? "DRIVE" : "UPLOAD",
@@ -1155,26 +1173,8 @@ function ClaimEntryModal({
                   placeholder="Where was it bought?"
                 />
               </label>
-              {generalExpense && (
+              {(
                 <>
-                  <label>
-                    <span>
-                      Type of account <em>*</em>
-                    </span>
-                    <select
-                      value={line.accountType}
-                      onChange={(event) =>
-                        onChange({ accountType: event.target.value })
-                      }
-                    >
-                      <option value="">Choose account</option>
-                      {CLAIM_ACCOUNT_TYPES.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                   <label>
                     <span>
                       Division <em>*</em>
@@ -1197,6 +1197,24 @@ function ClaimEntryModal({
               )}
             </>
           )}
+          <label className={styles.modalFullField}>
+            <span>
+              Account code <em>*</em>
+            </span>
+            <select
+              value={line.accountType ?? ""}
+              onChange={(event) =>
+                onChange({ accountType: event.target.value })
+              }
+            >
+              <option value="">Choose account code</option>
+              {CLAIM_ACCOUNT_TYPES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className={styles.modalFullField}>
             <span>
               Description & purpose <em>*</em>
@@ -1284,6 +1302,7 @@ function ClaimEntryModal({
           )}
         </div>
 
+        {error && <div className={styles.error} role="alert">{error}</div>}
         <footer>
           <span>
             {mode === "EDIT"

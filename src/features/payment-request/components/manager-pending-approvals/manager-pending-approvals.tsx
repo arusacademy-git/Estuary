@@ -204,7 +204,7 @@ export function ManagerPendingApprovals() {
               href: `/beta/project-manager/payment-requests/invoice-payments/${record.id}`,
             })),
           ...cash
-            .filter((record) => record.managerApproverId === account.id && record.status === "PENDING_MANAGER_APPROVAL")
+            .filter((record) => record.managerApproverId === account.id && ["PENDING_MANAGER_APPROVAL", "PENDING_DIRECTOR_APPROVAL"].includes(record.status))
             .map((record) => ({
               key: `CA:${record.id}`,
               id: record.id,
@@ -216,10 +216,10 @@ export function ManagerPendingApprovals() {
               amount: record.totalAmount,
               submittedAt: record.requestDate,
               status: record.status,
-              stage: record.managerPreviewedAt ? "Viewed" : "Preview",
+              stage: record.managerPreviewedAt ? "Viewed" : record.status === "PENDING_DIRECTOR_APPROVAL" ? "Information only" : "Preview",
               actionable:
                 !record.managerPreviewedAt &&
-                record.status === "PENDING_MANAGER_APPROVAL",
+                ["PENDING_MANAGER_APPROVAL", "PENDING_DIRECTOR_APPROVAL"].includes(record.status),
               reviewed: Boolean(record.managerPreviewedAt),
               details: [
                 { label: "Project", value: record.projectName },
@@ -241,7 +241,7 @@ export function ManagerPendingApprovals() {
           ...petty
             .filter(
               (record) =>
-                record.managerApproverId === account.id ||
+                (record.managerApproverIds ?? [record.managerApproverId]).includes(account.id) ||
                 record.financeReviewerId === account.id,
             )
             .map((record) => ({
@@ -256,8 +256,9 @@ export function ManagerPendingApprovals() {
               amount: record.totalAmount,
               submittedAt: record.requestDate,
               status: record.status,
-              stage: record.managerApprovedAt ? (record.requesterRole === "staff" ? "Approved" : "Previewed") : record.requesterRole === "staff" ? "Pending Manager Approval" : "Needs preview",
+              stage: record.managerActionRequired === false ? "Information only" : record.managerApprovedAt ? (record.requesterRole === "staff" ? "Approved" : "Previewed") : record.requesterRole === "staff" ? "Pending Manager Approval" : "Needs preview",
               actionable:
+                record.managerActionRequired !== false &&
                 !record.managerApprovedAt &&
                 !["RETURNED_TO_STAFF", "RECONCILED", "PAID"].includes(
                   record.status,
@@ -286,7 +287,7 @@ export function ManagerPendingApprovals() {
               href: `/beta/project-manager/payment-requests/petty-cash/${encodeURIComponent(record.requestNumber)}`,
             })),
           ...claims
-            .filter((record) => record.managerApproverId === account.id)
+            .filter((record) => (record.managerApproverIds ?? [record.managerApproverId]).includes(account.id))
             .map((record) => ({
               key: `CL:${record.id}`,
               id: record.id,
@@ -297,9 +298,9 @@ export function ManagerPendingApprovals() {
               amount: record.totalAmount,
               submittedAt: record.createdAt,
               status: record.status,
-              stage: record.managerApprovedAt ? "Previewed" : "Manager preview",
-              actionable: !record.managerApprovedAt && !["DRAFT", "RETURNED_TO_CLAIMANT"].includes(record.status),
-              reviewed: Boolean(record.managerApprovedAt),
+              stage: record.managerApprovals?.some((item) => item.managerId === account.id && item.approvedAt) ? "Approved" : record.approvalRoute === "MANAGER" ? "Pending Manager Approval" : record.approvalRoute === "DIRECTOR" ? "Information only" : "Manager preview",
+              actionable: !record.managerApprovals?.some((item) => item.managerId === account.id && item.approvedAt) && !["DRAFT", "RETURNED_TO_CLAIMANT"].includes(record.status) && (record.approvalRoute === "MANAGER" ? record.status === "PENDING_MANAGER_APPROVAL" : record.approvalRoute !== "DIRECTOR"),
+              reviewed: Boolean(record.managerApprovals?.some((item) => item.managerId === account.id && item.approvedAt)),
               details: [
                 { label: "Claim type", value: record.claimType.replaceAll("_", " ") },
                 { label: "Projects", value: [...new Set(record.lines.map((line) => line.division))].join(", ") },

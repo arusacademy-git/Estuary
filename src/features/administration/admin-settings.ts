@@ -1,5 +1,4 @@
 import { DIVISION_OPTIONS, PAYMENT_VOUCHER_ACCOUNT_OPTIONS } from '@/shared/constants/payment-options';
-import { useEffect, useState } from 'react';
 import { betaAccounts, type BetaAccount } from '@/lib/auth/beta-accounts';
 import {
   INTERNET_COMMUTE_LIMIT,
@@ -34,7 +33,7 @@ export function canAccessAdministration(account: BetaAccount | null | undefined)
 
 export function createDefaultAdminSettings(): AdminSettings {
   return {
-    programmes: DIVISION_OPTIONS.map((code) => ({ id: `programme-${code}`, code, name: code, managerId: 'nadia-hassan', active: true })),
+    programmes: DIVISION_OPTIONS.map((code) => ({ id: `programme-${code}`, code, name: code, managerId: '', active: true })),
     accountingCodes: PAYMENT_VOUCHER_ACCOUNT_OPTIONS.map((option) => ({
       id: `account-${option.value}`,
       code: option.value,
@@ -141,23 +140,27 @@ export function activeProjectManagerAccounts(settings = readAdminSettings()) {
   return betaAccounts.filter((account) => ids.has(account.id));
 }
 
-export function saveAdminSettings(settings: AdminSettings) {
+export async function loadSharedProgrammes() {
+  const response = await fetch('/api/v1/administration/programmes', { cache: 'no-store' });
+  const body = await response.json() as { data?: AdminProgramme[]; message?: string };
+  if (!response.ok || !Array.isArray(body.data)) throw new Error(body.message ?? 'Programme settings are unavailable.');
+  const settings = { ...readAdminSettings(), programmes: body.data };
   window.localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(settings));
   window.dispatchEvent(new Event(ADMIN_SETTINGS_EVENT));
+  return settings;
 }
 
-export function useAdminAccountingOptions() {
-  const defaults = PAYMENT_VOUCHER_ACCOUNT_OPTIONS;
-  const [options, setOptions] = useState(defaults);
-  useEffect(() => {
-    let active = true;
-    const refresh = () => {
-      if (!active) return;
-      setOptions(readAdminSettings().accountingCodes.filter((item) => item.active).map((item) => ({ value: item.code, label: `${item.code} – ${item.name}` })));
-    };
-    queueMicrotask(refresh);
-    window.addEventListener(ADMIN_SETTINGS_EVENT, refresh);
-    return () => { active = false; window.removeEventListener(ADMIN_SETTINGS_EVENT, refresh); };
-  }, [defaults]);
-  return options;
+export async function saveAdminSettings(settings: AdminSettings) {
+  const actor = window.localStorage.getItem('estuary-beta-account');
+  const response = await fetch('/api/v1/administration/programmes', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ actorId: actor, programmes: settings.programmes }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message ?? 'Programme settings could not be saved.');
+  }
+  window.localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(settings));
+  window.dispatchEvent(new Event(ADMIN_SETTINGS_EVENT));
 }

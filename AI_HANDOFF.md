@@ -1,5 +1,26 @@
 # AI_HANDOFF.md
 
+## 2026-11-24 — Integrated dashboard updates from main
+
+- Merged `origin/main` at `ee0ee64` into `agent/payment-type-approval-routing` without Git conflicts. The new Workflow Health dashboard referenced a missing `workflow-reminder` module, so the branch now supplies the reminder action and a focused recipient-routing test. Production build, typecheck, and dashboard/reminder tests pass after integration.
+
+## 2026-11-24 — Programme-scoped parallel approval routing
+
+- GitHub issue #183, branch `agent/payment-type-approval-routing`. New PV, Cash Advance, Travel Allowance and Petty Cash top-up requests go to Director approval with each relevant programme Manager informed at submission. New Invoice Payments and all six Claims go to their programme Manager for approval with the Director informed; a Manager's own Claim goes to a Director. Multi-programme Claims keep one request and wait for every assigned Manager. Existing submitted requests preserve their recorded route on resubmission.
+- Programme Manager mapping is shared across Arus organizations through `beta_programmes` and `/api/v1/administration/programmes`. The previous general Nadia assignment is removed; an administrator must explicitly assign a Manager to each programme code before new submissions using it. Migration `20261124090000_shared_beta_programme_managers` must run before deploying this code. Other beta Settings still use browser storage.
+- The beta sign-in still trusts a locally selected account, including administrator identity. Shared settings are appropriate for beta testing only until authenticated sessions protect the write endpoint. Local typecheck, focused routing tests, and production build pass. The Claim policy test file still has two pre-existing purchase-date expectation failures unrelated to this route change. Penang DB migration and live end-to-end approvals remain to be verified after merge.
+
+## 2026-11-24 — Restore staff dashboard API for deployable main
+
+- GitHub issue #180: current `main` imported a missing `staff-dashboard-api` module, blocking TypeScript and Docker builds after the Claim account-code PR was merged. Added the client adapter that reads the existing dashboard summary API, maps staff records and status labels, and creates My Requests deep links and action counts.
+- Production build, repository-wide TypeScript, focused ESLint, and a focused dashboard mapping test pass. No database migration is needed. This fix must merge before the Penang app can rebuild from the latest `main`.
+
+## 2026-11-24 — Account code required for every Claim entry
+
+- GitHub issue #179: the existing Claim account-code selector now appears for all six Claim types, including Mileage. The entry modal requires a selection before adding or updating a line, and the shared domain validator requires it before API submission. Old drafts and submitted snapshots remain readable; a draft without a code must be completed before submission.
+- Six focused policy cases and a local browser check of all six entry modals pass. Focused ESLint has no errors. The full policy test file retains three unrelated stale failures in existing Manager-approval and purchase-date expectations.
+- Repository-wide typecheck is blocked on current `main` by the missing `src/data/dashboard/staff-dashboard-api.ts` module imported by the staff dashboard. Tracked separately as GitHub issue #180; a production build cannot pass until that issue is fixed.
+
 ## Project Handoff Baseline
 
 - Project: Estuary
@@ -5292,3 +5313,20 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Signature storage now honors `ESTUARY_PRIVATE_STORAGE_ROOT`, matching the persistent private-storage mount used by the server compose file.
 - Limited user-facing payment-request Google Sheet entry to Payment Voucher plus Cash Advance reconciliation. Latest `main` already removed the Travel Allowance, Claim, and initial Cash Advance Sheet components; conflict resolution preserved those newer form implementations. `.env.server.example` and server build arguments now retain only PV, Appendix A, and Participant Allowance template URLs.
 - Validation before conflict resolution: 9 issue-focused tests, TypeScript, targeted ESLint, and `git diff --check` passed. The repository baseline has unrelated policy/fixture failures documented above; a repeated build also encountered the intermittent Turbopack `next/font` internal resolution failure after an earlier successful production build.
+
+## 2026-11-24 — PR #186 dashboard role API separation
+
+- Resolved the add/add conflict in `staff-dashboard-api.ts` by retaining `main`'s newer Staff-only adapter, requester filtering, direct My Requests links, and focused test.
+- Added fixed-role Staff, Manager, and Director dashboard summary functions so each dashboard adapter can no longer select another role accidentally. Manager and Director keep independent record contracts, labels, routes, action helpers, and project option types.
+- Kept Manager visibility limited to assigned approval/current-assignee records plus the Manager's own requests. Director visibility is organization-wide for the Director oversight dashboard; Staff remains limited to self-submitted records.
+- Corrected the shared Manager/Director team table to use the role-specific approval predicate supplied by its caller when choosing Review versus Open.
+- Added dashboard summary fields required by the new team and organization views (`submittedAt`, project code, and project name).
+- Verification: six focused dashboard tests passed and targeted ESLint passed. Full TypeScript reaches one unrelated `main` baseline error: `workflow-health-workspace.tsx` imports the untracked/missing `features/team-records/notifications/workflow-reminder` module.
+- PR #187 currently points to the same commit as #186 and contains the same dashboard files; it has no domain-specific changes and should be closed as a duplicate or replaced with the intended domain work.
+
+## 2026-11-25 — PR #190 workflow reminder conflict resolution
+
+- Resolved the add/add conflict in `workflow-reminder.ts` by preserving `main`'s Finance fallback, active-recipient validation, self-reminder protection, stage-specific notification copy, and existing test coverage.
+- Added PR #190's exported `WorkflowReminderStage`, Manager/Director-specific action labels, recipient labels, and clearer errors for missing or inactive assignees.
+- Expanded the focused test to cover Manager and Director labels plus the self-reminder guard.
+- Verification: focused workflow-reminder tests, targeted ESLint, full TypeScript, and `git diff --check` passed.

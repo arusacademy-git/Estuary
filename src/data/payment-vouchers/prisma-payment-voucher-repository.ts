@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
+import { programmeManagerIds, requireSameManagerIds } from '@/data/payment-requests/shared/programme-managers';
 
 import type {
   CreatePaymentVoucherInput,
@@ -480,6 +481,9 @@ export async function createPaymentVoucherInDatabase(
     ? 'PENDING_DIRECTOR_APPROVAL'
     : 'DRAFT';
   return prisma.$transaction(async (transaction) => {
+    if (submitForApproval) {
+      requireSameManagerIds(await programmeManagerIds(transaction, input.organizationId, [input.division]), [input.projectManagerId ?? '']);
+    }
     const [organization, submitter, director, workflow] = await Promise.all([
       transaction.organization.findUnique({
         where: { id: input.organizationId },
@@ -831,6 +835,7 @@ export async function submitDraftPaymentVoucherInDatabase(
     );
 
     const snapshot = readSnapshot(voucher);
+    requireSameManagerIds(await programmeManagerIds(transaction, voucher.organization_id, [snapshot.division ?? '']), [snapshot.projectManagerId ?? '']);
     const directorId = snapshot.directorId?.trim();
 
     if (!directorId) {

@@ -14,6 +14,7 @@ import styles from "./claim-confirmation.module.css";
 
 type WorkflowStage =
   | "submitted"
+  | "manager"
   | "financeReview"
   | "director"
   | "financePayment"
@@ -45,7 +46,9 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-function workflowStages(): WorkflowStage[] {
+function workflowStages(route?: ClaimRecord["approvalRoute"]): WorkflowStage[] {
+  if (route === "MANAGER") return ["submitted", "manager", "financeReview", "financePayment", "transactionProof", "completed"];
+  if (route === "DIRECTOR") return ["submitted", "director", "financeReview", "financePayment", "transactionProof", "completed"];
   return [
     "submitted",
     "financeReview",
@@ -57,6 +60,7 @@ function workflowStages(): WorkflowStage[] {
 }
 
 function currentStage(record: ClaimRecord): WorkflowStage {
+  if (record.status === "PENDING_MANAGER_APPROVAL") return "manager";
   if (record.status === "PENDING_FINANCE_VERIFICATION") return "financeReview";
   if (record.status === "PENDING_DIRECTOR_APPROVAL") return "director";
   if (["APPROVED_FOR_PAYMENT", "PAYMENT_PROCESSED"].includes(record.status))
@@ -66,6 +70,7 @@ function currentStage(record: ClaimRecord): WorkflowStage {
   if (record.status === "RETURNED_TO_CLAIMANT") {
     if (record.returnedFromStage === "FINANCE") return "financeReview";
     if (record.returnedFromStage === "DIRECTOR") return "director";
+    if (record.returnedFromStage === "MANAGER") return "manager";
     return "financeReview";
   }
   return "submitted";
@@ -106,13 +111,18 @@ export function ClaimConfirmation({
 }) {
   const [copied, setCopied] = useState(false);
   const isDraft = record.status === "DRAFT";
-  const stages = workflowStages();
+  const stages = workflowStages(record.approvalRoute);
   const director = record.directorApproverId
     ? getBetaAccount(record.directorApproverId)
     : null;
+  const managerNames = (record.managerApproverIds?.length ? record.managerApproverIds : [record.managerApproverId])
+    .filter((id): id is string => Boolean(id))
+    .map((id) => getBetaAccount(id)?.name ?? id).join(", ");
   const claimType = claimTypeDetails(record.claimType).label;
   const nextReviewer =
-    record.status === "PENDING_FINANCE_VERIFICATION"
+    record.status === "PENDING_MANAGER_APPROVAL"
+      ? (managerNames || "Assigned Manager")
+      : record.status === "PENDING_FINANCE_VERIFICATION"
       ? "Finance team"
       : record.status === "PENDING_DIRECTOR_APPROVAL"
         ? (director?.name ?? "Assigned Director")
@@ -125,10 +135,12 @@ export function ClaimConfirmation({
               : "Claim workflow";
   const headerMessage = isDraft
     ? `Your ${claimType.toLowerCase()} has been saved without entering the approval workflow.`
+    : record.status === "PENDING_MANAGER_APPROVAL"
+      ? `Your claim was sent to ${managerNames || "the assigned Manager"} for approval. Each programme Manager must approve before Finance; the Director was notified for information.`
     : record.status === "PENDING_FINANCE_VERIFICATION"
-      ? "Your claim was routed directly to Finance for verification."
+      ? record.approvalRoute ? "Your approved claim is waiting for Finance verification." : "Your claim was routed directly to Finance for verification."
       : record.status === "PENDING_DIRECTOR_APPROVAL"
-        ? `Finance verified your claim and routed it to ${director?.name ?? "the assigned Director"} for a final decision.`
+        ? record.approvalRoute === "DIRECTOR" ? `Your claim was routed to ${director?.name ?? "the assigned Director"} for approval.` : `Finance verified your claim and routed it to ${director?.name ?? "the assigned Director"} for a final decision.`
         : record.status === "APPROVED_FOR_PAYMENT"
           ? "Your claim was approved and returned to Finance for payment."
           : "Your claim has been saved in the Claims workflow.";
@@ -260,7 +272,7 @@ export function ClaimConfirmation({
       <p className={styles.note}>
         {isDraft
           ? "This Draft is private to your role and can be edited before submission."
-          : "Finance verifies the Claim first, the assigned Director makes the final decision, and Finance pays approved Claims."}
+          : record.approvalRoute === "MANAGER" ? "The assigned Manager approves the Claim, then Finance verifies and pays it." : record.approvalRoute === "DIRECTOR" ? "The assigned Director approves this Manager's Claim, then Finance verifies and pays it." : "Finance verifies the Claim first, the assigned Director makes the final decision, and Finance pays approved Claims."}
       </p>
     </main>
   );
@@ -268,6 +280,7 @@ export function ClaimConfirmation({
 
 function stageTitle(stage: WorkflowStage, isDraft: boolean) {
   if (stage === "submitted") return isDraft ? "Draft Saved" : "Claim Submitted";
+  if (stage === "manager") return "Manager Approval";
   if (stage === "financeReview") return "Finance Verification";
   if (stage === "director") return "Director Decision";
   if (stage === "financePayment") return "Finance Payment";
@@ -283,6 +296,7 @@ function stageCopy(
 ) {
   if (stage === "submitted")
     return `${record.requesterName} · ${formatDate(record.createdAt)}`;
+  if (stage === "manager") return `Approval by ${(record.managerApproverIds?.length ? record.managerApproverIds : [record.managerApproverId]).filter((id): id is string => Boolean(id)).map((id) => getBetaAccount(id)?.name ?? id).join(", ") || "the assigned Manager"}`;
   if (stage === "financeReview")
     return "Finance checks the form, receipts, policy and amount";
   if (stage === "director")

@@ -95,7 +95,7 @@ function roleWhere(scope: DashboardScope): Prisma.SubmissionWhereInput {
       current_state_code: { in: ["COMPLETED", "COMPLETE", "CLOSED", "PAID"] },
     };
   }
-  if (scope.role === "finance") return {};
+  if (scope.role === "finance" || scope.role === "director") return {};
   if (scope.role === "staff") return { submitted_by_id: scope.userId };
   return {
     OR: [
@@ -110,7 +110,7 @@ export async function listDashboardSummaryFromDatabase(scope: DashboardScope) {
   const records = await prisma.submission.findMany({
     where: {
       payment_type: { in: supportedTypes },
-      ...roleWhere(scope),
+      ...dashboardRoleWhere(scope),
     },
     select,
     orderBy: { updated_at: "desc" },

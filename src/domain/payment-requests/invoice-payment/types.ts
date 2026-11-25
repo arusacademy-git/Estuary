@@ -86,6 +86,7 @@ export type InvoicePaymentRequestRecord =
     requestNumber: string;
     requestType: 'INVOICE_PAYMENT';
     status: PaymentRequestStatus;
+    directorApprovalRequired?: boolean;
     totalAmount: number;
     managerReviewedAt?: string;
     managerReviewedById?: string;

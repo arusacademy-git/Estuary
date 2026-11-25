@@ -34,9 +34,12 @@ export function PettyCashConfirmation({
   const independentReviewer = request.financeReviewerId ? getBetaAccount(request.financeReviewerId) : undefined;
   const location = request.location === 'PENANG' ? 'Penang' : 'Kuala Lumpur';
   const requesterRole = request.requesterRole ?? 'staff';
-  const nextReviewer = requesterRole === 'staff' ? manager?.name ?? 'Manager' : 'Finance';
-  const nextStage = requesterRole === 'staff' ? 'Pending Manager Approval' : 'Finance processing';
-  const workflow = requesterRole === 'staff'
+  const directorFirst = request.status === 'PENDING_DIRECTOR_APPROVAL' && request.managerActionRequired === false;
+  const nextReviewer = directorFirst ? director?.name ?? 'Director' : requesterRole === 'staff' ? manager?.name ?? 'Manager' : 'Finance';
+  const nextStage = directorFirst ? 'Pending Director Approval' : requesterRole === 'staff' ? 'Pending Manager Approval' : 'Finance processing';
+  const workflow = directorFirst
+    ? [['Director Approval', `Assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available after Director approval'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
+    : requesterRole === 'staff'
     ? [['Manager Approval', `Mandatory review assigned to ${manager?.name ?? 'Manager'}`], ['Director Approval', `After Manager approval, assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available after Director approval'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
     : requesterRole === 'manager'
       ? [['Director Preview', `Informational preview assigned to ${director?.name ?? 'Director'}`], ['Finance Processing', 'Available immediately'], ['Payment transaction proof uploaded', 'After Finance processes payment'], ['Reconciliation', 'Requester submits receipts and returned-balance information'], ['Completed', 'After Finance verifies reconciliation']]
@@ -74,7 +77,9 @@ export function PettyCashConfirmation({
             </span>
             <span className={styles.confirmationStatus}><i />{nextStage}</span>
           </div>
-          <p>{requesterRole === 'staff'
+          <p>{directorFirst
+            ? 'Your request was sent to the assigned Director for approval. The project Manager was notified for information.'
+            : requesterRole === 'staff'
             ? 'Your request was sent to the assigned Manager for mandatory approval. After Manager approval, it moves to the Director and then Finance.'
             : 'Your request is available to Finance now. Assigned previews remain informational and do not delay payment processing.'}</p>
         </header>
@@ -93,7 +98,7 @@ export function PettyCashConfirmation({
           <h2>Workflow progress</h2>
           <ol className={styles.confirmationWorkflow} style={{ '--stage-count': workflow.length + 1 } as CSSProperties}>
             <ConfirmationStep state="complete" number="✓" title="Request Submitted" copy={request.requesterName} />
-            {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={requesterRole === 'staff' ? (index === 0 ? 'active' : 'pending') : title === 'Finance Processing' ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
+            {workflow.map(([title, copy], index) => <ConfirmationStep key={title} state={directorFirst || requesterRole === 'staff' ? (index === 0 ? 'active' : 'pending') : title === 'Finance Processing' ? 'active' : 'pending'} number={String(index + 2)} title={title} copy={copy} />)}
           </ol>
         </section>
 
@@ -108,7 +113,7 @@ export function PettyCashConfirmation({
       </section>
 
       <p className={styles.confirmationNote}>
-        {requesterRole === 'staff' ? 'Need a correction? Contact the assigned Manager before the request is approved.' : 'Need a correction? Contact Finance while the request is being processed.'}
+        {directorFirst ? 'Need a correction? Contact the assigned Director before approval.' : requesterRole === 'staff' ? 'Need a correction? Contact the assigned Manager before the request is approved.' : 'Need a correction? Contact Finance while the request is being processed.'}
       </p>
     </main>
   );

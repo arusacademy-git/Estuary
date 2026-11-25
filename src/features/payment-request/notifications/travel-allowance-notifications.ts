@@ -18,6 +18,19 @@ export function notifyTravelAllowanceSubmitted(record: TravelAllowanceRecord, ac
     message: `${actor.name} submitted ${record.requestNumber}. ${managerStage ? 'Manager review' : 'Director approval'} is required.`,
     href: managerStage ? `/beta/project-manager/payment-requests/travel-allowances/${record.id}` : `/beta/director/payment-requests/travel-allowances/${record.id}`,
   });
+  if (!managerStage) {
+    (record.managerApproverIds?.length ? record.managerApproverIds : [record.managerApproverId]).filter((id): id is string => Boolean(id && id !== actor.id)).forEach((managerId) => createSafely({
+      recipientId: managerId,
+      actorId: actor.id,
+      type: 'TRAVEL_ALLOWANCE_SUBMITTED',
+      entityType: 'TRAVEL_ALLOWANCE',
+      entityId: record.id,
+      referenceNumber: record.requestNumber,
+      title: 'Travel Allowance available to view',
+      message: `${actor.name} submitted ${record.requestNumber}. Director approval is required; your Manager view is informational.`,
+      href: `/beta/project-manager/payment-requests/travel-allowances/${record.id}`,
+    }));
+  }
 }
 
 export function notifyTravelAllowanceManagerApproved(record: TravelAllowanceRecord, actor: BetaAccount) {
