@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db/prisma";
 type DashboardScope = {
   role: "staff" | "manager" | "director" | "finance";
   userId: string;
-  view?: "ROLE" | "ORGANIZATION_COMPLETED";
+  view?: "ROLE" | "ORGANIZATION" | "ORGANIZATION_COMPLETED";
 };
 
 const supportedTypes = [
@@ -88,9 +88,8 @@ function fallbackReference(record: StoredSummary) {
   return `${prefixes[normalizedType(record.payment_type)]}-DRAFT-${record.id.slice(-6)}`;
 }
 
-export function dashboardRoleWhere(
-  scope: DashboardScope,
-): Prisma.SubmissionWhereInput {
+function roleWhere(scope: DashboardScope): Prisma.SubmissionWhereInput {
+  if (scope.view === "ORGANIZATION") return {};
   if (scope.view === "ORGANIZATION_COMPLETED") {
     return {
       current_state_code: { in: ["COMPLETED", "COMPLETE", "CLOSED", "PAID"] },
