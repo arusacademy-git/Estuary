@@ -19,11 +19,17 @@ describe('workflow reminders', () => {
     expect(workflowReminderAction(record, 'RECONCILIATION').recipientId).toBe('afiq-rahman');
   });
 
+  it('uses role-specific labels for Manager and Director approval stages', () => {
+    expect(workflowReminderAction({ ...record, status: 'PENDING_MANAGER_APPROVAL' }, 'APPROVAL').label).toBe('Remind Manager');
+    expect(workflowReminderAction({ ...record, status: 'PENDING_DIRECTOR_APPROVAL' }, 'APPROVAL').label).toBe('Remind Director');
+  });
+
   it('creates a reminder linked to the exact record and rejects an unassigned stage', () => {
     const account = getBetaAccount('daniel-lee')!;
     expect(sendWorkflowReminder({ account, record, stage: 'APPROVAL' })).toMatchObject({
       recipientId: 'nadia-hassan', entityType: 'EXPENSE_CLAIM', entityId: 'claim-1', href: record.href,
     });
-    expect(() => sendWorkflowReminder({ account, record: { ...record, currentAssigneeId: undefined }, stage: 'APPROVAL' })).toThrow('No active beta account');
+    expect(() => sendWorkflowReminder({ account, record: { ...record, currentAssigneeId: undefined }, stage: 'APPROVAL' })).toThrow('No approver is assigned');
+    expect(() => sendWorkflowReminder({ account: getBetaAccount('nadia-hassan')!, record, stage: 'APPROVAL' })).toThrow('already assigned to you');
   });
 });

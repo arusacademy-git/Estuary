@@ -5324,9 +5324,9 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Verification: six focused dashboard tests passed and targeted ESLint passed. Full TypeScript reaches one unrelated `main` baseline error: `workflow-health-workspace.tsx` imports the untracked/missing `features/team-records/notifications/workflow-reminder` module.
 - PR #187 currently points to the same commit as #186 and contains the same dashboard files; it has no domain-specific changes and should be closed as a duplicate or replaced with the intended domain work.
 
-## 2026-11-25 — Issue #191 yearly project budgets
+## 2026-11-25 — PR #190 workflow reminder conflict resolution
 
-- Added `Project.budgets` and the independent `ProjectBudget` model with decimal amount, mapped database columns, one budget per project/year, and project/year indexes.
-- Added migration `20261125090000_add_project_budgets`, including the `projects.id` foreign key with update/delete cascade. The budget table has no dependency on `ProjectManagerAssignment`, so manager changes cannot modify or delete budgets.
-- Added focused generated-schema and migration tests covering the direct Project relation, composite uniqueness, indexes, cascade, and absence of a manager-assignment reference.
-- Prisma format, schema validation, Client generation, two focused tests, targeted ESLint, full TypeScript, and `git diff --check` passed. Migration execution against a disposable PostgreSQL database was unavailable because the local Docker engine is not running; deploy remains required against the target database.
+- Resolved the add/add conflict in `workflow-reminder.ts` by preserving `main`'s Finance fallback, active-recipient validation, self-reminder protection, stage-specific notification copy, and existing test coverage.
+- Added PR #190's exported `WorkflowReminderStage`, Manager/Director-specific action labels, recipient labels, and clearer errors for missing or inactive assignees.
+- Expanded the focused test to cover Manager and Director labels plus the self-reminder guard.
+- Verification: focused workflow-reminder tests, targeted ESLint, full TypeScript, and `git diff --check` passed.
