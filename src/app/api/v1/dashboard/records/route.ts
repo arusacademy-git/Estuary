@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!["ROLE", "ORGANIZATION_COMPLETED"].includes(view)) {
+  if (!["ROLE", "ORGANIZATION", "ORGANIZATION_COMPLETED"].includes(view)) {
     return Response.json(
       {
         error: "INVALID_DASHBOARD_VIEW",
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   }
 
   if (
-    view === "ORGANIZATION_COMPLETED" &&
+    ["ORGANIZATION", "ORGANIZATION_COMPLETED"].includes(view) &&
     !["director", "finance"].includes(role)
   ) {
     return Response.json(
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const data = await listDashboardSummaryFromDatabase({
       role: role as "staff" | "manager" | "director" | "finance",
       userId,
-      view: view as "ROLE" | "ORGANIZATION_COMPLETED",
+      view: view as "ROLE" | "ORGANIZATION" | "ORGANIZATION_COMPLETED",
     });
     return Response.json({ data });
   } catch (error) {
