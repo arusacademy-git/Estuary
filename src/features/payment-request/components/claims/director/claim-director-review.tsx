@@ -130,7 +130,7 @@ export function ClaimDirectorReview({ requestId }: { requestId: string }) {
       <div className={styles.detailLayout}>
         <section className={styles.detailMain}>
           <ClaimReviewDetails
-            contextLabel="Director final decision"
+            contextLabel={record.approvalRoute === "MANAGER" ? "Director information copy" : "Director approval"}
             record={record}
             userId={account.id}
           />
@@ -139,13 +139,12 @@ export function ClaimDirectorReview({ requestId }: { requestId: string }) {
           <section className={styles.actionCard}>
             <p>Director action</p>
             <h2>
-              {actionable ? "Approve or reject Claim" : "Decision recorded"}
+              {actionable ? "Approve or reject Claim" : record.approvalRoute === "MANAGER" ? "For your information" : "Decision recorded"}
             </h2>
             {actionable ? (
               <>
                 <span>
-                  Finance has verified this Claim. Approve it for payment or
-                  reject it with a reason.
+                  {record.approvalRoute === "DIRECTOR" ? "This Manager's Claim requires your approval before Finance verification." : "Finance has verified this Claim. Approve it for payment or reject it with a reason."}
                 </span>
                 <button
                   className={styles.primary}

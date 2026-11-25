@@ -203,10 +203,9 @@ export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
   const proofComplete = ["TRANSACTION_PROOF_UPLOADED", "COMPLETED"].includes(
     status,
   );
-  const managerName = record.managerApproverId
-    ? (getBetaAccount(record.managerApproverId)?.name ??
-      record.managerApproverId)
-    : "Manager";
+  const managerName = (record.managerApproverIds?.length ? record.managerApproverIds : [record.managerApproverId])
+    .filter((id): id is string => Boolean(id))
+    .map((id) => getBetaAccount(id)?.name ?? id).join(", ") || "Manager";
   const directorName =
     getBetaAccount(
       record.directorReviewedById ?? record.directorApproverId ?? null,
@@ -243,11 +242,11 @@ export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
         returnedStage === "manager"
           ? "The Manager returned the Claim for correction."
           : record.managerApprovedAt
-            ? "The Manager reviewed the Claim."
-            : "Manager review is available while Finance verifies the Claim.",
+            ? record.approvalRoute === "MANAGER" ? "The Manager approved the Claim." : "The Manager reviewed the Claim."
+            : record.approvalRoute === "MANAGER" ? "The Manager must approve this Claim before Finance verification." : "Manager review is available while Finance verifies the Claim.",
       actorName: managerName,
       actorRole: "Manager",
-      informational: true,
+      informational: record.approvalRoute !== "MANAGER",
       state:
         returnedStage === "manager"
           ? "returned"
@@ -265,13 +264,32 @@ export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
   }
 
   const afterFinanceReview = [
-    "PENDING_DIRECTOR_APPROVAL",
+    ...(record.approvalRoute ? [] : ["PENDING_DIRECTOR_APPROVAL"]),
     "APPROVED_FOR_PAYMENT",
     "PAYMENT_PROCESSED",
     "TRANSACTION_PROOF_UPLOADED",
     "COMPLETED",
     "PAYMENT_REJECTED",
   ].includes(status);
+  const directorStage: PaymentProgressStage = {
+    id: "director",
+    kind: "approval",
+    title: "Director decision",
+    description: returnedStage === "director"
+      ? "The Director returned the Claim for correction."
+      : rejected ? "The Director rejected the Claim."
+        : record.directorReviewedAt ? "The Director approved the Claim."
+          : "The Director makes the final approval decision.",
+    actorName: directorName,
+    actorRole: "Director",
+    state: rejected ? "rejected"
+      : returnedStage === "director" ? "returned"
+        : record.directorReviewedAt ? "complete"
+          : record.status === "PENDING_DIRECTOR_APPROVAL" ? "current" : "pending",
+    completedAt: returnedStage === "director" || rejected
+      ? (record.returnedAt ?? record.updatedAt) : record.directorReviewedAt,
+  };
+  if (record.approvalRoute === "DIRECTOR") stages.push(directorStage);
   stages.push(
     {
       id: "finance-review",
@@ -292,47 +310,22 @@ export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
             : [
                   "CLAIM_SUBMITTED",
                   "PENDING_FINANCE_VERIFICATION",
-                  "PENDING_MANAGER_APPROVAL",
+                  ...(record.approvalRoute ? [] : ["PENDING_MANAGER_APPROVAL"]),
                 ].includes(status)
               ? "current"
               : "pending",
       receivedAt: record.createdAt,
     },
-    {
-      id: "director",
-      kind: "approval",
-      title: "Director decision",
-      description:
-        returnedStage === "director"
-          ? "The Director returned the Claim for correction."
-          : rejected
-            ? "The Director rejected the Claim."
-            : record.directorReviewedAt
-              ? "The Director approved the Claim for payment."
-              : "The Director makes the final approval decision.",
-      actorName: directorName,
-      actorRole: "Director",
-      state: rejected
-        ? "rejected"
-        : returnedStage === "director"
-          ? "returned"
-          : record.directorReviewedAt
-            ? "complete"
-            : record.status === "PENDING_DIRECTOR_APPROVAL"
-              ? "current"
-              : "pending",
-      completedAt:
-        returnedStage === "director" || rejected
-          ? (record.returnedAt ?? record.updatedAt)
-          : record.directorReviewedAt,
-    },
+  );
+  if (!record.approvalRoute) stages.push(directorStage);
+  stages.push(
     {
       id: "finance-payment",
       kind: "payment",
       title: "Finance payment",
       description: record.financeProcessedAt
         ? "Finance recorded and processed the Claim payment."
-        : "Finance records the payment after Director approval.",
+        : `Finance records the payment after ${record.approvalRoute === "MANAGER" ? "Manager" : "Director"} approval and verification.`,
       actorName: financeName,
       actorRole: "Finance",
       state: record.financeProcessedAt
@@ -340,7 +333,7 @@ export function ClaimWorkflow({ record }: { record: ClaimRecord }) {
         : ["APPROVED_FOR_PAYMENT", "PAYMENT_PROCESSED"].includes(status)
           ? "current"
           : "pending",
-      receivedAt: record.directorReviewedAt,
+      receivedAt: record.directorReviewedAt ?? record.managerApprovedAt,
       completedAt: record.financeProcessedAt,
     },
     {

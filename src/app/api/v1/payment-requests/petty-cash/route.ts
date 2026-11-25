@@ -19,6 +19,7 @@ export const pettyCashInputSchema = z.object({
   requestDate: z.string().trim().min(1),
   location: z.enum(['PENANG', 'KUALA_LUMPUR']),
   managerApproverId: z.string().trim(),
+  managerApproverIds: z.array(z.string().trim().min(1)).optional(),
   directorApproverId: z.string().trim(),
   financeReviewerId: z.string().trim().optional(),
   financeReviewerRole: z.enum(['manager', 'director', 'finance']).optional(),

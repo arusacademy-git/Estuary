@@ -479,7 +479,23 @@ function Progress({
     },
   ];
 
-  if (requesterRole === "staff") {
+  if (record.managerActionRequired === false) {
+    stages.push({
+      id: "director-review",
+      kind: "approval",
+      title: "Director approval",
+      description: returnedStage === "director-review"
+        ? "The Director returned the request for correction."
+        : record.directorApprovedAt ? "The Director approved the Petty Cash request." : "Waiting for Director approval; the project Manager was notified.",
+      actorName: director,
+      actorRole: "Director",
+      state: returnedStage === "director-review" ? "returned"
+        : record.directorApprovedAt ? "complete"
+          : record.status === "PENDING_DIRECTOR_APPROVAL" ? "current" : "pending",
+      receivedAt: record.createdAt,
+      completedAt: record.directorApprovedAt,
+    });
+  } else if (requesterRole === "staff") {
     stages.push(
       {
         id: "manager-review",
@@ -574,7 +590,7 @@ function Progress({
   }
 
   const approvalEnd =
-    requesterRole === "staff" ? record.directorApprovedAt : record.createdAt;
+    requesterRole === "staff" || record.managerActionRequired === false ? record.directorApprovedAt : record.createdAt;
   stages.push(
     {
       id: "finance-processing",

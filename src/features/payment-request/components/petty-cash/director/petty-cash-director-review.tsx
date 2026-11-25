@@ -53,7 +53,7 @@ export function PettyCashDirectorReview({ requestId }: PettyCashDirectorReviewPr
       notifyPettyCashDirectorApproved(updated, account);
       setRecord(updated);
       setSuccess(
-        updated.requesterRole === 'staff'
+        updated.status === 'PENDING_FINANCE_PAYMENT'
           ? 'Petty Cash approved and forwarded to Finance.'
           : 'Your informational preview was recorded. Finance processing continues independently.'
       );
@@ -77,7 +77,7 @@ export function PettyCashDirectorReview({ requestId }: PettyCashDirectorReviewPr
     return <State title="Request assigned to another Director" copy="You cannot preview this Petty Cash request." />;
   }
 
-  const requiresApproval = record.requesterRole === 'staff';
+  const requiresApproval = record.status === 'PENDING_DIRECTOR_APPROVAL' || record.requesterRole === 'staff';
   const canAct =
     !record.directorApprovedAt &&
     record.status !== 'RETURNED_TO_STAFF' &&

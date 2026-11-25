@@ -29,12 +29,27 @@ export function notifyManagerInvoicePaymentSubmitted(
     message: `${staff.name} submitted ${request.requestNumber}. Manager review is required.`,
     href: `/beta/project-manager/payment-requests/invoice-payments/${request.id}`,
   });
+  if (request.directorApprovalRequired === false) createNotificationSafely({
+    recipientId: request.directorApproverId,
+    actorId: staff.id,
+    type: 'INVOICE_PAYMENT_SUBMITTED',
+    entityType: 'INVOICE_PAYMENT',
+    entityId: request.id,
+    referenceNumber: request.requestNumber,
+    title: 'Invoice Payment submitted for your information',
+    message: `${staff.name} submitted ${request.requestNumber}. The assigned Manager will approve it before Finance; no Director action is required.`,
+    href: `/beta/director/payment-requests/invoice-payments/${request.id}`,
+  });
 }
 
 export function notifyDirectorInvoicePaymentApprovedByManager(
   request: InvoicePaymentRequestRecord,
   manager: BetaAccount,
 ) {
+  if (request.status === 'PENDING_FINANCE_REVIEW') {
+    notifyFinanceInvoicePaymentApprovedByDirector(request, manager);
+    return;
+  }
   createNotificationSafely({
     recipientId: request.directorApproverId,
     actorId: manager.id,
@@ -50,20 +65,20 @@ export function notifyDirectorInvoicePaymentApprovedByManager(
 
 export function notifyFinanceInvoicePaymentApprovedByDirector(
   request: InvoicePaymentRequestRecord,
-  director: BetaAccount,
+  approver: BetaAccount,
 ) {
   betaAccounts
     .filter((account) => account.role === 'finance')
     .forEach((financeAccount) => {
       createNotificationSafely({
         recipientId: financeAccount.id,
-        actorId: director.id,
-        type: 'INVOICE_PAYMENT_DIRECTOR_APPROVED',
+        actorId: approver.id,
+        type: approver.role === 'director' ? 'INVOICE_PAYMENT_DIRECTOR_APPROVED' : 'INVOICE_PAYMENT_MANAGER_APPROVED',
         entityType: 'INVOICE_PAYMENT',
         entityId: request.id,
         referenceNumber: request.requestNumber,
         title: 'Invoice Payment requires Finance verification',
-        message: `${director.name} approved ${request.requestNumber}. Finance verification is required.`,
+        message: `${approver.name} approved ${request.requestNumber}. Finance verification is required.`,
         href: `/beta/finance/payment-requests/invoice-payments/${request.id}`,
       });
     });

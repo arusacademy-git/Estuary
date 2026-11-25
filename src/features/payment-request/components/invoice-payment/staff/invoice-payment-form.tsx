@@ -19,10 +19,7 @@ import { notifyManagerInvoicePaymentSubmitted } from "@/features/payment-request
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
-import {
-  activeProjectManagerAccounts,
-  projectManagerFor,
-} from "@/features/administration/admin-settings";
+import { projectManagerFor } from "@/features/administration/admin-settings";
 
 import { InvoicePaymentReview } from "./invoice-payment-review";
 import { InvoicePaymentConfirmation } from "./invoice-payment-confirmation";
@@ -202,8 +199,7 @@ export function InvoicePaymentForm({
   useEffect(() => {
     if (initialRecord) return;
     const assignedManager = projectManagerFor(projectName);
-    const fallbackManager = activeProjectManagerAccounts()[0]?.id;
-    setManagerApproverId(assignedManager ?? fallbackManager ?? "");
+    setManagerApproverId(assignedManager ?? "");
   }, [initialRecord, projectName]);
 
   const requestedAmount = useMemo(() => {

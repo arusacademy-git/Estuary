@@ -26,6 +26,7 @@ import type {
   CreateClaimInput,
 } from "@/domain/payment-requests/claims/types";
 import { prisma } from "@/lib/db/prisma";
+import { programmeManagerIds, requireSameManagerIds } from '@/data/payment-requests/shared/programme-managers';
 
 /*
  * Production containers commonly mount the application directory read-only.
@@ -108,7 +109,6 @@ function readSnapshot(record: StoredClaim): CreateClaimInput {
 
 function normalizedClaimStatus(status: string): ClaimStatus {
   if (
-    status === "PENDING_MANAGER_APPROVAL" ||
     status === "PENDING_FINANCE_PROCESSING"
   )
     return "PENDING_FINANCE_VERIFICATION";
@@ -116,11 +116,34 @@ function normalizedClaimStatus(status: string): ClaimStatus {
   return status as ClaimStatus;
 }
 
+function mappedApprovalRoute(record: StoredClaim): ClaimRecord["approvalRoute"] {
+  const routedSubmission = [...record.transitions].reverse().find((item) =>
+    ["CREATE", "SUBMIT_DRAFT"].includes(item.action_code) &&
+    isRecord(item.metadata_json) &&
+    ["MANAGER", "DIRECTOR"].includes(String(item.metadata_json.approvalRoute)),
+  );
+  const routeMetadata = routedSubmission?.metadata_json;
+  return isRecord(routeMetadata) &&
+    (routeMetadata.approvalRoute === "MANAGER" || routeMetadata.approvalRoute === "DIRECTOR")
+    ? routeMetadata.approvalRoute : undefined;
+}
+
+function managerIds(input: CreateClaimInput) {
+  return [...new Set((input.managerApproverIds?.length ? input.managerApproverIds : [input.managerApproverId])
+    .filter((id): id is string => Boolean(id?.trim())))];
+}
+
 function mapClaim(record: StoredClaim): ClaimRecord {
   const snapshot = readSnapshot(record);
+  const approvalRoute = mappedApprovalRoute(record);
   const managerApproval = [...record.transitions]
     .reverse()
     .find((item) => item.action_code === "APPROVE_BY_MANAGER");
+  const managerApprovals = record.approval_steps
+    .filter((step) => step.required_role === OrgRole.MANAGER)
+    .map((step) => ({ managerId: step.assigned_user_id ?? "", approvedAt: step.decision?.decision_code === "APPROVED" ? step.decision.created_at.toISOString() : undefined }))
+    .filter((item) => item.managerId);
+  const allManagersApproved = managerApprovals.length > 0 && managerApprovals.every((item) => item.approvedAt);
   const directorReview = [...record.transitions]
     .reverse()
     .find((item) => item.action_code === "FORWARD_BY_DIRECTOR");
@@ -141,8 +164,10 @@ function mapClaim(record: StoredClaim): ClaimRecord {
     claimNumber: record.submission_number ?? `CL-DRAFT-${record.id.slice(-6)}`,
     requestType: "CLAIM_REQUEST",
     status: normalizedClaimStatus(record.current_state_code),
+    approvalRoute,
     totalAmount: Number(record.total_amount),
-    managerApprovedAt: managerApproval?.created_at.toISOString(),
+    managerApprovedAt: approvalRoute === "MANAGER" ? allManagersApproved ? managerApproval?.created_at.toISOString() : undefined : managerApproval?.created_at.toISOString(),
+    managerApprovals,
     managerApprovedById: managerApproval?.actor_user_id ?? undefined,
     directorReviewedAt: directorReview?.created_at.toISOString(),
     directorReviewedById: directorReview?.actor_user_id ?? undefined,
@@ -376,6 +401,9 @@ export async function createClaimInDatabase(
           input.directorApproverId ?? "",
           OrgRole.DIRECTOR,
         );
+        if (input.requesterRole !== "manager") {
+          for (const managerId of managerIds(input)) await requireActiveMembership(tx, input.organizationId, managerId);
+        }
         if (input.directorApproverId === input.requesterId)
           throw new Error("Select a different Director to approve this Claim.");
       }
@@ -388,6 +416,10 @@ export async function createClaimInDatabase(
       const validation =
         mode === "submit" ? validateClaimInput(input, context) : "";
       if (validation) throw new Error(validation);
+      if (mode === 'submit') {
+        const assigned = await programmeManagerIds(tx, input.organizationId, input.lines.map((line) => line.division));
+        requireSameManagerIds(assigned, managerIds(input));
+      }
 
       const receiptDocuments = new Map<string, string>();
       for (const upload of prepared) {
@@ -441,15 +473,10 @@ export async function createClaimInDatabase(
         Math.max(...lineDates.map((value) => value.getTime())),
       );
 
-      const financeId =
-        mode === "submit"
-          ? input.requesterRole === "finance"
-            ? input.requesterId
-            : await activeFinanceUser(tx, input.organizationId)
-          : undefined;
+      const approvalRoute = mode === "submit" ? input.requesterRole === "manager" ? "DIRECTOR" : "MANAGER" : undefined;
       const firstState =
-        mode === "draft" ? "DRAFT" : "PENDING_FINANCE_VERIFICATION";
-      const firstAssignee = mode === "draft" ? undefined : financeId;
+        mode === "draft" ? "DRAFT" : approvalRoute === "DIRECTOR" ? "PENDING_DIRECTOR_APPROVAL" : "PENDING_MANAGER_APPROVAL";
+      const firstAssignee = mode === "draft" ? undefined : approvalRoute === "DIRECTOR" ? input.directorApproverId : managerIds(input)[0];
       const submission = await tx.submission.create({
         data: {
           organization_id: input.organizationId,
@@ -458,7 +485,7 @@ export async function createClaimInDatabase(
           current_state_group:
             mode === "draft"
               ? StateGroup.DRAFT
-              : StateGroup.PENDING_VERIFICATION,
+              : StateGroup.IN_REVIEW,
           current_assignee_id: firstAssignee,
           submission_number: claimNumber,
           submitted_by_id: input.requesterId,
@@ -495,6 +522,7 @@ export async function createClaimInDatabase(
               actor_user_id: input.requesterId,
               metadata_json: {
                 snapshot: storedInput,
+                approvalRoute,
               } as unknown as Prisma.InputJsonValue,
             },
           },
@@ -503,17 +531,17 @@ export async function createClaimInDatabase(
               ? undefined
               : {
                 create: [
-                  ...(input.managerApproverId ? [{
-                    step_number: 1,
+                  ...(approvalRoute === "MANAGER" ? managerIds(input).map((managerId, index) => ({
+                    step_number: index + 1,
                     required_role: OrgRole.MANAGER,
-                    assigned_user_id: input.managerApproverId,
+                    assigned_user_id: managerId,
                     status_code: "ACTIVE",
-                  }] : []),
+                  })) : []),
                   {
-                    step_number: 2,
+                    step_number: managerIds(input).length + 1,
                     required_role: OrgRole.DIRECTOR,
                     assigned_user_id: input.directorApproverId,
-                    status_code: "PENDING",
+                    status_code: approvalRoute === "DIRECTOR" ? "ACTIVE" : "BYPASSED",
                   },
                 ],
               },
@@ -598,6 +626,15 @@ export async function updateClaimDraftInDatabase(
         throw new Error(
           "Only the claimant who created this Draft can update it.",
         );
+      const previousRoute = mappedApprovalRoute(existing);
+      const previouslySubmitted = existing.transitions.some((item) =>
+        item.action_code === "SUBMIT_DRAFT" ||
+        (item.action_code === "CREATE" && item.to_state_code !== "DRAFT"),
+      );
+      const approvalRoute = mode === "draft"
+        ? previousRoute
+        : previouslySubmitted ? previousRoute
+          : input.requesterRole === "manager" ? "DIRECTOR" : "MANAGER";
       await requireActiveMembership(
         tx,
         input.organizationId,
@@ -610,8 +647,15 @@ export async function updateClaimDraftInDatabase(
           input.directorApproverId ?? "",
           OrgRole.DIRECTOR,
         );
+        if (approvalRoute === "MANAGER") {
+          for (const managerId of managerIds(input)) await requireActiveMembership(tx, input.organizationId, managerId);
+        }
         if (input.directorApproverId === input.requesterId)
           throw new Error("Select a different Director to approve this Claim.");
+        if (approvalRoute) {
+          const assigned = await programmeManagerIds(tx, input.organizationId, input.lines.map((line) => line.division));
+          requireSameManagerIds(assigned, managerIds(input));
+        }
       }
 
       const receiptDocuments = new Map<string, string>();
@@ -666,18 +710,22 @@ export async function updateClaimDraftInDatabase(
         input.claimDate,
       );
       const validation =
-        mode === "submit" ? validateClaimInput(storedInput, context) : "";
+        mode === "submit" ? validateClaimInput(storedInput, context, { legacyApproval: previouslySubmitted && !approvalRoute }) : "";
       if (validation) throw new Error(validation);
 
       const financeId =
-        mode === "submit"
+        mode === "submit" && !approvalRoute
           ? input.requesterRole === "finance"
             ? input.requesterId
             : await activeFinanceUser(tx, input.organizationId)
           : undefined;
-      const nextState =
-        mode === "draft" ? "DRAFT" : "PENDING_FINANCE_VERIFICATION";
-      const assignee = mode === "draft" ? undefined : financeId;
+      const nextState = mode === "draft" ? "DRAFT"
+        : approvalRoute === "MANAGER" ? "PENDING_MANAGER_APPROVAL"
+          : approvalRoute === "DIRECTOR" ? "PENDING_DIRECTOR_APPROVAL"
+            : "PENDING_FINANCE_VERIFICATION";
+      const assignee = mode === "draft" ? undefined
+        : approvalRoute === "MANAGER" ? managerIds(input)[0]
+          : approvalRoute === "DIRECTOR" ? input.directorApproverId : financeId;
       const total = claimTotal(storedInput.claimType, storedInput.lines);
       const lineDates = storedInput.lines.map(
         (line) => new Date(`${line.expenseDate || input.claimDate}T12:00:00`),
@@ -707,7 +755,7 @@ export async function updateClaimDraftInDatabase(
             current_state_group:
               mode === "draft"
                 ? StateGroup.DRAFT
-                : StateGroup.PENDING_VERIFICATION,
+                : approvalRoute ? StateGroup.IN_REVIEW : StateGroup.PENDING_VERIFICATION,
             current_assignee_id: assignee,
             submitted_at: mode === "submit" ? new Date() : null,
             total_amount: new Prisma.Decimal(total.toFixed(2)),
@@ -737,17 +785,17 @@ export async function updateClaimDraftInDatabase(
                 ? undefined
                 : {
                   create: [
-                    ...(input.managerApproverId ? [{
-                      step_number: 1,
+                    ...(approvalRoute !== "DIRECTOR" ? managerIds(input).map((managerId, index) => ({
+                      step_number: index + 1,
                       required_role: OrgRole.MANAGER,
-                      assigned_user_id: input.managerApproverId,
+                      assigned_user_id: managerId,
                       status_code: "ACTIVE",
-                    }] : []),
+                    })) : []),
                     {
-                      step_number: 2,
+                      step_number: managerIds(input).length + 1,
                       required_role: OrgRole.DIRECTOR,
                       assigned_user_id: input.directorApproverId,
-                      status_code: "PENDING",
+                      status_code: approvalRoute === "DIRECTOR" ? "ACTIVE" : approvalRoute === "MANAGER" ? "BYPASSED" : "PENDING",
                     },
                   ],
                 },
@@ -760,6 +808,7 @@ export async function updateClaimDraftInDatabase(
                 actor_user_id: input.requesterId,
                 metadata_json: {
                   snapshot: storedInput,
+                  approvalRoute,
                 } as unknown as Prisma.InputJsonValue,
               },
             },
@@ -882,21 +931,26 @@ export async function approveClaimByManagerInDatabase(
   managerId: string,
 ) {
   return prisma.$transaction(async (tx) => {
-    const record = await getStoredClaim(tx, id);
+    const initial = await getStoredClaim(tx, id);
+    await tx.$queryRaw`SELECT id FROM "submissions" WHERE id = ${initial.id} FOR UPDATE`;
+    const record = await getStoredClaim(tx, initial.id);
     const snapshot = readSnapshot(record);
-    if (snapshot.managerApproverId !== managerId)
+    if (!managerIds(snapshot).includes(managerId))
       throw new Error("This Claim is assigned to another Manager.");
     if (
       record.transitions.some(
-        (item) => item.action_code === "APPROVE_BY_MANAGER",
+        (item) => item.action_code === "APPROVE_BY_MANAGER" && item.actor_user_id === managerId,
       )
     )
       throw new Error("The Manager preview has already been recorded.");
     if (["DRAFT", "RETURNED_TO_CLAIMANT"].includes(record.current_state_code))
       throw new Error("This Claim is not available for Manager preview.");
-    await requireRole(tx, record.organization_id, managerId, OrgRole.MANAGER);
+    if (mappedApprovalRoute(record) === "MANAGER" && record.current_state_code !== "PENDING_MANAGER_APPROVAL")
+      throw new Error("This Claim is no longer awaiting Manager approval.");
+    if (mappedApprovalRoute(record) === "MANAGER") await requireActiveMembership(tx, record.organization_id, managerId);
+    else await requireRole(tx, record.organization_id, managerId, OrgRole.MANAGER);
     const managerStep = record.approval_steps.find(
-      (step) => step.required_role === OrgRole.MANAGER,
+      (step) => step.required_role === OrgRole.MANAGER && step.assigned_user_id === managerId && step.status_code === "ACTIVE",
     );
     if (!managerStep) throw new Error("The Manager preview step is missing.");
     await tx.approvalStep.update({
@@ -912,28 +966,31 @@ export async function approveClaimByManagerInDatabase(
       "PENDING_MANAGER_APPROVAL",
       "PENDING_DIRECTOR_APPROVAL",
     ].includes(record.current_state_code);
-    const financeId = legacyState
+    const requiredManagerApproval = mappedApprovalRoute(record) === "MANAGER";
+    const remainingManagers = requiredManagerApproval
+      ? record.approval_steps.filter((step) => step.required_role === OrgRole.MANAGER && step.id !== managerStep.id && step.status_code !== "COMPLETE")
+      : [];
+    const allManagersApproved = requiredManagerApproval && remainingManagers.length === 0;
+    const nextState = requiredManagerApproval
+      ? allManagersApproved ? "PENDING_FINANCE_VERIFICATION" : "PENDING_MANAGER_APPROVAL"
+      : legacyState ? "PENDING_FINANCE_PROCESSING" : record.current_state_code;
+    const financeId = allManagersApproved || !requiredManagerApproval && legacyState
       ? await activeFinanceUser(tx, record.organization_id)
       : record.current_assignee_id;
     return mapClaim(
       await tx.submission.update({
         where: { id: record.id },
         data: {
-          current_state_code: legacyState
-            ? "PENDING_FINANCE_PROCESSING"
-            : record.current_state_code,
-          current_state_group: legacyState
+          current_state_code: nextState,
+          current_state_group: allManagersApproved || !requiredManagerApproval && legacyState
             ? StateGroup.PENDING_VERIFICATION
             : record.current_state_group,
-          current_assignee_id: legacyState
-            ? financeId
-            : record.current_assignee_id,
+          current_assignee_id: requiredManagerApproval && !allManagersApproved
+            ? remainingManagers[0]?.assigned_user_id : financeId,
           transitions: {
             create: {
               from_state_code: record.current_state_code,
-              to_state_code: legacyState
-                ? "PENDING_FINANCE_PROCESSING"
-                : record.current_state_code,
+              to_state_code: nextState,
               action_code: "APPROVE_BY_MANAGER",
               actor_type: ActorType.INTERNAL_USER,
               actor_user_id: managerId,
@@ -954,12 +1011,16 @@ export async function returnClaimByManagerInDatabase(
   if (reason.trim().length < 3)
     throw new Error("Enter correction remarks before returning the Claim.");
   return prisma.$transaction(async (tx) => {
-    const record = await getStoredClaim(tx, id);
+    const initial = await getStoredClaim(tx, id);
+    await tx.$queryRaw`SELECT id FROM "submissions" WHERE id = ${initial.id} FOR UPDATE`;
+    const record = await getStoredClaim(tx, initial.id);
     if (record.current_state_code !== "PENDING_MANAGER_APPROVAL")
       throw new Error("Only a Claim pending Manager review can be returned.");
-    if (record.current_assignee_id !== managerId)
+    const assignedStep = record.approval_steps.some((step) => step.required_role === OrgRole.MANAGER && step.assigned_user_id === managerId && step.status_code === "ACTIVE");
+    if (mappedApprovalRoute(record) === "MANAGER" ? !assignedStep : record.current_assignee_id !== managerId)
       throw new Error("This Claim is assigned to another Manager.");
-    await requireRole(tx, record.organization_id, managerId, OrgRole.MANAGER);
+    if (mappedApprovalRoute(record) === "MANAGER") await requireActiveMembership(tx, record.organization_id, managerId);
+    else await requireRole(tx, record.organization_id, managerId, OrgRole.MANAGER);
     return mapClaim(
       await tx.submission.update({
         where: { id: record.id },
@@ -1000,6 +1061,9 @@ export async function verifyClaimByFinanceInDatabase(
       throw new Error(
         "Only a Claim pending Finance verification can be forwarded.",
       );
+    const newApprovalRoute = mappedApprovalRoute(record);
+    if (newApprovalRoute && record.current_state_code !== "PENDING_FINANCE_VERIFICATION")
+      throw new Error("This Claim is not ready for Finance verification.");
     await requireRole(
       tx,
       record.organization_id,
@@ -1011,21 +1075,24 @@ export async function verifyClaimByFinanceInDatabase(
     );
     if (!directorStep || !snapshot.directorApproverId)
       throw new Error("The assigned Director is missing.");
-    await tx.approvalStep.update({
-      where: { id: directorStep.id },
-      data: { status_code: "ACTIVE" },
-    });
+    if (!newApprovalRoute) {
+      await tx.approvalStep.update({
+        where: { id: directorStep.id },
+        data: { status_code: "ACTIVE" },
+      });
+    }
+    const nextState = newApprovalRoute ? "APPROVED_FOR_PAYMENT" : "PENDING_DIRECTOR_APPROVAL";
     return mapClaim(
       await tx.submission.update({
         where: { id: record.id },
         data: {
-          current_state_code: "PENDING_DIRECTOR_APPROVAL",
-          current_state_group: StateGroup.IN_REVIEW,
-          current_assignee_id: snapshot.directorApproverId,
+          current_state_code: nextState,
+          current_state_group: newApprovalRoute ? StateGroup.PENDING_VERIFICATION : StateGroup.IN_REVIEW,
+          current_assignee_id: newApprovalRoute ? financeId : snapshot.directorApproverId,
           transitions: {
             create: {
               from_state_code: record.current_state_code,
-              to_state_code: "PENDING_DIRECTOR_APPROVAL",
+              to_state_code: nextState,
               action_code: "VERIFY_BY_FINANCE",
               actor_type: ActorType.INTERNAL_USER,
               actor_user_id: financeId,
@@ -1072,17 +1139,19 @@ export async function forwardClaimByDirectorInDatabase(
         snapshot.requesterId !== directorId
         ? snapshot.requesterId
         : await activeFinanceUser(tx, record.organization_id);
+    const directorFirst = mappedApprovalRoute(record) === "DIRECTOR";
+    const nextState = directorFirst ? "PENDING_FINANCE_VERIFICATION" : "APPROVED_FOR_PAYMENT";
     return mapClaim(
       await tx.submission.update({
         where: { id: record.id },
         data: {
-          current_state_code: "APPROVED_FOR_PAYMENT",
+          current_state_code: nextState,
           current_state_group: StateGroup.PENDING_VERIFICATION,
           current_assignee_id: financeId,
           transitions: {
             create: {
               from_state_code: record.current_state_code,
-              to_state_code: "APPROVED_FOR_PAYMENT",
+              to_state_code: nextState,
               action_code: "FORWARD_BY_DIRECTOR",
               actor_type: ActorType.INTERNAL_USER,
               actor_user_id: directorId,

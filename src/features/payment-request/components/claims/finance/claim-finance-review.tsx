@@ -115,9 +115,9 @@ export function ClaimFinanceReview({
       window.dispatchEvent(new Event("estuary:finance-queue-changed"));
       window.dispatchEvent(new Event("estuary:director-queue-changed"));
       window.dispatchEvent(new Event("estuary:action-counts-changed"));
-      setSuccess(
-        "Finance verification completed. The Claim is now awaiting the assigned Director's decision.",
-      );
+      setSuccess(updated.status === "APPROVED_FOR_PAYMENT"
+        ? "Finance verification completed. The Claim is ready for payment processing."
+        : "Finance verification completed. The Claim is now awaiting the assigned Director's decision.");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -263,7 +263,7 @@ export function ClaimFinanceReview({
               <>
                 <span>
                   Check the Claim form, receipts, policy and amount before
-                  sending it to the assigned Director for a final decision.
+                  {record.approvalRoute ? " payment processing." : " sending it to the assigned Director for a final decision."}
                 </span>
                 <button
                   className={styles.primary}
@@ -271,7 +271,7 @@ export function ClaimFinanceReview({
                   onClick={verifyAndForward}
                   type="button"
                 >
-                  Verify and send to Director →
+                  {record.approvalRoute ? "Verify for payment →" : "Verify and send to Director →"}
                 </button>
                 <div className={styles.divider}>or return with notes</div>
                 <label>
@@ -295,7 +295,7 @@ export function ClaimFinanceReview({
             ) : readyForPayment ? (
               <>
                 <span>
-                  The Director approved this Claim. Record the payment details
+                  The {record.approvalRoute === "MANAGER" ? "Manager" : "Director"} approved this Claim. Record the payment details
                   before uploading its transaction proof.
                 </span>
                 <div className={styles.financeFields}>
@@ -396,7 +396,7 @@ export function ClaimFinanceReview({
               title="Finance payment"
               copy={
                 verifying
-                  ? "Verify the Claim and send it to the assigned Director."
+                  ? record.approvalRoute ? "Verify the approved Claim for payment." : "Verify the Claim and send it to the assigned Director."
                   : readyForPayment
                     ? "Record the approved payment, then upload its transaction proof."
                     : awaitingProof

@@ -4,13 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 
 import {
-  managerCompletedStatuses,
-  managerReturnedStatuses,
-  managerTypeCodes,
-  managerTypeLabels,
-  type ManagerDashboardRecord,
-  type ManagerDashboardType,
-} from "@/data/dashboard/manager-dashboard-api";
+  directorCompletedStatuses,
+  directorReturnedStatuses,
+  directorTypeCodes,
+  directorTypeLabels,
+  type DirectorDashboardRecord,
+  type DirectorDashboardType,
+} from "@/data/dashboard/director-dashboard-api";
 
 import styles from "./director-dashboard-org-overview.module.css";
 
@@ -28,9 +28,9 @@ const ageInDays = (value: string, now: Date) =>
     Math.floor((now.getTime() - new Date(value).getTime()) / 86_400_000),
   );
 
-function statusTone(record: ManagerDashboardRecord) {
-  if (managerCompletedStatuses.has(record.status)) return "complete";
-  if (managerReturnedStatuses.has(record.status)) return "returned";
+function statusTone(record: DirectorDashboardRecord) {
+  if (directorCompletedStatuses.has(record.status)) return "complete";
+  if (directorReturnedStatuses.has(record.status)) return "returned";
   return "pending";
 }
 
@@ -39,17 +39,17 @@ export function DirectorDashboardOrgOverview({
   records,
 }: {
   now: Date;
-  records: ManagerDashboardRecord[];
+  records: DirectorDashboardRecord[];
 }) {
   const completed = records.filter((record) =>
-    managerCompletedStatuses.has(record.status),
+    directorCompletedStatuses.has(record.status),
   );
   const inProgress = records.filter((record) => pendingStatuses(record.status));
   const unreconciled = records.filter((record) =>
     record.status.includes("RECONCILIATION"),
   );
   const returned = records.filter((record) =>
-    managerReturnedStatuses.has(record.status),
+    directorReturnedStatuses.has(record.status),
   );
   const delayedApprovals = records.filter(
     (record) =>
@@ -61,21 +61,21 @@ export function DirectorDashboardOrgOverview({
       record.status.includes("FINANCE") &&
       ageInDays(record.updatedAt, now) >= 5,
   );
-  const byType = Object.keys(managerTypeLabels).map((type) => {
-    const paymentType = type as ManagerDashboardType;
+  const byType = Object.keys(directorTypeLabels).map((type) => {
+    const paymentType = type as DirectorDashboardType;
     const typed = records.filter((record) => record.type === paymentType);
     return {
       active: typed.filter(
-        (record) => !managerCompletedStatuses.has(record.status),
+        (record) => !directorCompletedStatuses.has(record.status),
       ).length,
       attention: typed.filter(
         (record) =>
-          managerReturnedStatuses.has(record.status) ||
+          directorReturnedStatuses.has(record.status) ||
           (pendingStatuses(record.status) &&
             ageInDays(record.updatedAt, now) >= 5),
       ).length,
       done: typed.filter((record) =>
-        managerCompletedStatuses.has(record.status),
+        directorCompletedStatuses.has(record.status),
       ).length,
       paymentType,
     };
@@ -212,7 +212,7 @@ export function DirectorDashboardOrgOverview({
                 key={item.paymentType}
               >
                 <i data-type={item.paymentType}>
-                  {managerTypeCodes[item.paymentType]}
+                  {directorTypeCodes[item.paymentType]}
                 </i>
                 <span>{item.active}</span>
                 <span>{item.done}</span>

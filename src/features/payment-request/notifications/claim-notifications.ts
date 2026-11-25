@@ -20,7 +20,7 @@ const recordHref = (record: ClaimRecord) =>
 function notifyFinance(
   record: ClaimRecord,
   actor: BetaAccount,
-  type: "CLAIM_SUBMITTED" | "CLAIM_DIRECTOR_FORWARDED",
+  type: "CLAIM_SUBMITTED" | "CLAIM_MANAGER_APPROVED" | "CLAIM_DIRECTOR_FORWARDED",
   title: string,
   message: string,
 ) {
@@ -45,6 +45,58 @@ function notifyFinance(
 }
 
 export function notifyClaimSubmitted(record: ClaimRecord, actor: BetaAccount) {
+  if (record.approvalRoute === "MANAGER" && (record.managerApproverIds?.length || record.managerApproverId)) {
+    (record.managerApproverIds?.length ? record.managerApproverIds : [record.managerApproverId!]).forEach((managerId) => createSafely({
+      recipientId: managerId,
+      actorId: actor.id,
+      type: "CLAIM_SUBMITTED",
+      entityType: "EXPENSE_CLAIM",
+      entityId: record.id,
+      referenceNumber: record.claimNumber,
+      title: "Claim requires Manager approval",
+      message: `${actor.name} submitted ${record.claimNumber}. Your approval is required before Finance verification.`,
+      href: `/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`,
+    }));
+    if (record.directorApproverId && record.directorApproverId !== actor.id) {
+      createSafely({
+        recipientId: record.directorApproverId,
+        actorId: actor.id,
+        type: "CLAIM_SUBMITTED",
+        entityType: "EXPENSE_CLAIM",
+        entityId: record.id,
+        referenceNumber: record.claimNumber,
+        title: "Claim submitted for your information",
+        message: `${actor.name} submitted ${record.claimNumber}. The assigned Manager will approve it; no Director action is required.`,
+        href: `/beta/director/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`,
+      });
+    }
+    return;
+  }
+  if (record.approvalRoute === "DIRECTOR" && record.directorApproverId) {
+    createSafely({
+      recipientId: record.directorApproverId,
+      actorId: actor.id,
+      type: "CLAIM_SUBMITTED",
+      entityType: "EXPENSE_CLAIM",
+      entityId: record.id,
+      referenceNumber: record.claimNumber,
+      title: "Manager's Claim requires Director approval",
+      message: `${actor.name} submitted ${record.claimNumber}. Your approval is required before Finance verification.`,
+      href: `/beta/director/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`,
+    });
+    (record.managerApproverIds ?? []).filter((id) => id !== actor.id).forEach((managerId) => createSafely({
+      recipientId: managerId,
+      actorId: actor.id,
+      type: "CLAIM_SUBMITTED",
+      entityType: "EXPENSE_CLAIM",
+      entityId: record.id,
+      referenceNumber: record.claimNumber,
+      title: "Claim submitted for your information",
+      message: `${actor.name} submitted ${record.claimNumber}. Director approval is required; no Manager action is needed.`,
+      href: `/beta/project-manager/payment-requests/claims/${encodeURIComponent(record.claimNumber)}`,
+    }));
+    return;
+  }
   if (record.status !== "PENDING_FINANCE_VERIFICATION") return;
   notifyFinance(
     record,
@@ -59,6 +111,9 @@ export function notifyClaimManagerApproved(
   record: ClaimRecord,
   actor: BetaAccount,
 ) {
+  if (record.approvalRoute === "MANAGER" && record.status === "PENDING_FINANCE_VERIFICATION") {
+    notifyFinance(record, actor, "CLAIM_MANAGER_APPROVED", "Claim requires Finance verification", `${actor.name} approved ${record.claimNumber}. Finance verification can begin.`);
+  }
   createSafely({
     recipientId: record.requesterId,
     actorId: actor.id,
@@ -66,8 +121,8 @@ export function notifyClaimManagerApproved(
     entityType: "EXPENSE_CLAIM",
     entityId: record.id,
     referenceNumber: record.claimNumber,
-    title: "Manager preview recorded",
-    message: `${actor.name} completed the informational preview for ${record.claimNumber}. Finance processing continues independently.`,
+    title: record.approvalRoute === "MANAGER" ? "Claim approved by Manager" : "Manager preview recorded",
+    message: record.approvalRoute === "MANAGER" ? record.status === "PENDING_FINANCE_VERIFICATION" ? `${actor.name} approved ${record.claimNumber}. All assigned Managers have approved; it has moved to Finance.` : `${actor.name} approved their programme entries in ${record.claimNumber}. Other Manager approvals are still pending.` : `${actor.name} completed the informational preview for ${record.claimNumber}. Finance processing continues independently.`,
     href: recordHref(record),
   });
 }
@@ -87,13 +142,13 @@ export function notifyClaimDirectorForwarded(
     message: `${actor.name} approved ${record.claimNumber}. It has returned to Finance for payment processing.`,
     href: recordHref(record),
   });
-  if (record.status === "APPROVED_FOR_PAYMENT") {
+  if (record.status === "APPROVED_FOR_PAYMENT" || record.approvalRoute === "DIRECTOR" && record.status === "PENDING_FINANCE_VERIFICATION") {
     notifyFinance(
       record,
       actor,
       "CLAIM_DIRECTOR_FORWARDED",
-      "Claim approved for payment",
-      `${record.claimNumber} was approved by the assigned Director and is ready for payment processing.`,
+      record.status === "APPROVED_FOR_PAYMENT" ? "Claim approved for payment" : "Claim requires Finance verification",
+      record.status === "APPROVED_FOR_PAYMENT" ? `${record.claimNumber} was approved by the assigned Director and is ready for payment processing.` : `${record.claimNumber} was approved by the assigned Director and requires Finance verification.`,
     );
   }
 }

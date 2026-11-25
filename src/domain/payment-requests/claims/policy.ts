@@ -47,6 +47,7 @@ export function claimLimit(
 export function validateClaimInput(
   input: CreateClaimInput,
   context: ClaimPolicyContext,
+  options: { legacyApproval?: boolean } = {},
 ) {
   if (!input.requesterContact.trim() || !input.claimDate)
     return "Complete the claim date and contact information.";
@@ -54,10 +55,19 @@ export function validateClaimInput(
     return "Choose the Director who will make the final Claim decision.";
   if (input.directorApproverId === input.requesterId)
     return "A claimant cannot approve their own Claim. Choose another Director.";
+  if (!options.legacyApproval && input.requesterRole !== "manager" && !(input.managerApproverIds?.length || input.managerApproverId?.trim()))
+    return "Each Claim programme must have an assigned Manager.";
+  if (input.requesterRole !== "manager" && input.managerApproverId === input.requesterId)
+    return "A claimant cannot approve their own Claim.";
   if (!input.lines.length) return "Add at least one claim item.";
   if (input.claimType === "TECH" && context.techExtendedLockedUntil) {
     return `Tech claims are unavailable until ${formatDate(context.techExtendedLockedUntil)} because the RM1,000.00 option was previously used.`;
   }
+
+  if (input.lines.some((line) => !line.accountType?.trim()))
+    return "Choose an account code for every claim entry.";
+  if (!options.legacyApproval && input.lines.some((line) => !line.division?.trim()))
+    return "Choose a division for every claim entry so its assigned Manager can be identified.";
 
   const incomplete = input.lines.some((line) => {
     if (!line.expenseDate || !line.details.trim()) return true;
@@ -77,7 +87,7 @@ export function validateClaimInput(
     if (!line.supplier.trim() || !hasReceipt || Number(line.amount) <= 0)
       return true;
     if (input.claimType === "EXPENSE")
-      return !line.accountType.trim() || !line.division.trim();
+      return !line.division.trim();
     return false;
   });
   if (incomplete)

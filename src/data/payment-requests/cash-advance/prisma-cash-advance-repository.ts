@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 
 import { prisma } from '@/lib/db/prisma';
+import { programmeManagerIds, requireSameManagerIds } from '@/data/payment-requests/shared/programme-managers';
 import {
   CASH_ADVANCE_RECONCILIATION_DAYS,
   addCalendarDays,
@@ -285,20 +286,22 @@ export async function listCashAdvancesFromDatabase(scope?: ListScope) {
 export async function previewCashAdvanceByManagerInDatabase(id: string, managerId: string) {
   return prisma.$transaction(async (tx) => {
     const record = await getStored(tx, id);
-    if (record.current_state_code !== 'PENDING_MANAGER_APPROVAL') {
-      throw new Error('This Cash Advance is no longer awaiting Manager approval.');
+    if (!['PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL'].includes(record.current_state_code)) {
+      throw new Error('This Cash Advance is no longer available for Manager preview.');
     }
-    if (record.current_assignee_id !== managerId) {
+    if (record.ca_detail?.manager_user_id !== managerId) {
       throw new Error('This Cash Advance is assigned to another Manager.');
     }
-    const membership = await requireRole(tx, record.organization_id, managerId, 'MANAGER');
+    const membership = record.approval_steps.some((step) => step.required_role === 'MANAGER')
+      ? await requireRole(tx, record.organization_id, managerId, 'MANAGER')
+      : await requireActiveMembership(tx, record.organization_id, managerId);
     if (latestTransition(record, 'PREVIEW_BY_MANAGER')) return mapCashAdvance(record);
     await tx.submissionTransition.create({
       data: {
         submission_id: record.id,
-        from_state_code: 'PENDING_MANAGER_APPROVAL',
+        from_state_code: record.current_state_code,
         action_code: 'PREVIEW_BY_MANAGER',
-        to_state_code: 'PENDING_MANAGER_APPROVAL',
+        to_state_code: record.current_state_code,
         actor_type: ActorType.INTERNAL_USER,
         actor_user_id: managerId,
         actor_membership_id: membership.id,
@@ -323,9 +326,11 @@ export async function createCashAdvanceInDatabase(input: CreateCashAdvanceInput)
   const total = input.lines.reduce((sum, line) => sum + line.amount, 0);
 
   return prisma.$transaction(async (tx) => {
+    const assignedManagers = await programmeManagerIds(tx, input.organizationId, [input.projectName]);
+    requireSameManagerIds(assignedManagers, [input.managerApproverId]);
     const [staffMembership] = await Promise.all([
       requireActiveMembership(tx, input.organizationId, input.requesterId),
-      requireRole(tx, input.organizationId, input.managerApproverId, 'MANAGER'),
+      requireActiveMembership(tx, input.organizationId, input.managerApproverId),
       requireRole(tx, input.organizationId, input.directorApproverId, 'DIRECTOR'),
     ]);
     await requireActiveSignature(tx, input.organizationId, input.requesterId, input.staffSignatureKey, staffMembership.signature_url);
@@ -340,9 +345,9 @@ export async function createCashAdvanceInDatabase(input: CreateCashAdvanceInput)
       data: {
         organization_id: input.organizationId,
         payment_type: PaymentType.CASH_ADVANCE,
-        current_state_code: 'PENDING_MANAGER_APPROVAL',
+        current_state_code: 'PENDING_DIRECTOR_APPROVAL',
         current_state_group: StateGroup.IN_REVIEW,
-        current_assignee_id: input.managerApproverId,
+        current_assignee_id: input.directorApproverId,
         submission_number: requestNumber,
         submitted_by_id: input.requesterId,
         submitted_at: new Date(),
@@ -366,15 +371,14 @@ export async function createCashAdvanceInDatabase(input: CreateCashAdvanceInput)
         },
         approval_steps: {
           create: [
-            { step_number: 1, required_role: 'MANAGER', assigned_user_id: input.managerApproverId, status_code: 'ACTIVE' },
-            { step_number: 2, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'PENDING' },
+            { step_number: 1, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'ACTIVE' },
           ],
         },
         transitions: {
           create: {
             from_state_code: 'NONE',
             action_code: 'CREATE',
-            to_state_code: 'PENDING_MANAGER_APPROVAL',
+            to_state_code: 'PENDING_DIRECTOR_APPROVAL',
             actor_type: ActorType.INTERNAL_USER,
             actor_user_id: input.requesterId,
             metadata_json: { snapshot: input, signatureKey: input.staffSignatureKey } as Prisma.InputJsonValue,
@@ -581,9 +585,15 @@ export async function resubmitCashAdvanceInDatabase(id: string, input: CreateCas
       throw new Error('Only a returned Cash Advance request can be amended.');
     }
     if (record.submitted_by_id !== input.requesterId) throw new Error('Only the original Staff requester can amend this Cash Advance.');
+    if (!record.approval_steps.some((step) => step.required_role === 'MANAGER')) {
+      const assignedManagers = await programmeManagerIds(tx, record.organization_id, [input.projectName]);
+      requireSameManagerIds(assignedManagers, [input.managerApproverId]);
+    }
     const [staffMembership] = await Promise.all([
       requireRole(tx, record.organization_id, input.requesterId, 'STAFF'),
-      requireRole(tx, record.organization_id, input.managerApproverId, 'MANAGER'),
+      record.approval_steps.some((step) => step.required_role === 'MANAGER')
+        ? requireRole(tx, record.organization_id, input.managerApproverId, 'MANAGER')
+        : requireActiveMembership(tx, record.organization_id, input.managerApproverId),
       requireRole(tx, record.organization_id, input.directorApproverId, 'DIRECTOR'),
     ]);
     await requireActiveSignature(tx, record.organization_id, input.requesterId, input.staffSignatureKey, staffMembership.signature_url);
@@ -601,19 +611,25 @@ export async function resubmitCashAdvanceInDatabase(id: string, input: CreateCas
       where: { submission_id: record.id },
       data: { purpose_text: input.purpose, manager_user_id: input.managerApproverId, director_user_id: input.directorApproverId },
     });
+    // Existing Manager-first requests retain that route after correction.
+    // Newly created requests have no Manager approval step.
+    const legacyManagerGate = record.approval_steps.some((step) => step.required_role === 'MANAGER');
     await tx.approvalStep.createMany({
-      data: [
-        { submission_id: record.id, step_number: nextStep, required_role: 'MANAGER', assigned_user_id: input.managerApproverId, status_code: 'ACTIVE' },
-        { submission_id: record.id, step_number: nextStep + 1, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'PENDING' },
-      ],
+      data: legacyManagerGate
+        ? [
+          { submission_id: record.id, step_number: nextStep, required_role: 'MANAGER', assigned_user_id: input.managerApproverId, status_code: 'ACTIVE' },
+          { submission_id: record.id, step_number: nextStep + 1, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'PENDING' },
+        ]
+        : [{ submission_id: record.id, step_number: nextStep, required_role: 'DIRECTOR', assigned_user_id: input.directorApproverId, status_code: 'ACTIVE' }],
     });
+    const nextState = legacyManagerGate ? 'PENDING_MANAGER_APPROVAL' : 'PENDING_DIRECTOR_APPROVAL';
     const total = input.lines.reduce((sum, line) => sum + line.amount, 0);
     await tx.submissionTransition.create({
       data: {
         submission_id: record.id,
         from_state_code: 'RETURNED_TO_STAFF',
         action_code: 'RESUBMIT',
-        to_state_code: 'PENDING_MANAGER_APPROVAL',
+        to_state_code: nextState,
         actor_type: ActorType.INTERNAL_USER,
         actor_user_id: input.requesterId,
         metadata_json: { snapshot: input, signatureKey: input.staffSignatureKey } as Prisma.InputJsonValue,
@@ -622,9 +638,9 @@ export async function resubmitCashAdvanceInDatabase(id: string, input: CreateCas
     const updated = await tx.submission.update({
       where: { id: record.id },
       data: {
-        current_state_code: 'PENDING_MANAGER_APPROVAL',
+        current_state_code: nextState,
         current_state_group: StateGroup.IN_REVIEW,
-        current_assignee_id: input.managerApproverId,
+        current_assignee_id: legacyManagerGate ? input.managerApproverId : input.directorApproverId,
         total_amount: new Prisma.Decimal(total.toFixed(2)),
         description: input.purpose,
       },

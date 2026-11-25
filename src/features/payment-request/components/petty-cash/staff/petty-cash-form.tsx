@@ -21,7 +21,7 @@ import {
   type PettyCashRequestLine,
 } from "@/domain/payment-requests/petty-cash/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { isProjectManagerAccount } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
 import { notifyPettyCashSubmitted } from "@/features/payment-request/notifications/petty-cash-notifications";
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
@@ -74,6 +74,11 @@ export function PettyCashForm({
   const [lines, setLines] = useState<PettyCashRequestLine[]>(
     initialRecord?.lines ?? [makeLine()],
   );
+  const assignedManagerIds = [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))];
+  useEffect(() => {
+    if (initialRecord) return;
+    queueMicrotask(() => setManagerId(assignedManagerIds[0] ?? ""));
+  }, [initialRecord, lines]);
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -140,29 +145,20 @@ export function PettyCashForm({
   function buildInput(
     currentAccount: NonNullable<typeof account>,
   ): CreatePettyCashInput {
+    const requesterRole = currentAccount.role === "staff" && isProjectManagerAccount(currentAccount)
+      ? "manager" : currentAccount.role;
     return {
       organizationId: "beta-arus-org",
       requesterId: currentAccount.id,
-      requesterRole: currentAccount.role,
+      requesterRole,
       requesterName: currentAccount.name,
       requesterPosition: currentAccount.position,
       requesterContact: contact.trim(),
       requestDate,
       location,
-      managerApproverId:
-        currentAccount.role === "staff"
-          ? managerId
-          : currentAccount.role === "finance" &&
-            financeReviewerRole === "manager"
-            ? financeReviewerId
-            : currentAccount.id,
-      directorApproverId:
-        currentAccount.role === "staff" || currentAccount.role === "manager"
-          ? directorId
-          : currentAccount.role === "finance" &&
-            financeReviewerRole === "director"
-            ? financeReviewerId
-            : currentAccount.id,
+      managerApproverId: managerId,
+      managerApproverIds: assignedManagerIds,
+      directorApproverId: directorId,
       financeReviewerId:
         currentAccount.role === "finance" ? financeReviewerId : undefined,
       financeReviewerRole:
@@ -180,7 +176,9 @@ export function PettyCashForm({
       return setError("Sign in before submitting a Petty Cash request.");
     }
     const input = buildInput(account);
-    const validation = validatePettyCashInput(input);
+    if (!initialRecord && lines.some((line) => line.division && !projectManagerFor(line.division)))
+      return setError("Each Petty Cash division must have an assigned Manager in Settings before submission.");
+    const validation = validatePettyCashInput(input, { legacyRoute: Boolean(initialRecord?.managerActionRequired) });
     if (validation) return setError(validation);
     if (!confirmed)
       return setError(
@@ -471,7 +469,7 @@ export function PettyCashForm({
                     ))}
                   </select>
                 </label>
-                {(account?.role === "staff" || account?.role === "manager") && (
+                {account && (
                   <label
                     className={`${styles.reviewerField} ${account?.role === "manager"
                         ? styles.reviewerFieldFull
@@ -479,7 +477,7 @@ export function PettyCashForm({
                       }`}
                   >
                     <span>
-                      Director previewer{" "}
+                      Director approver{" "}
                       <em className={styles.requiredMark}>*</em>
                     </span>
                     <select
@@ -487,7 +485,7 @@ export function PettyCashForm({
                       onChange={(event) => setDirectorId(event.target.value)}
                     >
                       <option value="">Choose Director</option>
-                      {directors.map((item) => (
+                      {directors.filter((item) => item.id !== account.id).map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name}
                         </option>
@@ -495,23 +493,14 @@ export function PettyCashForm({
                     </select>
                   </label>
                 )}
-                {account?.role === "staff" && (
+                {account?.role === "staff" && !isProjectManagerAccount(account) && (
                   <label className={styles.reviewerField}>
                     <span>
-                      Manager reviewer{" "}
+                      Programme Manager(s) notified{" "}
                       <em className={styles.requiredMark}>*</em>
                     </span>
-                    <select
-                      value={managerId}
-                      onChange={(event) => setManagerId(event.target.value)}
-                    >
-                      <option value="">Choose Manager</option>
-                      {managers.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
+                    {initialRecord ? <select value={managerId} onChange={(event) => setManagerId(event.target.value)}><option value="">Choose Manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+                      : <input disabled value={assignedManagerIds.map((id) => betaAccounts.find((item) => item.id === id)?.name ?? id).join(", ") || "Unassigned"} />}
                   </label>
                 )}
                 {account?.role === "finance" && (

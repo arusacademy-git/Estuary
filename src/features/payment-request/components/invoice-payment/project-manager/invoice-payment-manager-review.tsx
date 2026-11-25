@@ -65,7 +65,9 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
             const updated = await reviewInvoicePaymentByManager(record.id, account.id);
             notifyDirectorInvoicePaymentApprovedByManager(updated, account);
             setRecord(updated);
-            setSuccess('The Invoice Payment was reviewed and forwarded to the Director.');
+            setSuccess(updated.status === 'PENDING_FINANCE_REVIEW'
+              ? 'The Invoice Payment was approved and forwarded to Finance.'
+              : 'The Invoice Payment was reviewed and forwarded to the Director.');
         } catch (actionError) {
             setError(actionError instanceof Error ? actionError.message : 'The request could not be forwarded.');
         } finally {
@@ -145,7 +147,7 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
                 <div className={styles.rightRail}>
                     <aside className={styles.actionPanel}>
                         <p>Manager action</p><h2>{canAct ? 'Review and forward' : 'Review recorded'}</h2>
-                        {canAct ? <><span>Confirm the information is complete, or return it to Staff with correction notes. No signature is required.</span><button className={styles.primaryAction} disabled={isSaving} type="button" onClick={forwardToDirector}>Review and forward to Director <b aria-hidden="true">→</b></button><div className={styles.actionDivider}><span>or return with notes</span></div><label><span>Reason for returning</span><textarea rows={4} placeholder="Explain what Staff needs to correct" value={returnRemarks} onChange={(event) => setReturnRemarks(event.target.value)} /></label><button className={styles.returnAction} disabled={isSaving || !returnRemarks.trim()} type="button" onClick={returnToStaff}>Return to Staff</button></> : <><span>This request is now: <strong>{standardPaymentStatusLabel(record.status)}</strong>.</span>{record.managerReviewedAt && <small>Reviewed {date(record.managerReviewedAt)}</small>}{record.managerReturnRemarks && <div className={styles.returnedReason}><strong>Reason of rejection</strong><p>{record.managerReturnRemarks}</p></div>}</>}
+                        {canAct ? <><span>Confirm the information is complete, or return it to Staff with correction notes. No signature is required.</span><button className={styles.primaryAction} disabled={isSaving} type="button" onClick={forwardToDirector}>Approve and forward <b aria-hidden="true">→</b></button><div className={styles.actionDivider}><span>or return with notes</span></div><label><span>Reason for returning</span><textarea rows={4} placeholder="Explain what Staff needs to correct" value={returnRemarks} onChange={(event) => setReturnRemarks(event.target.value)} /></label><button className={styles.returnAction} disabled={isSaving || !returnRemarks.trim()} type="button" onClick={returnToStaff}>Return to Staff</button></> : <><span>This request is now: <strong>{standardPaymentStatusLabel(record.status)}</strong>.</span>{record.managerReviewedAt && <small>Reviewed {date(record.managerReviewedAt)}</small>}{record.managerReturnRemarks && <div className={styles.returnedReason}><strong>Reason of rejection</strong><p>{record.managerReturnRemarks}</p></div>}</>}
                     </aside>
                     <WorkflowProgress record={record} directorName={directorName} />
                 </div>
@@ -155,29 +157,28 @@ export function InvoicePaymentManagerReview({ requestId }: { requestId: string }
 }
 
 function WorkflowProgress({ record, directorName }: { record: InvoicePaymentRequestRecord; directorName: string }) {
+    const directorGate = record.directorApprovalRequired !== false;
     const activeStep = record.status === 'PENDING_MANAGER_REVIEW' || record.status === 'RETURNED_TO_STAFF'
         ? 2
-        : record.status === 'PENDING_DIRECTOR_REVIEW'
-            ? 3
-            : record.status === 'PENDING_FINANCE_REVIEW'
-                ? 4
-                : 5;
+        : record.status === 'PENDING_DIRECTOR_REVIEW' ? 3
+            : record.status === 'PENDING_FINANCE_REVIEW' ? (directorGate ? 4 : 3)
+                : directorGate ? 5 : 4;
     const isCompleted = record.status === 'COMPLETED';
     const steps = [
         { title: 'Request Submitted', copy: `Submitted by ${record.staffName}` },
-        { title: 'Manager Review', copy: record.status === 'RETURNED_TO_STAFF' ? 'Returned to Staff for correction' : 'Manager verification' },
-        { title: 'Director Review', copy: `Assigned to ${directorName}` },
+        { title: 'Manager Approval', copy: record.status === 'RETURNED_TO_STAFF' ? 'Returned to Staff for correction' : 'Manager verification' },
+        ...(directorGate ? [{ title: 'Director Review', copy: `Assigned to ${directorName}` }] : []),
         { title: 'Finance Verification', copy: 'Payment checks and confirmation' },
         { title: 'Completed', copy: 'Request verified and closed' },
     ];
 
     return (
         <aside className={styles.progressPanel}>
-            <header><p>Payment progress</p><span>Step {activeStep} of 5</span></header>
+            <header><p>Payment progress</p><span>Step {activeStep} of {steps.length}</span></header>
             <ol>
                 {steps.map((step, index) => {
                     const number = index + 1;
-                    const state = number < activeStep || (isCompleted && number === 5) ? 'complete' : number === activeStep ? 'active' : 'pending';
+                    const state = number < activeStep || (isCompleted && number === steps.length) ? 'complete' : number === activeStep ? 'active' : 'pending';
                     return <li className={styles.progressStep} data-state={state} key={step.title}><i aria-hidden="true">{state === 'complete' ? '✓' : ''}</i><div><strong>{step.title}</strong><small>{state === 'active' ? `Current stage: ${step.copy}` : step.copy}</small></div></li>;
                 })}
             </ol>
