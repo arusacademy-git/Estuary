@@ -1,10 +1,10 @@
 export type DashboardSummaryPaymentType =
-  | 'PAYMENT_VOUCHER'
-  | 'INVOICE_PAYMENT'
-  | 'TRAVEL_ALLOWANCE'
-  | 'CASH_ADVANCE'
-  | 'PETTY_CASH'
-  | 'EXPENSE_CLAIM';
+  | "PAYMENT_VOUCHER"
+  | "INVOICE_PAYMENT"
+  | "TRAVEL_ALLOWANCE"
+  | "CASH_ADVANCE"
+  | "PETTY_CASH"
+  | "EXPENSE_CLAIM";
 
 export type DashboardSummaryRecord = {
   id: string;
