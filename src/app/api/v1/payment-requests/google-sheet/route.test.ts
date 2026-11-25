@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Workbook } from 'exceljs';
 
-import { richLinksFromHtml, richLinksFromWorkbook } from './route';
+import { richLinksFromHtml, richLinksFromWorkbook } from './rich-links';
 
 describe('public Google Sheet smart-chip links', () => {
   it('keeps a smart-chip label mapped to its clickable Drive URL', () => {
@@ -22,7 +22,7 @@ describe('public Google Sheet smart-chip links', () => {
     `);
 
     expect(links['Receipt file']).toBe(
-      'https://drive.google.com/file/d/receipt/view',
+      'https://drive.google.com/file/d/receipt/view'
     );
   });
 });

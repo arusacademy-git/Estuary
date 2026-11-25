@@ -5324,6 +5324,13 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Verification: six focused dashboard tests passed and targeted ESLint passed. Full TypeScript reaches one unrelated `main` baseline error: `workflow-health-workspace.tsx` imports the untracked/missing `features/team-records/notifications/workflow-reminder` module.
 - PR #187 currently points to the same commit as #186 and contains the same dashboard files; it has no domain-specific changes and should be closed as a duplicate or replaced with the intended domain work.
 
+## 2026-11-25 — Issue #197 production-build hotfix after PR #195
+
+- Restored the independent Director dashboard contract removed by PR #195: Director record/project types, type labels/codes, completion/return sets, requester-action helper, and role-specific summary functions. Preserved PR #195's organization-wide dataset through a dedicated Director organization summary wrapper.
+- Restored the exported `dashboardRoleWhere` repository function expected by its caller and focused visibility tests.
+- Moved Google Sheet rich-link parsing helpers and the Petty Cash input schema out of Next.js route modules. Route files now export only supported route handlers/config, eliminating production route-type failures without changing behavior.
+- Verification: eight focused tests, full TypeScript, formatting, and a complete `next build --webpack` production build passed. Local Turbopack cannot follow the worktree's external `node_modules` junction; Penang's Docker build uses real in-image dependencies and is not affected by that local junction limitation.
+
 ## 2026-11-25 — PR #190 workflow reminder conflict resolution
 
 - Resolved the add/add conflict in `workflow-reminder.ts` by preserving `main`'s Finance fallback, active-recipient validation, self-reminder protection, stage-specific notification copy, and existing test coverage.
