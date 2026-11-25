@@ -161,6 +161,9 @@ export async function saveAdminSettings(settings: AdminSettings) {
     const body = await response.json().catch(() => null) as { message?: string } | null;
     throw new Error(body?.message ?? 'Programme settings could not be saved.');
   }
-  window.localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(settings));
+  const body = await response.json() as { data: AdminProgramme[] };
+  const saved = { ...settings, programmes: body.data };
+  window.localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(saved));
   window.dispatchEvent(new Event(ADMIN_SETTINGS_EVENT));
+  return saved;
 }

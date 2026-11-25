@@ -1,10 +1,19 @@
 # AI_HANDOFF.md
 
+## 2026-11-25 — Consolidate programme Manager assignments
+
+- GitHub issue #199 on branch `agent/consolidate-programme-manager-assignments`. The existing `Project` and `ProjectManagerAssignment` records are now the source of programme Manager authority. Staff, Director and Finance remain organization roles; Admin controls assignments through the beta Settings page. New payment requests resolve each programme's active Manager through the project assignment and active membership, with no general Manager fallback.
+- Migration `20261125090000_use_project_manager_assignments` preserves configured `beta_programmes` rows for `beta-arus-org`, adds a project archive flag so Settings deletion remains durable, transfers Manager assignments, and drops the duplicate beta table. Apply the migration before rebuilding the app. If a saved Manager has no beta organization membership, the migration fails instead of discarding that assignment.
+- The beta Settings page currently edits the beta organization. Other organizations can use the same project-assignment model as their own programme directories are configured. Existing in-progress approvals retain their recorded approvers and legacy MANAGER role checks.
+- Prisma schema validation, client generation, TypeScript, production build, focused Settings/Manager tests, and focused ESLint pass locally. There is no local PostgreSQL instance, so the migration and live data preservation still require a database verification after deployment.
+
 ## 2026-11-24 — Integrated dashboard updates from main
 
 - Merged `origin/main` at `ee0ee64` into `agent/payment-type-approval-routing` without Git conflicts. The new Workflow Health dashboard referenced a missing `workflow-reminder` module, so the branch now supplies the reminder action and a focused recipient-routing test. Production build, typecheck, and dashboard/reminder tests pass after integration.
 
 ## 2026-11-24 — Programme-scoped parallel approval routing
+
+This section records the original implementation; the 2026-11-25 consolidation above supersedes its beta table design.
 
 - GitHub issue #183, branch `agent/payment-type-approval-routing`. New PV, Cash Advance, Travel Allowance and Petty Cash top-up requests go to Director approval with each relevant programme Manager informed at submission. New Invoice Payments and all six Claims go to their programme Manager for approval with the Director informed; a Manager's own Claim goes to a Director. Multi-programme Claims keep one request and wait for every assigned Manager. Existing submitted requests preserve their recorded route on resubmission.
 - Programme Manager mapping is shared across Arus organizations through `beta_programmes` and `/api/v1/administration/programmes`. The previous general Nadia assignment is removed; an administrator must explicitly assign a Manager to each programme code before new submissions using it. Migration `20261124090000_shared_beta_programme_managers` must run before deploying this code. Other beta Settings still use browser storage.

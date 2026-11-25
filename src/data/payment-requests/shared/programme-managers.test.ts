@@ -2,19 +2,23 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Prisma } from '@prisma/client';
 import { programmeManagerIds, requireSameManagerIds } from './programme-managers';
 
-function transaction(rows: Array<{ code: string; manager_id: string | null }>, active: string[]) {
+function transaction(rows: Array<{ code: string; managers: string[] }>, active: string[]) {
   return {
-    betaProgramme: { findMany: vi.fn().mockResolvedValue(rows) },
-    userOrgMembership: { findMany: vi.fn().mockResolvedValue(active.map((user_id) => ({ user_id }))) },
+    project: { findMany: vi.fn().mockResolvedValue(rows.map((row) => ({
+      code: row.code,
+      manager_assignments: row.managers.map((user_id) => ({ membership: {
+        user_id, is_active: active.includes(user_id), membership_status: 'ACTIVE',
+      } })),
+    }))) },
   } as unknown as Prisma.TransactionClient;
 }
 
 describe('programme Manager resolution', () => {
   it('collects every distinct Manager for a multi-programme request', async () => {
     const tx = transaction([
-      { code: 'P-ONE', manager_id: 'manager-a' },
-      { code: 'P-TWO', manager_id: 'manager-b' },
-      { code: 'P-THREE', manager_id: 'manager-a' },
+      { code: 'P-ONE', managers: ['manager-a'] },
+      { code: 'P-TWO', managers: ['manager-b'] },
+      { code: 'P-THREE', managers: ['manager-a'] },
     ], ['manager-a', 'manager-b']);
     const assigned = await programmeManagerIds(tx, 'arus-org', ['p-one', 'P-TWO', 'P-THREE']);
     expect(assigned).toEqual(['manager-a', 'manager-b']);
@@ -23,9 +27,11 @@ describe('programme Manager resolution', () => {
   });
 
   it('rejects an unassigned programme or inactive Manager', async () => {
-    await expect(programmeManagerIds(transaction([{ code: 'P-ONE', manager_id: null }], []), 'arus-org', ['P-ONE']))
+    await expect(programmeManagerIds(transaction([{ code: 'P-ONE', managers: [] }], []), 'arus-org', ['P-ONE']))
       .rejects.toThrow('Assign a Manager');
-    await expect(programmeManagerIds(transaction([{ code: 'P-ONE', manager_id: 'manager-a' }], []), 'arus-org', ['P-ONE']))
-      .rejects.toThrow('not an active member');
+    await expect(programmeManagerIds(transaction([{ code: 'P-ONE', managers: ['manager-a'] }], []), 'arus-org', ['P-ONE']))
+      .rejects.toThrow('Assign a Manager');
+    await expect(programmeManagerIds(transaction([{ code: 'P-ONE', managers: ['manager-a', 'manager-b'] }], ['manager-a', 'manager-b']), 'arus-org', ['P-ONE']))
+      .rejects.toThrow('exactly one');
   });
 });

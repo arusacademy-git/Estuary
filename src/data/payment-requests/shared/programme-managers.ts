@@ -9,29 +9,35 @@ export async function programmeManagerIds(
   if (!codes.length || codes.some((code) => !code)) {
     throw new Error('Choose a programme code for every request item.');
   }
-  const programmes = await tx.betaProgramme.findMany({
-    where: { code: { in: codes }, is_active: true },
-    select: { code: true, manager_id: true },
-  });
-  const byCode = new Map(programmes.map((programme) => [programme.code, programme.manager_id]));
-  for (const code of codes) {
-    if (!byCode.get(code)) throw new Error(`Assign a Manager to programme ${code} in Settings before submitting.`);
-  }
-  const managerIds = [...new Set(codes.map((code) => byCode.get(code)!))];
-  const memberships = await tx.userOrgMembership.findMany({
-    where: {
-      organization_id: organizationId,
-      user_id: { in: managerIds },
-      is_active: true,
-      membership_status: 'ACTIVE',
+  const now = new Date();
+  const programmes = await tx.project.findMany({
+    where: { organization_id: organizationId, code: { in: codes }, is_active: true, is_archived: false },
+    select: {
+      code: true,
+      manager_assignments: {
+        where: {
+          is_active: true,
+          effective_from: { lte: now },
+          OR: [{ effective_until: null }, { effective_until: { gt: now } }],
+        },
+        select: {
+          membership: { select: { user_id: true, is_active: true, membership_status: true } },
+        },
+      },
     },
-    select: { user_id: true },
   });
-  const activeIds = new Set(memberships.map((membership) => membership.user_id));
-  if (managerIds.some((id) => !activeIds.has(id))) {
-    throw new Error('A programme Manager is not an active member of this organization.');
+  const byCode = new Map(programmes.map((programme) => [
+    programme.code,
+    programme.manager_assignments
+      .filter((assignment) => assignment.membership.is_active && assignment.membership.membership_status === 'ACTIVE')
+      .map((assignment) => assignment.membership.user_id),
+  ]));
+  for (const code of codes) {
+    const assigned = byCode.get(code);
+    if (!assigned?.length) throw new Error(`Assign a Manager to programme ${code} in Settings before submitting.`);
+    if (assigned.length !== 1) throw new Error(`Programme ${code} must have exactly one active Manager.`);
   }
-  return managerIds;
+  return [...new Set(codes.map((code) => byCode.get(code)![0]))];
 }
 
 export function requireSameManagerIds(assigned: string[], submitted: string[]) {
