@@ -1,35 +1,5 @@
 # AI_HANDOFF.md
 
-## 2026-11-25 — Consolidate programme Manager assignments
-
-- GitHub issue #199 on branch `agent/consolidate-programme-manager-assignments`. The existing `Project` and `ProjectManagerAssignment` records are now the source of programme Manager authority. Staff, Director and Finance remain organization roles; Admin controls assignments through the beta Settings page. New payment requests resolve each programme's active Manager through the project assignment and active membership, with no general Manager fallback.
-- Migration `20261125090000_use_project_manager_assignments` preserves configured `beta_programmes` rows for `beta-arus-org`, adds a project archive flag so Settings deletion remains durable, transfers Manager assignments, and drops the duplicate beta table. Apply the migration before rebuilding the app. If a saved Manager has no beta organization membership, the migration fails instead of discarding that assignment.
-- The beta Settings page currently edits the beta organization. Other organizations can use the same project-assignment model as their own programme directories are configured. Existing in-progress approvals retain their recorded approvers and legacy MANAGER role checks.
-- Prisma schema validation, client generation, TypeScript, production build, focused Settings/Manager tests, and focused ESLint pass locally. There is no local PostgreSQL instance, so the migration and live data preservation still require a database verification after deployment.
-
-## 2026-11-24 — Integrated dashboard updates from main
-
-- Merged `origin/main` at `ee0ee64` into `agent/payment-type-approval-routing` without Git conflicts. The new Workflow Health dashboard referenced a missing `workflow-reminder` module, so the branch now supplies the reminder action and a focused recipient-routing test. Production build, typecheck, and dashboard/reminder tests pass after integration.
-
-## 2026-11-24 — Programme-scoped parallel approval routing
-
-This section records the original implementation; the 2026-11-25 consolidation above supersedes its beta table design.
-
-- GitHub issue #183, branch `agent/payment-type-approval-routing`. New PV, Cash Advance, Travel Allowance and Petty Cash top-up requests go to Director approval with each relevant programme Manager informed at submission. New Invoice Payments and all six Claims go to their programme Manager for approval with the Director informed; a Manager's own Claim goes to a Director. Multi-programme Claims keep one request and wait for every assigned Manager. Existing submitted requests preserve their recorded route on resubmission.
-- Programme Manager mapping is shared across Arus organizations through `beta_programmes` and `/api/v1/administration/programmes`. The previous general Nadia assignment is removed; an administrator must explicitly assign a Manager to each programme code before new submissions using it. Migration `20261124090000_shared_beta_programme_managers` must run before deploying this code. Other beta Settings still use browser storage.
-- The beta sign-in still trusts a locally selected account, including administrator identity. Shared settings are appropriate for beta testing only until authenticated sessions protect the write endpoint. Local typecheck, focused routing tests, and production build pass. The Claim policy test file still has two pre-existing purchase-date expectation failures unrelated to this route change. Penang DB migration and live end-to-end approvals remain to be verified after merge.
-
-## 2026-11-24 — Restore staff dashboard API for deployable main
-
-- GitHub issue #180: current `main` imported a missing `staff-dashboard-api` module, blocking TypeScript and Docker builds after the Claim account-code PR was merged. Added the client adapter that reads the existing dashboard summary API, maps staff records and status labels, and creates My Requests deep links and action counts.
-- Production build, repository-wide TypeScript, focused ESLint, and a focused dashboard mapping test pass. No database migration is needed. This fix must merge before the Penang app can rebuild from the latest `main`.
-
-## 2026-11-24 — Account code required for every Claim entry
-
-- GitHub issue #179: the existing Claim account-code selector now appears for all six Claim types, including Mileage. The entry modal requires a selection before adding or updating a line, and the shared domain validator requires it before API submission. Old drafts and submitted snapshots remain readable; a draft without a code must be completed before submission.
-- Six focused policy cases and a local browser check of all six entry modals pass. Focused ESLint has no errors. The full policy test file retains three unrelated stale failures in existing Manager-approval and purchase-date expectations.
-- Repository-wide typecheck is blocked on current `main` by the missing `src/data/dashboard/staff-dashboard-api.ts` module imported by the staff dashboard. Tracked separately as GitHub issue #180; a production build cannot pass until that issue is fixed.
-
 ## Project Handoff Baseline
 
 - Project: Estuary
@@ -61,6 +31,132 @@ This section records the original implementation; the 2026-11-25 consolidation a
 - Next.js (TypeScript, App Router) + PostgreSQL (RDS target) + Prisma + NextAuth + AWS SES + S3 + Docker + Lightsail
 - Multi-entity from day one: Organization is the top-level partition; SSO with org switcher.
 - API-first: every action addressable as REST `/api/v1/`.
+
+## 2026-11-24 — Clickable Manager dashboard stats
+
+- Converted both Manager tab KPI sets into keyboard-accessible links with the Staff workspace label color, hover lift, shadow and focus treatment.
+- Team Approvals routes to the pending queue, Team Records, or the completed Team Records filter. My Requests routes to its Action, Progress, or Completed summary filter.
+- Replaced the Manager pending-approval icon with `/assets/icons/clipboard-check.png` in both the KPI card and Pending approvals heading.
+- Strengthened icon-tile contrast consistently across both Manager tabs: solid orange for pending/action, solid blue for team/in-progress, and solid green for completed. The orange clipboard asset is filtered to white only inside its KPI tile; the standalone heading icon keeps its original orange color.
+
+## 2026-11-24 — Team Records interaction and analytics polish
+
+- Updated the five Team Records workflow cards with Staff-style hover lift/glow, tone-specific shadows, accessible focus treatment, high-contrast orange/blue/green/teal/red icon tiles, and extra spacing for the active Showing badge.
+- Made More filters functional with expandable exact-date and minimum/maximum amount controls plus a dedicated clear action.
+- Replaced the Workflow health placeholder with clickable Awaiting review, Awaiting payment, and Unreconciled queue cards.
+- Added the established PV/INV/TA/CA/PC/Claims color system to Payment analysis By type bars and markers.
+- Rebuilt Spend by project from the same shared project option list used by the dropdown, with stable project-code keys. This fixes the React duplicate/missing-key warning and keeps project naming consistent.
+- The Pending approval clipboard is filtered to white only inside its orange Team Records stat tile, preserving the source asset color everywhere else.
+
+## 2026-11-24 — Shared role-aware Workflow Health
+
+- Added a maintainable shared `/beta/team-records/workflow-health` feature with separate page, workspace and CSS files rather than duplicating Manager, Director and Finance implementations.
+- Manager and Director use “Workflow health” with team/organisation-specific descriptions; Finance uses “Where requests are” and finance-stage wording.
+- Added clickable Approval, Payment and Reconciliation stage cards, project and period filters, age/SLA badges, consistent “Requester” wording, record actions, legends and shared list pagination.
+- Updated the compact Analysis card to use medium bold links and open the matching detailed workflow stage.
+
+## 2026-11-23 — Manager dashboard project column and sortable tables
+
+- Added a Project name column to the Manager Team payment activity table, using each record's project name with project code and em dash fallbacks.
+- Added accessible clickable sorting to the meaningful columns in both Manager tables. Team activity sorts by Reference, Requester, Project name, Purpose, Amount, and Status; My Requests sorts by Reference, Requester, Amount, Submitted, and Status.
+- The active heading shows ascending/descending state, while other sortable headings show the neutral two-way indicator. Action columns remain unsortable.
+- Increased the Manager table minimum width to accommodate the new project column without squeezing content.
+- Aligned the Manager My Requests KPI icons and action panel with the Staff dashboard: white action/progress/completed assets on 34px colored tiles, the same amber outlined exclamation treatment, and 34px payment-code blocks. Team Approvals now uses the public pending-approval icon instead of a text placeholder.
+- Preserved the user's latest Manager CSS overrides and changed the Pending approvals heading treatment to a standalone 24px icon with no padded or colored box.
+
+## 2026-11-23 — Shared Team Records workspace
+
+- Added `/beta/team-records` as the shared Manager, Director, and Finance Team Records destination, backed by the common dashboard-record API and role-aware account scope.
+- Added prototype-aligned Records and Analysis tabs. Records includes five clickable workflow summaries, project/period/search/payment-type filters, a project-aware table, and shared pagination. Analysis includes headline totals, budget utilisation, project/period filters, Trend and By type payment charts, and spend-by-project.
+- Updated all role-sidebar Team Records links and the Manager dashboard “View team records” link to the new route. `/beta/payment-records?scope=mine` remains the shared My Requests route.
+- Kept the old payment-record detail and shared download/action files because Team Records and My Requests still depend on their detail modals, document generation, and per-type record views. See the handoff deletion notes before manually removing legacy files.
+- Fixed the Team Records page bootstrap to initialize the beta session through lazy state and keep its effect asynchronous, satisfying `react-hooks/set-state-in-effect` while retaining loading, error and unmount guards.
+
+## 2026-11-17 — Prototype-aligned Invoice Payment request form
+
+- Redesigned the copy-ready Invoice Payment requester form around the supplied prototype while preserving the current API payload, validation, draft restoration, returned-request resubmission, document handling, review and confirmation flow.
+- Added the compact INV/E-Invoice header and a five-section left-side form: Request Overview, Invoice Details, Payment Amount, Supporting Documents and Review Workflow.
+- Added a requester identity card, selectable transfer/payment cards, calculated amount fields, compact prototype-style document picker and numbered section markers.
+- Added a responsive right-side request summary with live requested amount, invoice/payment details, required-field checklist, invoice requirement note and the existing Continue to review and Save as draft actions.
+- Preserved project-scoped Project Manager assignment with its active-manager fallback and the existing Director selection.
+- Copy-ready files: `invoice-payment-form.tsx` and `invoice-payment-form.module.css`. Prettier and focused ESLint pass. The generated Invoice Payment TypeScript project reaches unrelated pre-existing Travel Allowance type errors; it reports no errors in the updated Invoice Payment form.
+- Follow-up presentation alignment gives the Petty Cash and Invoice Payment headers the same bordered, rounded and softly shadowed card treatment as Claims, and enforces red required-field asterisks in both forms.
+- Added the previously missing visible required markers and native required attributes to every Petty Cash planned-expense field: Details/Purpose, Type of Account, Division and Estimated Amount.
+- Changed the Invoice Payment right-side summary from sticky to static and made both summary actions occupy the full card width without inheriting the older compressed alignment.
+- Applied the same explicit one-column stretch layout to the Petty Cash summary actions so Continue to review and Save as draft both occupy the full card width.
+
+## 2026-11-17 — Prototype-aligned Cash Advance request form
+
+- Redesigned the copy-ready Cash Advance requester form to match the supplied card-based prototype while preserving its existing payload, approval routing, draft restoration, correction/resubmission, review, signature, submission and reconciliation behavior.
+- Added a bordered CA header card, four numbered sections, requester identity card and a static live summary/checklist panel.
+- Replaced the spreadsheet-style request breakdown with responsive expense-entry cards and added visible red required markers plus native required attributes to Description, Purpose and Amount.
+- Added live minimum-RM300 guidance, required/optional checklist feedback and full-width Continue to review and Save as draft actions.
+- Copy-ready files: `cash-advance-form.tsx`, `cash-advance-request-lines.tsx` and `cash-advance.module.css`.
+- Updated Claims section headings so steps 1–4 use separate 40px pale-blue rounded number badges instead of embedding the number in the heading text.
+
+## 2026-11-17 — Prototype-aligned Travel Allowance request form
+
+- Redesigned the copy-ready Travel Allowance requester form around the supplied prototype while preserving employee grouping, meal and special-allowance calculations, role-aware approvals, draft restoration, correction/resubmission, document handling, review and submission.
+- Added the bordered TA header card, three numbered form sections and a static live total/checklist panel with policy and fixed meal-rate guidance.
+- Enforced red required markers throughout and added native required attributes to the entry employee, travel date, project, reason and conditional special-allowance reason controls.
+- Made Continue to review and Save as draft full-width summary actions.
+- Copy-ready files: `travel-allowance-form.tsx` and `travel-allowance.module.css`.
+- Prettier, focused ESLint and the manual-only Travel Allowance TypeScript project pass. The broader Travel Allowance project remains blocked by the existing missing `exceljs` dependency and implicit-any errors in the separate Google Sheet API route.
+- Replaced the native Travel Allowance file control with a compact prototype-style dashed uploader containing one bordered Choose files button and dynamic selected-file/help text.
+
+## 2026-11-17 — Prototype-aligned Single Payment Voucher form
+
+- Redesigned the copy-ready Single Payment Voucher form shell around the supplied prototype while preserving voucher identity validation, line calculations, draft restoration, amendment behavior, review flow, Director routing and API payload.
+- Added a bordered PV header card, numbered form sections and a static right-side total/checklist panel.
+- Enforced red required markers for voucher-line Account, Description, Quantity and Unit Price fields and added native required validation to Account.
+- Replaced the native supporting-document control with the compact dashed Choose files treatment and made Continue to review and Save as draft full-width summary actions.
+- Copy-ready files: `payment-voucher-form.tsx` and `payment-voucher.module.css`.
+- Restored wrapper-aware Single PV section padding after the two-column redesign and increased spacing around fields, voucher lines, the uploader and total panels so the left card no longer appears squeezed against its borders.
+- Rebalanced the Single PV voucher-line grid with wider Account and Description columns, stable numeric columns, 16px gaps, taller controls and a complete bordered table shell so line entry no longer appears compressed.
+- Corrected the voucher-line over-expansion by reducing desktop minimum widths, removing the horizontal scrollbar, right-aligning the Total heading/value and stacking the summary earlier at 1100px so the Total column remains visible.
+
+## 2026-11-17 — Prototype-aligned Petty Cash request form
+
+- Redesigned the copy-ready Petty Cash requester form to match the supplied prototype while preserving its existing API payload, manual-draft behavior, correction/resubmission flow and role-aware reviewer rules.
+- Added the compact PC/Petty Cash header, requester profile card and three numbered left-side sections: Requester & Reviewers, Planned Expenses and Purpose.
+- Replaced the wide spreadsheet-style planned-expense table with readable stacked expense cards containing purpose, account, division and estimated amount fields, plus Add/Remove controls.
+- Added a static right-side Request Total card with item count, below-RM300 limit, remaining amount, live policy result, next-step guidance, confirmation, Continue to review and Save as draft actions.
+- Staff still select Manager and Director; Manager requesters select Director; Director behavior remains self-associated; Finance requesters retain the independent previewer selection. Existing Project Manager account discovery remains intact.
+- Kept receipt collection in Petty Cash reconciliation rather than request creation, matching the current domain and API workflow.
+- Copy-ready files: `petty-cash-form.tsx` and `petty-cash.module.css`. Prettier, focused ESLint and the generated Petty Cash TypeScript project pass.
+
+## 2026-11-17 — Dashboard requester-action routing
+
+- Updated Dashboard Action Required links so requester-owned follow-up work no longer opens legacy payment-specific record URLs. It now routes to unified My Requests with payment type, Action summary and request ID query parameters.
+- Unified My Requests recognizes `request=<id>&open=1`, promotes the requested row to the first result and automatically opens the existing request details/progress modal overlay.
+- Synchronized My Requests action-status coverage with the Dashboard, including payment rejection, signed-PV upload and processed-pending-reconciliation states.
+- Manager, Director and Finance action drawers now distinguish their own payment requests from assigned role work: own returned/rejected/reconciliation items open My Requests, while assigned approvals remain in Pending Approvals and Finance work remains in Pending Processing.
+- When a drawer contains both requester-owned and role-assigned work, its footer renders separate destinations rather than sending every record to one queue.
+- Project Manager accounts now use the effective Manager role for Dashboard action counts and routing, while their personal requester actions still open My Requests.
+- Copy-ready files: Dashboard `page.tsx`, unified `my-requests.tsx`, and shared `my-request-action.tsx`. Focused Prettier, ESLint, Dashboard TypeScript and My Requests TypeScript checks pass.
+
+## 2026-11-16 — Notification API failure fallback
+
+- Fixed the copy-ready notification store so an unavailable/failed `/api/v1/notifications` request no longer throws into the React/Next.js UI. Reads now return and retain the recipient's browser-local notifications when the API responds with HTTP 500 or cannot be reached.
+- Preserved cross-browser synchronization attempts for create, mark-read, mark-all-read and delete operations. Failed writes remain saved locally and produce a warning instead of a console error/runtime overlay.
+- Restored the live project's existing `estuary-beta-notifications` storage key so copying the file does not orphan users' existing local notifications.
+- The underlying HTTP 500 originates inside the Prisma-backed notifications route; verify that migration `20261111090000_persist_in_app_notifications` has been applied to the active database to restore shared cross-browser persistence.
+- Focused Prettier, ESLint and generated Notifications TypeScript checks pass. Only `generated/src/data/notifications/local-notification-store.ts` needs to be copied for the safe client fallback.
+
+## 2026-11-15 — Clean, type-aware Claims form
+
+- Redesigned the copy-ready Claims request interface in the existing `claim-form.tsx` and `claims.module.css`; no API or database files were changed.
+- Replaced the Claim Type select with six compact tabs and added a responsive policy summary for Expense, Internet/Commute, Medical, Mileage, PD and Tech Claims.
+- Replaced editable spreadsheet-like rows with a clean empty state and read-only entries table supporting Edit, Duplicate and Remove.
+- Added one reusable modal overlay whose fields change by Claim Type: Mileage uses route/division/distance; Expense additionally requires account and division; the remaining receipt-based types use their shared supplier, description, receipt and amount fields.
+- Made every entry action type-specific (`Add medical expense`, `Add tech expense`, `Add mileage trip`, etc.) and carried the same wording into the modal title and save button.
+- Added mutually exclusive Upload file and Google Drive link proof tabs. Drive links persist in the existing `receiptLink` field; uploads retain the existing receipt metadata/File path, so no API shape changed.
+- Changed the Claim total summary from sticky to static and expanded the Claims page/header to the full available content width with the prototype card proportions.
+- Refined the proof uploader to match the prototype: the native browser file control is visually hidden, one compact bordered `Choose file` button remains, and the filename/help copy sits alongside it inside the dashed upload area. Corrected CSS specificity and invalid nested-label markup so the button no longer stretches to full width.
+- Preserved the existing Claim payload, policy limits, receipt validation, manual drafts, review and submission flow. Draft snapshots continue storing the same `ClaimLine[]` shape.
+- Removed stale Project Manager lookup and form validation from Claims. Current product direction is that Claims do not select or require a Manager; the final approving Director remains required.
+- Prettier, focused ESLint and the generated Claims TypeScript project all pass.
+- Copy only the two files under `generated/src/features/payment-request/components/claims/`; the generated workspace remains a manual scaffold and was not deployed.
 
 ## 2026-11-14 — Unified My Requests table
 
@@ -5312,37 +5408,202 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Added the shared payment-progress timeline foundation under Payment Records shared components. It provides reusable stage/state types, business-hour duration calculations with configurable weekdays/holidays, separate waiting/action measures when an explicit action-start event exists, SLA targets, return/rejection presentation and reconciliation/correction stage kinds. No payment-specific tracker has been migrated yet; PV through Petty Cash should map their existing workflow data into this component incrementally.
 - Migrated the Payment Voucher tracker to the shared payment-progress timeline. The mapper preserves all eight PV stages and uses stored Director, Manager preview, Finance review/PDF, recipient link/signature, Staff confirmation and final Finance verification timestamps. Finance and recipient stages show separate waiting/action durations where action-start evidence exists; total elapsed/processing time starts after submission. Because the current PV contract lacks `submittedAt`, non-draft legacy records temporarily fall back to `createdAt`; a dedicated immutable submission timestamp remains a data-model follow-up.
 - Migrated the Invoice Payment record tracker to the shared timeline. Its six core stages now use stored Manager, Director and Finance timestamps, show elapsed/total business processing time and paid date, and insert a separate active requester-correction stage after the responsible Manager/Director/Finance return event. The current Invoice contract has no action-start, resubmission or transaction-proof-upload timestamp, so the UI does not invent those action durations and only displays dates supported by stored evidence.
+- Migrated Cash Advance to the shared timeline with the complete advance lifecycle: submission, Manager/Director approval, Finance payment release, transaction proof, requester reconciliation, Finance reconciliation review and reconciled completion. Request and reconciliation returns identify the responsible stage and insert a separate active correction/resubmission step. Summary cards distinguish total lifecycle time from the post-payment reconciliation period. The record has no dedicated proof-upload or action-start timestamps, so later states establish proof completion without inventing an upload time or action duration.
+- Fixed the Cash Advance Manager Approver dropdown to use the same `isProjectManagerAccount` detection as the sidebar/dashboard. Project Managers stored with the beta `staff` role (such as the Operations Manager account) now appear alongside literal `manager` accounts instead of leaving the dropdown empty.
+- Fixed the blank Cash Advance detail modal in My Requests. The shared modal CSS previously hid any parent `div:has()` a Payment Records back link; Cash Advance places that link directly inside its root detail container, so the entire page disappeared. The modal now hides only the redundant back-link anchor and leaves the detail/progress content visible.
+- Migrated the Travel Allowance record tracker to the shared timeline. Staff submissions retain Manager → Director → Finance, while Manager-on-behalf submissions correctly skip Manager review and start at Director. The timeline includes Finance verification/payment, transaction proof, completion, elapsed business processing time, paid date and a separate correction/resubmission step after Manager, Director or Finance returns. Unsupported action-start/proof-upload times are not fabricated.
+- Fixed the Travel Allowance detail table inside request modals. A records-table override had forced every `.tableWrapper` to fixed layout with no horizontal scrolling, making employee names, dates, projects and reasons wrap character-by-character. Detail-scoped rules now restore an auto-layout 1080px table, sensible per-column minimum widths, normal word wrapping and horizontal scrolling without changing the unified records table.
+- Migrated the Petty Cash requester/detail tracker to the shared timeline. The mapper preserves role-dependent paths (mandatory Staff Manager/Director approvals, Manager Director preview, Director direct-to-Finance and Finance independent preview), separates Finance verification/payment from proof upload, and includes requester reconciliation, Finance reconciliation, returned correction/resubmission, total lifecycle time and post-payment reconciliation time. Existing Finance timestamps provide a real waiting/action split where available.
+- Migrated the shared Claims review tracker to the reusable timeline, updating every Claim detail/review that consumes `ClaimWorkflow`. It now covers submission, informational Manager review where assigned, Finance verification, Director decision, Finance payment, transaction proof and completion; Manager/Director/Finance returns insert a claimant correction step, while rejected Claims remain explicitly rejected rather than completed. Elapsed/total business processing time and paid date use stored timestamps only.
+- Fixed Invoice Payment project-manager resolution. The form still prioritizes the selected project's Administration mapping, but when an older/saved programme list has no matching code it falls back to the first active Project Manager account instead of leaving the required Project Manager field empty. Existing amendment records retain their saved Manager assignment.
+- Fixed Petty Cash reviewer options to recognize Administration-assigned Project Managers whose stored beta role is `staff`. They now appear in the Staff requester’s Manager Reviewer list and in Finance’s Independent Previewer list; the latter serializes their effective reviewer role as `manager` so validation and workflow routing remain correct.
 - Diagnosed the post-copy `No link element found for chunk ...css` overlay as stale Next.js 16 Turbopack output rather than a TypeScript/modal failure. The live project config uses `distDir: '.estuary-next'`; stop the dev server and clear `.estuary-next` (plus any stale `.next`) before restarting after cross-page CSS/import changes.
 
-## 2026-11-16 — Issue #170 settings imports, claim overrides, and signed-PV recovery
+## 2026-11-17 — Multiple Payment Voucher manual-entry redesign
 
-- Added public Google Sheets imports to beta Administration for Programmes & managers and Accounting codes. Row 1 is validated against explicit system headers; codes are matched case-insensitively, existing rows are updated, new rows are created, omitted records remain unchanged, and programme managers are resolved by active employee email.
-- Added organization-wide claim entitlement editing plus per-employee numeric overrides. Blank employee fields inherit the organization default, effective Medical/PD proration is shown in the employee table, and legacy browser settings migrate with an empty override map.
-- Confirmed the production signed-PV error was caused by a missing Director signature binary: the live signature endpoint returned HTTP 500 while PostgreSQL still held its Document ID. New approvals now snapshot the Director signature data URL into immutable approval transition metadata; PDF builders prefer that snapshot. Historical beta PVs fall back to a downloadable recipient-signed PDF when the old signature binary is unrecoverable. Uploaded signed PDFs now download through a Blob URL instead of a large direct data URL.
-- Signature storage now honors `ESTUARY_PRIVATE_STORAGE_ROOT`, matching the persistent private-storage mount used by the server compose file.
-- Limited user-facing payment-request Google Sheet entry to Payment Voucher plus Cash Advance reconciliation. Latest `main` already removed the Travel Allowance, Claim, and initial Cash Advance Sheet components; conflict resolution preserved those newer form implementations. `.env.server.example` and server build arguments now retain only PV, Appendix A, and Participant Allowance template URLs.
-- Validation before conflict resolution: 9 issue-focused tests, TypeScript, targeted ESLint, and `git diff --check` passed. The repository baseline has unrelated policy/fixture failures documented above; a repeated build also encountered the intermittent Turbopack `next/font` internal resolution failure after an earlier successful production build.
+- Redesigned the copy-ready Multiple Payment Voucher manual-entry screen around the supplied prototype while preserving its existing draft restoration, row duplication/removal, validation, preview and Google Sheet workflows.
+- Voucher entries remain expandable cards and now use a clearer compact header with voucher number, recipient, amount and Ready/Needs attention state. The bulk total, voucher counts and full-width Continue/Add/Save/Discard actions form a responsive right-side summary on desktop and stack above/below the entries on smaller screens.
+- Required field markers are explicitly red across recipient/payment fields and the Account, Description, Quantity and Unit Price voucher-line columns. Those voucher-line controls now also carry native required semantics.
+- Replaced the oversized native supporting-document input with a compact dashed Choose files control that reports the selected-file count while retaining the existing filename list.
+- Corrected the first redesign's layout leak: the manual two-column grid is now scoped to `BulkManualEntryPanel` instead of every `bulkFlow`, so the creation header, entry tabs and form no longer collapse into competing grid columns. The duplicate inner introduction is hidden on entry screens, the tabs are compact, and the desktop voucher editor now receives the wide left column with a unified summary/action card on the right.
+- Updated the selected Multiple Payment Voucher toolbar to serve as the prototype header (`Create multiple Payment Vouchers`) with concise guidance and a compact Change method action. Manual form fields use three columns at wide desktop sizes, two at medium widths and one on mobile.
+- Fixed the Multiple Payment Voucher summary rail so it is structurally independent of voucher expansion height. Bulk totals, next-step guidance and all four full-width actions now live inside one right-side card; expanding or collapsing a voucher can no longer push the action buttons to the bottom of the left form.
+- Reordered the expanded Multiple Payment Voucher fields to match the prototype instead of relying on CSS placement alone. Recipient is a balanced 3×2 grid (PV date, name, email, identity, Malaysian and division); Payment Details is a balanced 2×2 grid (Director, method, bank and account) with Purpose and Supporting Documents spanning the full width. Added the prototype guidance placeholders and removed the optional Project Manager control from this bulk-entry surface.
+- Corrected the Petty Cash requester/reviewer grid: the three requester fields retain equal thirds, while Director Previewer and Manager Reviewer now occupy two equal half-width columns across the entire card. Manager-only Director Previewer uses the full row, and mobile collapses all fields to one column.
+- Tightened the Claims composer’s vertical rhythm between its header card and the two-card form layout. The desktop header bottom margin is now 10px and the form top padding is 8px, reducing the combined separation from 40px to 18px without changing the 20px gap between the main form and summary card.
+- Kept the Claims section-level dynamic `+ Add [claim type] expense` action on one line with a non-shrinking, no-wrap rule scoped only to the Itemized Expenses heading button. Other secondary buttons retain their existing wrapping behavior.
 
-## 2026-11-24 — PR #186 dashboard role API separation
+## 2026-11-23 — Unified borderless role sidebar
 
-- Resolved the add/add conflict in `staff-dashboard-api.ts` by retaining `main`'s newer Staff-only adapter, requester filtering, direct My Requests links, and focused test.
-- Added fixed-role Staff, Manager, and Director dashboard summary functions so each dashboard adapter can no longer select another role accidentally. Manager and Director keep independent record contracts, labels, routes, action helpers, and project option types.
-- Kept Manager visibility limited to assigned approval/current-assignee records plus the Manager's own requests. Director visibility is organization-wide for the Director oversight dashboard; Staff remains limited to self-submitted records.
-- Corrected the shared Manager/Director team table to use the role-specific approval predicate supplied by its caller when choosing Review versus Open.
-- Added dashboard summary fields required by the new team and organization views (`submittedAt`, project code, and project name).
-- Verification: six focused dashboard tests passed and targeted ESLint passed. Full TypeScript reaches one unrelated `main` baseline error: `workflow-health-workspace.tsx` imports the untracked/missing `features/team-records/notifications/workflow-reminder` module.
-- PR #187 currently points to the same commit as #186 and contains the same dashboard files; it has no domain-specific changes and should be closed as a duplicate or replaced with the intended domain work.
+- Flattened the shared Staff, Project Manager, Director and Finance sidebar navigation. Named navigation groups no longer render as individually outlined/background-filled cards; they now use the same transparent navigation surface with only subtle horizontal separators.
+- Added the white Estuary icon from `public/assets/icons/estuary-icon-white.png` beside the brand and retained the existing public icon mappings for Overview, Payment Request, Pending Approvals, Pending Processing, SQL Entry Tracker, Petty Cash, My Requests, Payment Records and Settings.
+- Renamed the shared Dashboard navigation label to Overview while preserving `/beta/dashboard`, added explicit open/closed chevrons to expandable Payment Request navigation, and retained the existing active-row treatment and action badges.
+- Converted the Director/Finance standalone Petty Cash navigation from a Petty Cash → Overview branch into one direct Petty Cash link to `/beta/petty-cash`.
+- Removed the bordered card treatment from the signed-in profile footer so it follows the same flat sidebar visual language.
+- Moved Programme Staff Petty Cash out of the Payment Request submenu. It now appears as its own icon-bearing main navigation row and links directly to `/beta/payment-requests/petty-cash/new`; Manager creation navigation remains unchanged.
+- Renamed the Manager, Director, Finance and Project Manager sidebar destination from Payment Records to Team Records without changing its `/beta/payment-records` route. The row now uses `/assets/icons/team-records-white.png` from the public icon set.
+- Removed Petty Cash from the Manager, Project Manager, Director and Finance Payment Request submenus. Manager/Project Manager keeps one standalone Petty Cash row linking to its assigned-request queue; Director and Finance keep their direct `/beta/petty-cash` rows. Project Manager navigation suppresses the Programme Staff create-new Petty Cash row to avoid duplicate entries.
 
-## 2026-11-25 — Issue #197 production-build hotfix after PR #195
+## 2026-11-23 — Programme Staff dashboard workspace redesign
 
-- Restored the independent Director dashboard contract removed by PR #195: Director record/project types, type labels/codes, completion/return sets, requester-action helper, and role-specific summary functions. Preserved PR #195's organization-wide dataset through a dedicated Director organization summary wrapper.
-- Restored the exported `dashboardRoleWhere` repository function expected by its caller and focused visibility tests.
-- Moved Google Sheet rich-link parsing helpers and the Petty Cash input schema out of Next.js route modules. Route files now export only supported route handlers/config, eliminating production route-type failures without changing behavior.
-- Verification: eight focused tests, full TypeScript, formatting, and a complete `next build --webpack` production build passed. Local Turbopack cannot follow the worktree's external `node_modules` junction; Penang's Docker build uses real in-image dependencies and is not affected by that local junction limitation.
+- Redesigned only the plain Programme Staff dashboard to match the supplied workspace prototype; Project Manager, Manager, Director and Finance dashboard layouts and routing remain unchanged.
+- Replaced the five large Staff KPI cards with three compact linked summaries: Needs your action, In progress and Completed. Each opens unified My Requests with the corresponding URL-driven summary filter.
+- Replaced the six-type action tile strip with a grouped action queue that renders only payment types that currently need requester follow-up. Each row includes its live count and a direct filtered My Requests action.
+- Removed the redundant Payment Portfolio block from the plain Staff dashboard while retaining it for all other roles.
+- Added Staff Recent Activity filters for All requests, In progress, Completed and payment type. Filters work together against the live combined records, and the table now displays the 10 most recently updated matching records instead of 8, with a visible filtered-result count.
+- Changed the Staff hero CTA copy to `Request a payment` while preserving the existing payment-type menu and modal-based recent-record actions.
+- Verification: the copy-ready dashboard TypeScript passes the live project ESLint configuration through stdin; Prettier was run on both the TSX and CSS files. No independent scaffold runtime is available.
 
-## 2026-11-25 — PR #190 workflow reminder conflict resolution
+## 2026-11-23 — Role-separated dashboard foundation (Staff first)
 
-- Resolved the add/add conflict in `workflow-reminder.ts` by preserving `main`'s Finance fallback, active-recipient validation, self-reminder protection, stage-specific notification copy, and existing test coverage.
-- Added PR #190's exported `WorkflowReminderStage`, Manager/Director-specific action labels, recipient labels, and clearer errors for missing or inactive assignees.
-- Expanded the focused test to cover Manager and Director labels plus the self-reminder guard.
-- Verification: focused workflow-reminder tests, targeted ESLint, full TypeScript, and `git diff --check` passed.
+- Started the role-based dashboard split under `src/app/beta/dashboard/`. Plain Programme Staff now renders from `staff/staff-dashboard.tsx`; the existing root dashboard remains the temporary Manager/Director/Finance implementation until each role is migrated from its own approved prototype.
+- Added `src/data/dashboard/staff-dashboard-api.ts` as the Staff-specific dashboard data adapter. Role data stays in the data layer rather than inside the route component folder. It owns Staff record normalization, payment labels/codes, requester-action classification, completion/return grouping and unified My Requests URL generation while continuing to call the shared dashboard transport.
+- The root dashboard no longer fetches its legacy record set for plain Staff. It dispatches Staff accounts to `StaffDashboard`; Project Manager accounts stored as Staff continue through the Manager-compatible legacy view.
+- The extracted Staff screen preserves the redesigned hero, payment menu, three summary cards, grouped action queue, combined filters, modal record action and 10-record recent activity limit.
+- Added a fully standalone `staff/staff-dashboard.module.css`. It no longer composes or imports the legacy shared dashboard module and independently owns the Staff page shell, hero/payment menu, three KPI cards, action queue, filters, records table, status badges, hover states and responsive behavior. Staff KPI visuals now use the HD assets under `public/assets/icons` through `next/image`.
+- Matched the Staff Request a Payment popover to the supplied prototype: the most recently updated payment type is shown in a dedicated Recent section with a Last Used badge, and all payment choices show their color marker and explanatory subtitle. Updated the action queue to warm bordered rows with count pills, detailed follow-up context, outlined review buttons and a solid navy Review correction action for returned requests.
+- Added accessible column sorting to the Staff Recent Activity table. Reference, Requester, Amount, Submitted and Status are sortable; Action is intentionally excluded. Submitted defaults to newest first, inactive headings show a neutral bidirectional icon, and the active heading shows its current ascending or descending direction with `aria-sort` state.
+- Refined Staff Recent Activity badge tones: every `PENDING_*` and `AWAITING_*` status is amber, completed statuses remain green, and returned/rejected statuses are red instead of being grouped with general requester-action amber.
+- Tightened the Staff payment-menu proportions to the supplied prototype. The Request a payment and follow-up controls use a 265px rail and 52px height, the popover is 400px wide with compact internal spacing, and opening it temporarily hides the follow-up control so the menu begins immediately below the request button instead of being pushed down by the second action.
+
+## 2026-11-23 — Shared My Requests summary and table sorting
+
+- Confirmed that Staff, Manager, Director and Finance use the same combined `MyRequests` UI and shared request-action/download components, so the redesign applies consistently across requester roles.
+- Expanded the My Requests summary from four solid tiles to five compact prototype-style white cards: Drafts, In progress, Requires action, Completed and Rejected. Each remains a toggleable list filter and uses the matching HD public icon in a colored icon well.
+- Separated rejected/returned/inactive records from Requires action for summary counts and filtering. The new Rejected card selects those records explicitly while correction actions remain available in their table rows.
+- Added sortable table headings for Request no., Type, Purpose, Submitted, Status and Amount. Action remains unsortable. The heading arrows and existing Sort by selector share one sort state, including the new alphabetical options.
+- Retained the shared `PaymentRecordDownloadPanel` and `MyRequestAction` draft-delete modal, which already provide the prototype download filters and modal-overlay deletion flow rather than duplicating those features in the page.
+- Replaced the always-visible My Requests payment-type tabs and six-control filter grid with the compact prototype filter bar: a wide rounded search field, rounded All payment types selector and slider-icon Filters button. Opening Filters reveals Status, Month, Exact date, Sort by and Clear filters in a secondary panel. Search now also matches payment-type labels and the signed-in requester name in addition to reference, purpose and status.
+- Removed the redundant standalone Type column from My Requests. Each reference now includes the full payment-type label as a secondary line, while payment-type filtering remains available in the compact filter bar.
+- Prevented My Requests references such as `PV-2026-0005` from wrapping across lines by reserving a stable first-column width and applying no-wrap only to the reference value. Standardized all `PENDING_*` and `AWAITING_*` table badges to amber; completed/reconciled badges remain green and returned/rejected badges remain red.
+
+## 2026-11-23 — Role-separated Manager dashboard
+
+- Added a dedicated Manager dashboard under `src/app/beta/dashboard/manager/` with `manager-dashboard.tsx`, `manager-dashboard-team-records.tsx`, `manager-dashboard-my-request.tsx` and a standalone Manager CSS module. The root dashboard now dispatches both literal Manager accounts and Project Manager accounts stored as Staff to this view.
+- Added Team approvals and My requests tabs. Team approvals owns Manager queue metrics, the pending-approval callout and latest team records; My requests uses the Staff workspace pattern for Manager-submitted requests, including personal action cards, recent-status tabs, payment-type filtering and modal record actions.
+- Added `src/data/dashboard/manager-dashboard-api.ts` for Manager-specific record mapping, approval/requester-action classification, detail URLs and active project options loaded through the existing shared Administration settings reader.
+- Extended the shared dashboard summary contract/repository with the first submission-line Project code and name. The Manager Team payment activity selector is populated from active shared programmes and filters records by their stored Project code rather than a hard-coded list.
+- Fixed live-project compatibility in the Manager extraction: the shared Administration reader is now invoked with its zero-argument public API and normalized through `Promise.resolve` so both synchronous and asynchronous implementations work. Removed unnecessary explicit `useMemo` calls from both Manager tab lists to satisfy React Compiler's preserve-manual-memoization rule.
+- Replaced the Manager project-option builder with the existing `DIVISION_SELECT_OPTIONS` export from `shared/constants/payment-options`, eliminating duplicated labels such as `N-AOC-UNDP — N-AOC-UNDP`. Added the new public clipboard/users icons to Team metrics, grouped Manager personal action rows by payment type with the same colored PV/INV/TA/CA/PC/CL code blocks as Staff, and added a dynamic Manager Request a payment menu with Recent/Last used behavior.
+- Verification: all three updated dashboard TS/TSX files pass the live project ESLint configuration through stdin and were formatted with Prettier. The focused dashboard TypeScript config reaches only the existing scaffold baseline error that `isProjectManagerAccount` is absent from the scaffolded Administration export; no new Staff extraction error was reported.
+
+## 2026-11-24 — Workflow-health reminder notifications and card contrast
+
+- Strengthened the shared Manager/Director/Finance Workflow Health stage cards with orange, blue and red icon wells, matching active `Showing` badges, and tone-specific hover/selected glow states.
+- Added a reusable `features/team-records/notifications/workflow-reminder.ts` adapter. Workflow reminder actions now create a `GENERAL` notification through the existing local/shared notification store, which refreshes the recipient's notification bell and posts to `/api/v1/notifications`.
+- Made reminder labels role-aware: `Remind Manager`, `Remind Director`, `Remind Finance`, `Remind requester`, or the generic approver fallback. A user who currently owns the workflow action continues to receive `Review` or `Process` instead of a self-reminder button.
+- Added inline success/error feedback after a reminder attempt and documented the new copy destination in `TEAM_RECORDS_COPY_FILES.md`.
+- Switched the reconciliation artwork to `reconciliation-sync-white.png`. Records summary cards now keep their own orange, blue, green, teal or red border/glow on hover and selection, and each active `Showing` badge uses the same tone instead of always appearing amber.
+
+## 2026-11-24 — Role-separated Director dashboard foundation
+
+- Added a dedicated Director dashboard module with three views: Org overview, Team approvals and My requests. Team approvals and My requests reuse the established Manager/Staff interaction modules, while Director approval classification uses `PENDING_DIRECTOR_APPROVAL` and `PENDING_DIRECTOR_REVIEW`.
+- Added `director-dashboard-api.ts` so Director records and shared project options remain in the data layer. The root dashboard now dispatches Director accounts to the dedicated Director workspace instead of the legacy combined dashboard.
+- Added the initial organisation overview with organisation/in-progress/completed metrics, oversight highlights and a recent activity table linked to Team Records.
+- Generalised the Manager team-approval component with injectable approval classification and queue URL so Director can reuse the same tested table, filters, sorting and cards without duplicating it.
+- Added a Director/Admin workspace switcher for any Director account with `isAdministrator`. It changes between `/beta/dashboard` and `/beta/settings` without altering or recreating the signed-in session; the full Admin workspace remains future work.
+- Kept the Director dashboard dispatch as a runtime role-list check rather than a direct role equality branch. This prevents TypeScript from incorrectly narrowing all subsequent legacy dashboard code to “not Director,” which had produced three TS2367 comparisons in the existing shared implementation.
+- Removed the legacy System/Settings group from administrator-enabled Director navigation; Director administrators now reach Settings only through the Director/Admin workspace switcher. Other administrator roles retain their existing System group.
+- Added a dashboard API empty-state fallback for Prisma connection failures (`P1001`, `ECONNREFUSED`, or “Can't reach database server”). A disconnected local database now returns an empty dashboard payload with a warning instead of a 500 response; real query/programming errors remain 500 errors.
+- Rebuilt the Director Org overview to match the supplied prototype: three contrasting KPI cards, four linked oversight highlights, a compact six-type organisation summary and a six-row recent activity table. Delayed approvals use a 7-day threshold, Finance pending-too-long uses a 5-day threshold and the supplied `sandglass-blue.png` asset, while pending/completed/returned statuses use amber/green/red badges.
+- Removed the inherited tinted/padded Manager dashboard wrapper from the Director page through a Director-specific shell override, allowing the cards to use the full available content width. Strengthened the In progress icon tile to a saturated orange with a subtle glow so the white clock remains clearly visible.
+- Replaced the Director hero's direct Payment Voucher link with the same dynamic Request a payment menu used by Manager: Recent/Last used plus all six payment types. Opening the menu hides the follow-up control and each choice closes the menu before navigation.
+- Made the Director/Admin sidebar workspace-aware. Admin mode now shows only Overview (`/beta/administration/overview`) and Settings (`/beta/administration`), uses the Admin workspace tile and an Admin-access profile label, while Director mode retains its payment navigation. The lightweight Admin Overview lives under the existing `administration` route family so Administration remains a single maintainable module.
+- Replaced the Admin Overview placeholder with the supplied dashboard design: organisation setup stats, yearly project budget tracker, project utilisation table, claim-entitlement usage, needs-attention list and a Set budgets modal. Project codes/names come from the existing Prisma-backed Administration settings. Because the current Prisma `Project` model has no budget field, the year-scoped budget values explicitly remain Beta browser storage, matching the prototype badge and avoiding a schema-breaking single-column shortcut.
+- Corrected the Overview integration to use the live existing Administration module unchanged: `readAdminSettings()` is called with zero arguments, its complete live `AdminSettings` type supplies all claim-policy fields, and no unavailable `BETA_ORGANIZATION_ID` export is imported. Settings remains the existing `/beta/administration` implementation rather than duplicated code.
+- Fixed the budget modal project rows: Project code, Project name and Budget now have distinct labelled columns; known Beta prototype codes receive their intended friendly names when the existing Administration default still stores code-as-name. Opening the modal now loads only projects with saved budget rows instead of preloading every active project, so `Add project` can append the next unused project field visibly.
+- Made the budget modal Project name field editable. Custom names such as `V-KARISMA-YH` → `Guru Karisma` are saved both with that year's budget row and back through the existing `saveAdminSettings()` implementation, while the immutable project code remains the selector value.
+- Refined the Admin Overview to the latest prototype visual system. The four organisation setup cards now use the supplied Employees, Programmes, Accounting codes and Custom entitlements image assets with blue, orange, teal and purple accents and direct links to their existing Settings sections.
+- Expanded the Budget tracker presentation with labelled total/spent/committed/remaining cards, navy/light-blue allocation segments and legend, plus per-programme usage bars and green, amber or red utilisation badges for normal, near-limit and over-budget states.
+- Completed the two lower Overview cards. Claim entitlements now show Medical, Professional development, Tech and Internet/Commute policy rows with distinct prototype colors and link to the existing claim settings. Needs attention now has actionable Set budget, Assign, Review and View controls routed to the appropriate existing settings sections; over-budget actions reopen the current budget modal.
+- Verification: the updated Admin Overview TSX passes the live project ESLint configuration through stdin, and both TSX and CSS were formatted with the live project's Prettier installation.
+- Fixed the Admin Overview Custom entitlements count for the live `claimOverrides` shape. It is a keyed record rather than an array, so the card now renders `Object.keys(claimOverrides).length` as a number and no longer produces the `number | Partial<AdminClaimPolicy>` ReactNode TypeScript error.
+- Matched the Admin budget summary typography to the prototype: muted navy uppercase labels, navy total/spent values, blue committed and green remaining values. Restored vertical spacing between summary cards, allocation bar, legend and programme table; moved the legend below the graph; and increased table rows, headers and values to a medium readable size.
+- Increased Admin Overview typography across setup cards, budget descriptions/totals, legend, programme table and the two lower cards for improved readability. The Needs attention card remains integrated with saved budgets, active programme-manager assignments, employee status and accounting-code status; when no issue qualifies, it now renders a green “Everything looks up to date” state instead of an empty card.
+- Added `PROJECT_BUDGET_PRISMA_GUIDELINES.md` as the copy-ready handoff for Afiq. It specifies that yearly budgets reference the canonical `Project` model rather than `ProjectManagerAssignment` or legacy `beta_programmes`, and documents the Prisma model, compound key, API payloads, upsert behavior, authorization, calculations and migration checklist needed to replace browser `localStorage`.
+- Shortened the Afiq Project Budget handoff to exactly five Prisma-focused steps. It now contains only the `Project` reverse relation, `ProjectBudget` model, indirect relationship through `Project`, the `add_project_budgets` migration name, and post-migration verification; CLI commands and example migration file paths were removed.
+
+## 2026-11-25 — Role-separated Finance dashboard
+
+- Added a dedicated Finance dashboard with two tabs: Finance queue and Org overview. Finance queue contains four contrasting KPI cards, a payment-type processing queue, six-month released-payments chart and linked SQL/reconciliation cards matching the supplied prototype.
+- Reused the Director organisation overview for the Finance Org overview tab so organisation KPIs, oversight highlights, payment-type activity and recent activity keep the same iconography, status tones and interaction pattern.
+- Added a Finance-only Programme budget position card below Org overview. It currently reads the shared year-scoped Admin budget browser data and calculates spent/committed usage from Finance-visible payment records; it is explicitly ready to swap to the Project Budget API after Prisma support lands.
+- Added `finance-dashboard-api.ts` for Finance-specific record mapping, processing classification and Finance detail URLs.
+- Added a Finance/Staff workspace switcher that preserves the signed-in Finance account while rendering the existing Staff dashboard and Staff navigation for personal requests. Finance workspace navigation no longer duplicates Create payments or My Requests because those are available in Staff workspace.
+- Added `FINANCE_DASHBOARD_COPY_FILES.md` with all new and updated live-project destinations.
+- Verification: the Finance dashboard, budget component, root dashboard, sidebar and Finance API pass the live project ESLint configuration through stdin; all updated TSX/CSS files were formatted with the live Prettier installation.
+- Fixed the Finance dashboard validation follow-up: removed the unused `managerTypeLabels` import and converted the remaining legacy Director/Finance analytics comparison to a non-narrowing typed role-list check. This prevents TS2367 after the dedicated role dashboards return early while retaining the legacy block for compatible copies.
+- Corrected Director and Finance organisation data retrieval by adding an authorised `ORGANIZATION` dashboard view. Director keeps role-scoped records for Team approvals/My requests but now uses organisation-wide records for Org overview; Finance loads organisation-wide records for its queue and overview.
+- Restored the complete payment-type-specific Finance status matrix from the earlier combined dashboard, including approved-for-payment, processed, transaction-proof, verification, payment and reconciliation states, so valid Finance queue records are no longer filtered out.
+- Replaced the Finance KPI artwork with the supplied titled tile assets, increased processing-table typography and row height, and reduced the released-payment chart height so its x-axis sits closer to the plotted bars.
+- Finance Payments released now includes final completed/paid/reconciled records plus `PAYMENT_PROCESSED`, `FINANCE_VERIFIED` and `TRANSACTION_PROOF_UPLOADED`, so already released money appears in the monthly chart even while a record still requires proof or accounting follow-up.
+- Replaced the Finance Accounting and reconciliation symbol placeholders with the supplied `sql-entry-tracker-tile.png` and `unreconciled-advances-tile.png` assets. Reduced the Finance hero action typography to 13px so Open processing queue and the process count retain their prototype button dimensions without oversized text.
+- Refined the Finance Payments released chart to the supplied clean prototype: added This month so far and Monthly average summaries, an RM y-axis, a current-month “so far” label, tighter plot proportions and a deliberate gap between each amount label and its bar.
+- Made the Finance Unreconciled advances KPI keyboard/click interactive and added the supplied modal-overlay pattern. The modal derives its rows from live Finance-visible unreconciled cash advances, calculates 14-day due/overdue states, totals outstanding value, links non-overdue rows to reconciliation, and sends overdue reminders to each requester through the shared Estuary notification store.
+- Added Director-specific compatibility exports to `director-dashboard-api.ts`: record/type aliases plus completed statuses, returned statuses, type codes and type labels. This supports the live Director Org overview's newer import contract while preserving the shared Manager-backed implementation.
+- Completed the Director API compatibility surface with `DirectorProjectOption` and `directorRequesterAction`, both backed by the established Manager project-option type and requester-action classifier expected by the live Director dashboard.
+
+## 2026-11-25 — Project Budget API foundation
+
+- Added the copy-ready Project Budget API foundation against the confirmed Prisma `ProjectBudget` model: shared contracts, Prisma repository, browser client and `/api/v1/project-budgets` GET/PUT route.
+- Reused the existing Administration Settings authorization rule: only an active organization membership with Owner or Director role may read or replace budgets.
+- Defined PUT as a full replacement for one organization/year. Omitted project rows are deleted and become `Not configured`, matching the confirmed product behavior; all supplied project IDs must be active and belong to the same organization.
+- Preserved financial precision by accepting at most two decimal places and serializing Prisma Decimal amounts as fixed two-decimal strings.
+- Added `PROJECT_BUDGET_API_COPY_FILES.md` with the four live-project copy destinations and endpoint contract. UI integration and request commitment/spend calculations remain the next phase.
+
+## 2026-11-25 — Project Manager Team Records sidebar recovery
+
+- Restored Team Records for project-manager accounts after the pulled sidebar/data state classified Nadia as ordinary Programme Staff.
+- The sidebar now recognises the project-manager workspace from the explicit Manager role or the established Project Manager/Operations Manager account position. This avoids hiding Team Records and Pending Approvals merely because shared programme assignments are still loading or were replaced during a pull.
+- Ordinary Programme Staff remain on the staff-only navigation. The Team Records route and its existing server-side record scoping remain unchanged.
+
+## 2026-11-25 — Admin Project Budget API integration
+
+- Replaced the Admin Overview's `estuary:project-budgets:*` localStorage reader/writer with the Project Budget GET/PUT client. The selected year's rows now load from Prisma and a successful modal save replaces that organization's configured rows for the year.
+- Kept programme-name edits on the existing Administration Settings save path, while monetary budget values are persisted only through `ProjectBudget`.
+- Added modal saving state, disabled actions during persistence and inline API error feedback. Failed saves keep the modal open; the Overview no longer claims budgets are saved in the browser.
+- Updated `PROJECT_BUDGET_API_COPY_FILES.md` to include the Admin Overview TSX/CSS integration files. Budget spent/committed calculations still use current dashboard summaries and remain the next shared-domain phase.
+
+## 2026-11-25 — Shared Project Budget position service
+
+- Added a shared Project Budget position policy, Prisma repository, client method and `/api/v1/project-budgets/position` GET route. It returns every readable active project with configured/not-configured status plus budget, spent, committed, available and over-budget values.
+- Calculations aggregate `SubmissionLine.amount` by `project_id`, preserving multi-project request allocations and excluding untagged lines and Petty Cash.
+- Implemented the confirmed Cash Advance rule: pre-payment advances do not consume budget; paid advances are committed/on hold even when reconciliation is returned; reconciled advances move to spent without being counted twice.
+- Normal returned/rejected/cancelled/voided/draft requests are excluded, final Finance-stage approvals are committed and payment-processed/completed requests are spent.
+- Position visibility is organization-wide for active Owner, Director and Finance memberships. Project managers receive only projects from their active `ProjectManagerAssignment` records.
+- Added focused Vitest policy coverage. Because `ProjectBudget` currently stores only `year`, calculations temporarily use the selected year and submission/creation year; true project-duration windows require future schema dates.
+
+## 2026-11-25 — Programme manager assignment transaction fix
+
+- Rebuilt the copy-ready Administration Programmes PUT route to avoid the Prisma `P2028` interactive-transaction timeout seen while assigning a project manager.
+- The former route rewrote every submitted programme sequentially and deactivated/reactivated every project's assignments, even for a single modal edit. The new route loads and validates the directory before opening the transaction, bulk-creates missing projects, updates only changed project fields, and changes only manager assignments whose manager selection differs.
+- Assignment deactivation is now one bulk `updateMany` and records `effective_until`; selected assignments are reactivated with a fresh `effective_from`. The browser cache remains downstream of a successful API response, while Prisma `Project` and `ProjectManagerAssignment` stay authoritative.
+- Follow-up: VS Code initially reported three `Project.is_archived` type errors because its Prisma client/types were stale. The schema already contained the field. Direct `prisma generate` refreshed the TypeScript client before Windows blocked replacement of the dev-server-locked query-engine DLL; the refreshed client now exposes `is_archived`, and the complete live project passes `tsc --noEmit --incremental false`. Restarting the TypeScript language service/dev server clears the remaining cached editor diagnostics.
+
+## 2026-11-25 — Project Budget position UI integration
+
+- Connected Admin Overview, Team Records Analysis and Finance Programme budgets to the shared `/api/v1/project-budgets/position` endpoint.
+- Admin budget totals and programme rows now use the same Prisma-backed spent, committed, available and over-budget calculations as the domain service. The budget modal still saves through the administrator-only replacement endpoint and refreshes positions after a successful save.
+- Team Records now loads budget positions beside its scoped records, removes the invented RM 100,000 fallback and displays **Not configured** for projects without a saved budget. Spend by project uses the canonical project position values.
+- Finance Programme budgets no longer read `estuary:project-budgets:*` browser storage or recalculate statuses locally. It lists Finance-visible project positions with configured/not-configured handling and shared utilization values.
+- Verification: the five updated TSX files pass the live ESLint configuration through stdin. A focused strict TypeScript configuration covering the generated Admin, Team Records and Finance integration also passes; the temporary verification config was removed afterward.
+- Remaining product phase: add non-blocking insufficient-budget warnings to request entry/submission flows, using each request line's selected project and the shared position endpoint. Petty Cash remains excluded by the confirmed policy.
+
+## 2026-11-26 — Non-blocking request budget warnings
+
+- Added `POST /api/v1/project-budgets/check`, a narrow active-membership endpoint for request forms. It receives only project references and amounts and returns relevant `NOT_CONFIGURED` or `INSUFFICIENT` warnings without exposing the organisation-wide budget-position list to ordinary Staff.
+- Added a shared debounced `ProjectBudgetWarning` component with amber not-configured and red insufficient-budget notices. It explicitly states that submission remains allowed, matching the confirmed policy.
+- Connected the warning to Payment Voucher, Invoice Payment, Travel Allowance, Cash Advance and Claims. Multi-project Travel Allowance and Claim lines are grouped by project by the repository before comparison.
+- Petty Cash remains excluded from Project Budget warnings because its confirmed rule is available-fund tracking against actual spend.
+- The warning compares the requested amount with the current available position. Requests are not themselves committed at submission; the existing position policy commits normal payment types only after final Finance-stage approval/processing and holds paid Cash Advances until reconciliation.
+- Verification: all ten changed TypeScript/TSX files pass the live ESLint configuration through stdin. The strict focused TypeScript check for the new contracts, repository, client, route and shared component passes; its temporary config was removed.
+- Corrected the Payment Voucher accounting-options hook import after the live Administration module split it into `use-admin-accounting-options.ts`. This also restores the option callback's inferred type and removes the secondary implicit-`any` diagnostic.
+- Fixed the completed-PV budget attribution gap found with `PV-2026-0006`. The live PV repository saves `division` in CREATE/RESUBMIT metadata but leaves `SubmissionLine.project_id` null, so the position service previously skipped the RM15.50 and Team Records rendered project `—`.
+- Added a backward-compatible resolver in the budget-position repository that maps an unlinked Payment Voucher's latest snapshot `division` to canonical Project ID/code/name and classifies its lines as committed or spent. This immediately covers existing completed vouchers and new PVs written by the current repository.
+- Added the same snapshot fallback to the dashboard repository, so Team Records and role dashboards extract the Project from the saved PV Division when no line relation exists.
+- Updated Team Records currency formatting to retain two decimal places, so a test amount such as RM15.50 is no longer rounded visually to RM16.
+- Renamed the user-facing Payment Voucher field from **Division** to **Project Name** in both the single PV form and bulk manual-entry panel. The internal `division` field remains unchanged for API/database backward compatibility and continues to resolve to the canonical Project for Project Budget consumption.
+- Corrected Team Records projection: the Project column and CSV now show the canonical project code, while Purpose comes from `Submission.description` rather than incorrectly repeating the project name. The shared dashboard contract/repository now carries purpose, and Manager/Director/Finance dashboard adapters use it consistently.
+- Connected the PV Google Sheet wording to Project Budget attribution. The importer now maps `Project Name` and `Project Code` headers to the backward-compatible internal `division` field, retains support for legacy `Division` headers, reports a missing `Project Name` instead of the internal field name and shows Project in the import preview. Imported vouchers continue through the standard PV API, so the snapshot resolver commits/spends them against the matched canonical project.
+- Added accessible clickable sorting to the Team Records table for Reference, Requester, Project, Amount, Submitted and Purpose. The active header shows ascending/descending state, Submitted defaults newest-first and Action remains intentionally unsortable.
+- Verification: both updated repositories pass the live ESLint configuration and a focused strict TypeScript check.
