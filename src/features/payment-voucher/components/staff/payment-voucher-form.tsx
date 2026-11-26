@@ -17,8 +17,7 @@ import {
   PAYMENT_METHOD_OPTIONS as paymentMethodOptions,
   PAYMENT_VOUCHER_ACCOUNT_CODES as knownAccountCodes,
 } from "@/shared/constants/payment-options";
-import { projectManagerFor } from "@/features/administration/admin-settings";
-import { useAdminAccountingOptions } from '@/features/administration/use-admin-accounting-options';
+import { useAdminAccountingOptions } from "@/features/administration/use-admin-accounting-options";
 import { parsePaymentAmountInput } from "@/shared/utils/payment-amount";
 import { PaymentAmountInput } from "@/shared/payment-amount-input";
 import {
@@ -29,6 +28,7 @@ import {
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import { ManualDraftConfirmation } from "../../../payment-request/components/shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../../payment-request/components/shared/manual-draft-status";
+import { ProjectBudgetWarning } from "../../../payment-request/components/shared/project-budget-warning";
 
 import type {
   CreatePaymentVoucherInput,
@@ -154,6 +154,7 @@ export function PaymentVoucherForm({
 }: PaymentVoucherFormProps) {
   const paymentVoucherAccountOptions = useAdminAccountingOptions();
   const [account] = useState(() => readBetaSession());
+  const [division, setDivision] = useState(initialVoucher?.division ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const isAmendment = initialVoucher?.status === "REJECTED";
 
@@ -358,7 +359,7 @@ export function PaymentVoucherForm({
        */
       directorId: isAmendment ? initialVoucher.directorId : directorId,
 
-      projectManagerId: initialVoucher?.projectManagerId ?? projectManagerFor(divisionValue),
+      projectManagerId: initialVoucher?.projectManagerId ?? "nadia-hassan",
 
       pvDate: String(formData.get("pvDate") ?? "").trim(),
 
@@ -448,6 +449,12 @@ export function PaymentVoucherForm({
         ref={formRef}
         onSubmit={handleReview}
       >
+        <ProjectBudgetWarning
+          accountId={account?.id}
+          allocations={[
+            { projectReference: division, amount: totals.grandTotal },
+          ]}
+        />
         {isAmendment && initialVoucher && (
           <aside className={styles.amendmentAside}>
             <section className={styles.amendmentRequestCard} role="status">
@@ -593,16 +600,17 @@ export function PaymentVoucherForm({
 
               <label className={styles.field}>
                 <span>
-                  Division <em className={styles.requiredMarker}>*</em>
+                  Project Name <em className={styles.requiredMarker}>*</em>
                 </span>
 
                 <select
                   defaultValue={selectedDivision}
                   name="division"
+                  onChange={(event) => setDivision(event.target.value)}
                   required
                 >
                   <option disabled value="">
-                    Select division
+                    Select project
                   </option>
 
                   {divisionOptions.map((division) => (
@@ -793,8 +801,8 @@ export function PaymentVoucherForm({
 
             <div className={styles.lineLabels}>
               <span>Account <em className={styles.requiredMarker}>*</em></span>
-              <span>Description  <em className={styles.requiredMarker}>*</em></span>
-              <span>Quantity  <em className={styles.requiredMarker}>*</em></span>
+              <span>Description <em className={styles.requiredMarker}>*</em></span>
+              <span>Quantity <em className={styles.requiredMarker}>*</em></span>
               <span>Unit price <em className={styles.requiredMarker}>*</em></span>
               <span>Total</span>
             </div>

@@ -262,12 +262,12 @@ function VoucherEditor({
 
         <SelectField
           field="division"
-          label="Division"
+          label="Project Name"
           onUpdate={onUpdate}
           options={[
             {
               value: "",
-              label: "Select division",
+              label: "Select project",
             },
             ...divisions,
           ]}

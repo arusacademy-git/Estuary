@@ -40,6 +40,8 @@ const paymentVoucherTemplateUrl =
 const headerAliases: Record<string, BulkPaymentVoucherField> = {
   "pv date": "pvDate",
   division: "division",
+  "project name": "division",
+  "project code": "division",
   "director email": "directorEmail",
   "approve by": "directorEmail",
   "approved by": "directorEmail",
@@ -124,15 +126,16 @@ function createRowsFromCsv(csvText: string) {
   const missing = requiredFields.filter((field) => !indexes.has(field));
   if (missing.length) {
     throw new Error(
-      `The Google Sheet is missing required columns: ${missing.join(", ")}.`,
+      `The Google Sheet is missing required columns: ${missing
+        .map((field) => (field === "division" ? "Project Name" : field))
+        .join(", ")}.`,
     );
   }
 
-  const importStatusIndex = headers.findIndex(
-    (header) =>
-      ["import status", "submission status", "estuary status"].includes(
-        normalizeHeader(header),
-      ),
+  const importStatusIndex = headers.findIndex((header) =>
+    ["import status", "submission status", "estuary status"].includes(
+      normalizeHeader(header),
+    ),
   );
   const rows = dataRows
     .filter((values) => {
@@ -172,7 +175,8 @@ export function BulkCsvUploadPanel({
   onContinue,
 }: Props) {
   const [sheetUrl, setSheetUrl] = useState(initialSourceUrl);
-  const [parsedRows, setParsedRows] = useState<BulkPaymentVoucherRow[]>(initialRows);
+  const [parsedRows, setParsedRows] =
+    useState<BulkPaymentVoucherRow[]>(initialRows);
   const [isLoading, setIsLoading] = useState(false);
   const [loadedUrl, setLoadedUrl] = useState(initialSourceUrl);
   const [errorMessage, setErrorMessage] = useState("");
@@ -287,8 +291,8 @@ export function BulkCsvUploadPanel({
               </span>
               <span>
                 Keep an Import Status, Submission Status or Estuary Status
-                column. Rows marked  YES or NO are
-                excluded so a submitted PV is not imported twice.
+                column. Rows marked YES or NO are excluded so a submitted PV is
+                not imported twice.
               </span>
             </div>
           </div>
@@ -358,6 +362,7 @@ export function BulkCsvUploadPanel({
                   <th>#</th>
                   <th>PV date</th>
                   <th>Recipient</th>
+                  <th>Project</th>
                   <th>Director</th>
                   <th>Purpose</th>
                   <th>Amount</th>
@@ -375,6 +380,7 @@ export function BulkCsvUploadPanel({
                         <strong>{row.recipientName || "—"}</strong>
                         <small>{row.recipientEmail}</small>
                       </td>
+                      <td>{row.division || "—"}</td>
                       <td>{row.directorEmail || "—"}</td>
                       <td>{row.purpose || "—"}</td>
                       <td>{formatCurrency(validation?.amount ?? 0)}</td>
