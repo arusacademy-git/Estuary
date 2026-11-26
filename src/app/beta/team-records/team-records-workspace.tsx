@@ -8,13 +8,13 @@ import { ListPagination } from "@/components/ui/list-pagination/list-pagination"
 import { useListPagination } from "@/components/ui/list-pagination/use-list-pagination";
 import {
   completedTeamStatuses,
-  inactiveTeamStatuses,
   teamProjectOptions,
   teamRecordGroup,
   teamRecordTypeLabels,
   type TeamRecord,
 } from "@/data/team-records/team-records-api";
 import type { DashboardSummaryPaymentType } from "@/domain/dashboard/types";
+import type { ProjectBudgetPosition } from "@/domain/projects/project-budget-types";
 import type { BetaAccount } from "@/lib/auth/beta-accounts";
 
 import styles from "./team-records.module.css";
@@ -28,12 +28,30 @@ export type TeamRecordGroup =
   | "INACTIVE";
 type AnalysisView = "TREND" | "TYPE";
 type Period = "3" | "6" | "12" | "ALL";
+type SortKey =
+  | "reference"
+  | "requester"
+  | "project"
+  | "amount"
+  | "submitted"
+  | "purpose";
+type SortDirection = "asc" | "desc";
+
+const sortableColumns: Array<{ key: SortKey; label: string }> = [
+  { key: "reference", label: "Reference" },
+  { key: "requester", label: "Requester" },
+  { key: "project", label: "Project" },
+  { key: "amount", label: "Amount" },
+  { key: "submitted", label: "Submitted" },
+  { key: "purpose", label: "Purpose" },
+];
 
 const money = (value: number) =>
   new Intl.NumberFormat("en-MY", {
     style: "currency",
     currency: "MYR",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 const shortDate = (value: string) =>
   new Intl.DateTimeFormat("en-MY", {
@@ -52,7 +70,7 @@ const groupMeta: Array<{
     value: "APPROVAL",
     label: "Pending approval",
     note: "Waiting for a decision",
-    icon: "/assets/icons/clipboard-check.png",
+    icon: "/assets/icons/pending-approvals-light.png",
   },
   {
     value: "PAYMENT",
@@ -82,6 +100,8 @@ const groupMeta: Array<{
 
 export function TeamRecordsWorkspace({
   account,
+  budgetError = "",
+  budgetPositions = [],
   error,
   initialGroup = "APPROVAL",
   initialView = "RECORDS",
@@ -89,6 +109,8 @@ export function TeamRecordsWorkspace({
   records,
 }: {
   account?: BetaAccount;
+  budgetError?: string;
+  budgetPositions?: ProjectBudgetPosition[];
   error?: string;
   initialGroup?: TeamRecordGroup;
   initialView?: View;
@@ -106,6 +128,8 @@ export function TeamRecordsWorkspace({
   const [minimumAmount, setMinimumAmount] = useState("");
   const [maximumAmount, setMaximumAmount] = useState("");
   const [analysisView, setAnalysisView] = useState<AnalysisView>("TREND");
+  const [sortKey, setSortKey] = useState<SortKey>("submitted");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const now = new Date();
   const periodRecords = records.filter((record) => {
@@ -144,21 +168,76 @@ export function TeamRecordsWorkspace({
           .toLowerCase()
           .includes(query),
     );
-  const pagination = useListPagination(filtered, 10);
+  const sorted = [...filtered].sort((left, right) => {
+    const direction = sortDirection === "asc" ? 1 : -1;
+    if (sortKey === "amount") return (left.amount - right.amount) * direction;
+    if (sortKey === "submitted") {
+      return (
+        (new Date(left.submittedAt).getTime() -
+          new Date(right.submittedAt).getTime()) *
+        direction
+      );
+    }
+    const leftValue =
+      sortKey === "reference"
+        ? left.reference
+        : sortKey === "requester"
+          ? left.requesterName
+          : sortKey === "project"
+            ? (left.projectCode ?? "")
+            : left.purpose;
+    const rightValue =
+      sortKey === "reference"
+        ? right.reference
+        : sortKey === "requester"
+          ? right.requesterName
+          : sortKey === "project"
+            ? (right.projectCode ?? "")
+            : right.purpose;
+    return (
+      leftValue.localeCompare(rightValue, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }) * direction
+    );
+  });
+  const pagination = useListPagination(sorted, 10);
   const total = scoped.reduce((sum, record) => sum + record.amount, 0);
-  const paid = scoped
-    .filter((record) => completedTeamStatuses.has(record.status))
-    .reduce((sum, record) => sum + record.amount, 0);
-  const committed = scoped
-    .filter((record) => !completedTeamStatuses.has(record.status))
-    .filter((record) => !inactiveTeamStatuses.has(record.status))
-    .reduce((sum, record) => sum + record.amount, 0);
-  const budget = Math.max(100000, paid + committed);
-  const available = Math.max(0, budget - paid - committed);
+  const selectedPositions = budgetPositions.filter(
+    (position) => project === "ALL" || position.projectCode === project,
+  );
+  const configuredPositions = selectedPositions.filter(
+    (position) => position.configured,
+  );
+  const budget = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.budget),
+    0,
+  );
+  const paid = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.spent),
+    0,
+  );
+  const committed = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.committed),
+    0,
+  );
+  const available = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.available),
+    0,
+  );
 
   if (loading)
     return <main className={styles.state}>Loading Team Records…</main>;
   if (error) return <main className={styles.state}>{error}</main>;
+
+  const changeSort = (nextKey: SortKey) => {
+    if (sortKey === nextKey) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(nextKey);
+    setSortDirection(nextKey === "submitted" ? "desc" : "asc");
+  };
 
   const exportCsv = () => {
     const rows = [
@@ -166,7 +245,7 @@ export function TeamRecordsWorkspace({
       ...scoped.map((record) => [
         record.reference,
         record.requesterName,
-        record.projectName ?? record.projectCode ?? "",
+        record.projectCode ?? "",
         record.typeLabel,
         String(record.amount),
         record.statusLabel,
@@ -355,12 +434,37 @@ export function TeamRecordsWorkspace({
               <table>
                 <thead>
                   <tr>
-                    <th>Reference</th>
-                    <th>Requester</th>
-                    <th>Project</th>
-                    <th>Amount</th>
-                    <th>Submitted</th>
-                    <th>Purpose</th>
+                    {sortableColumns.map((column) => {
+                      const active = sortKey === column.key;
+                      return (
+                        <th
+                          aria-sort={
+                            active
+                              ? sortDirection === "asc"
+                                ? "ascending"
+                                : "descending"
+                              : "none"
+                          }
+                          key={column.key}
+                        >
+                          <button
+                            className={styles.sortHeader}
+                            data-active={active}
+                            onClick={() => changeSort(column.key)}
+                            type="button"
+                          >
+                            {column.label}
+                            <span aria-hidden="true">
+                              {active
+                                ? sortDirection === "asc"
+                                  ? "▲"
+                                  : "▼"
+                                : "↕"}
+                            </span>
+                          </button>
+                        </th>
+                      );
+                    })}
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -372,7 +476,7 @@ export function TeamRecordsWorkspace({
                         <small>{record.typeLabel}</small>
                       </td>
                       <td>{record.requesterName}</td>
-                      <td>{record.projectName ?? record.projectCode ?? "—"}</td>
+                      <td>{record.projectCode ?? "—"}</td>
                       <td>
                         <strong>{money(record.amount)}</strong>
                       </td>
@@ -407,6 +511,8 @@ export function TeamRecordsWorkspace({
           analysisView={analysisView}
           available={available}
           budget={budget}
+          budgetError={budgetError}
+          budgetPositions={selectedPositions}
           committed={committed}
           paid={paid}
           period={period}
@@ -427,6 +533,8 @@ function Analysis({
   analysisView,
   available,
   budget,
+  budgetError,
+  budgetPositions,
   committed,
   paid,
   period,
@@ -441,6 +549,8 @@ function Analysis({
   analysisView: AnalysisView;
   available: number;
   budget: number;
+  budgetError: string;
+  budgetPositions: ProjectBudgetPosition[];
   committed: number;
   paid: number;
   period: Period;
@@ -511,22 +621,24 @@ function Analysis({
         record.status.includes("RECONCILIATION"),
     ).length,
   };
-  const projectSpend = teamProjectOptions
-    .filter((option) => project === "ALL" || option.value === project)
-    .map((option) => ({
-      code: option.value,
-      label: option.label,
-      amount: records
-        .filter((record) => record.projectCode === option.value)
-        .reduce((sum, record) => sum + record.amount, 0),
+  const projectSpend = budgetPositions
+    .map((position) => ({
+      code: position.projectCode,
+      label: position.projectName,
+      amount: Number(position.spent),
+      budget: position.configured ? Number(position.budget) : null,
     }))
-    .filter((item) => item.amount > 0)
+    .filter((item) => item.amount > 0 || item.budget !== null)
     .sort((left, right) => right.amount - left.amount)
     .slice(0, 3);
   const highestProjectSpend = Math.max(
     1,
     ...projectSpend.map((item) => item.amount),
   );
+  const budgetUsed = paid + committed;
+  const budgetUsedPercent = budget
+    ? Math.round((budgetUsed / budget) * 100)
+    : 0;
   return (
     <>
       <section className={styles.analysisKpis}>
@@ -587,15 +699,19 @@ function Analysis({
         <header>
           <div>
             <h2>Budget utilisation</h2>
-            <span>Approved budget {money(budget)} · all assigned projects</span>
+            <span>
+              {budget
+                ? `Approved budget ${money(budget)} · selected projects`
+                : "Budget not configured for the selected projects"}
+            </span>
           </div>
           <strong>
-            {Math.round(((paid + committed) / budget) * 100)}% used
+            {budget ? `${budgetUsedPercent}% used` : "Not configured"}
           </strong>
         </header>
         <div className={styles.budgetBar}>
-          <i style={{ width: `${(paid / budget) * 100}%` }} />
-          <b style={{ width: `${(committed / budget) * 100}%` }} />
+          <i style={{ width: `${budget ? (paid / budget) * 100 : 0}%` }} />
+          <b style={{ width: `${budget ? (committed / budget) * 100 : 0}%` }} />
         </div>
         <div>
           <p>
@@ -610,10 +726,12 @@ function Analysis({
           </p>
           <p>
             <i />
-            Available<strong>{money(available)}</strong>
+            Available
+            <strong>{budget ? money(available) : "Not configured"}</strong>
             <small>Left to spend</small>
           </p>
         </div>
+        {budgetError && <p className={styles.noProjectSpend}>{budgetError}</p>}
       </section>
       <section className={styles.analysisChart}>
         <header>
@@ -708,7 +826,10 @@ function Analysis({
           {projectSpend.map((item) => (
             <div className={styles.projectSpend} key={item.code}>
               <strong>{item.label}</strong>
-              <span>{money(item.amount)}</span>
+              <span>
+                {money(item.amount)} of{" "}
+                {item.budget === null ? "Not configured" : money(item.budget)}
+              </span>
               <i>
                 <b
                   style={{
