@@ -18,8 +18,12 @@ import { amountToMalayWords } from "@/lib/currency/amount-words";
 import { notifyManagerInvoicePaymentSubmitted } from "@/features/payment-request/notifications/invoice-payment-notifications";
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
+import { ProjectBudgetWarning } from "../../shared/project-budget-warning";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
-import { projectManagerFor } from "@/features/administration/admin-settings";
+import {
+  activeProjectManagerAccounts,
+  projectManagerFor,
+} from "@/features/administration/admin-settings";
 
 import { InvoicePaymentReview } from "./invoice-payment-review";
 import { InvoicePaymentConfirmation } from "./invoice-payment-confirmation";
@@ -74,8 +78,8 @@ export function InvoicePaymentForm({
 }) {
   const initialProjectIsListed = initialRecord
     ? (INVOICE_PAYMENT_PROJECTS as readonly string[]).includes(
-      initialRecord.projectName,
-    )
+        initialRecord.projectName,
+      )
     : false;
   const [account, setAccount] =
     useState<ReturnType<typeof readBetaSession>>(null);
@@ -199,7 +203,8 @@ export function InvoicePaymentForm({
   useEffect(() => {
     if (initialRecord) return;
     const assignedManager = projectManagerFor(projectName);
-    setManagerApproverId(assignedManager ?? "");
+    const fallbackManager = activeProjectManagerAccounts()[0]?.id;
+    setManagerApproverId(assignedManager ?? fallbackManager ?? "");
   }, [initialRecord, projectName]);
 
   const requestedAmount = useMemo(() => {
@@ -390,8 +395,8 @@ export function InvoicePaymentForm({
           initialRecord
             ? window.location.assign("/beta/payment-records/invoice-payments")
             : window.location.assign(
-              "/beta/payment-requests/invoice-payment/new",
-            )
+                "/beta/payment-requests/invoice-payment/new",
+              )
         }
       />
     );
@@ -441,6 +446,12 @@ export function InvoicePaymentForm({
         </div>
       )}
       <form className={styles.formLayout} onSubmit={continueToReview}>
+        <ProjectBudgetWarning
+          accountId={account?.id}
+          allocations={[
+            { projectReference: projectName, amount: requestedAmount },
+          ]}
+        />
         <div className={styles.formCard}>
           <FormSection
             index="1"
