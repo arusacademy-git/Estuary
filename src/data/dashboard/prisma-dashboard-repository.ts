@@ -1,15 +1,15 @@
-import { PaymentType, Prisma } from '@prisma/client';
+import { PaymentType, Prisma } from "@prisma/client";
 
 import type {
   DashboardSummaryPaymentType,
   DashboardSummaryRecord,
-} from '@/domain/dashboard/types';
-import { prisma } from '@/lib/db/prisma';
+} from "@/domain/dashboard/types";
+import { prisma } from "@/lib/db/prisma";
 
 type DashboardScope = {
-  role: 'staff' | 'manager' | 'director' | 'finance';
+  role: "staff" | "manager" | "director" | "finance";
   userId: string;
-  view?: 'ROLE' | 'ORGANIZATION' | 'ORGANIZATION_COMPLETED';
+  view?: "ROLE" | "ORGANIZATION" | "ORGANIZATION_COMPLETED";
 };
 
 const supportedTypes = [
@@ -37,12 +37,14 @@ const claimTypes: PaymentType[] = [
 
 const select = {
   id: true,
+  organization_id: true,
   submission_number: true,
   payment_type: true,
   current_state_code: true,
   current_assignee_id: true,
   submitted_by_id: true,
   total_amount: true,
+  description: true,
   created_at: true,
   updated_at: true,
   submitted_by: { select: { name: true } },
@@ -56,49 +58,71 @@ const select = {
     where: {
       action_code: {
         in: [
-          'MANAGER_PREVIEW',
-          'APPROVE_BY_MANAGER',
-          'FORWARD_BY_DIRECTOR',
-          'ISSUE_RECIPIENT_LINK',
-          'RETURN_SIGNED_PV',
+          "MANAGER_PREVIEW",
+          "APPROVE_BY_MANAGER",
+          "FORWARD_BY_DIRECTOR",
+          "ISSUE_RECIPIENT_LINK",
+          "RETURN_SIGNED_PV",
+          "CREATE",
+          "RESUBMIT",
         ],
       },
     },
-    select: { action_code: true, created_at: true },
+    select: { action_code: true, created_at: true, metadata_json: true },
   },
 } satisfies Prisma.SubmissionSelect;
 
 type StoredSummary = Prisma.SubmissionGetPayload<{ select: typeof select }>;
 
 function normalizedType(type: PaymentType): DashboardSummaryPaymentType {
-  if (type === PaymentType.PETTY_CASH_TOPUP) return 'PETTY_CASH';
-  if (claimTypes.includes(type)) return 'EXPENSE_CLAIM';
+  if (type === PaymentType.PETTY_CASH_TOPUP) return "PETTY_CASH";
+  if (claimTypes.includes(type)) return "EXPENSE_CLAIM";
   return type as DashboardSummaryPaymentType;
 }
 
 function fallbackReference(record: StoredSummary) {
   const prefixes: Record<DashboardSummaryPaymentType, string> = {
-    PAYMENT_VOUCHER: 'PV',
-    INVOICE_PAYMENT: 'IV',
-    TRAVEL_ALLOWANCE: 'TA',
-    CASH_ADVANCE: 'CA',
-    PETTY_CASH: 'PC',
-    EXPENSE_CLAIM: 'CL',
+    PAYMENT_VOUCHER: "PV",
+    INVOICE_PAYMENT: "IV",
+    TRAVEL_ALLOWANCE: "TA",
+    CASH_ADVANCE: "CA",
+    PETTY_CASH: "PC",
+    EXPENSE_CLAIM: "CL",
   };
   return `${prefixes[normalizedType(record.payment_type)]}-DRAFT-${record.id.slice(-6)}`;
 }
 
-export function dashboardRoleWhere(
-  scope: DashboardScope
-): Prisma.SubmissionWhereInput {
-  if (scope.view === 'ORGANIZATION') return {};
-  if (scope.view === 'ORGANIZATION_COMPLETED') {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function snapshotProjectReference(record: StoredSummary) {
+  const transition = [...record.transitions]
+    .reverse()
+    .find(
+      (item) =>
+        item.action_code === "CREATE" || item.action_code === "RESUBMIT",
+    );
+  const metadata = transition?.metadata_json;
+  if (!isRecord(metadata) || !isRecord(metadata.snapshot)) return undefined;
+  const division = metadata.snapshot.division;
+  return typeof division === "string" && division.trim()
+    ? division.trim()
+    : undefined;
+}
+
+const normalizeProject = (value: string) =>
+  value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+
+function roleWhere(scope: DashboardScope): Prisma.SubmissionWhereInput {
+  if (scope.view === "ORGANIZATION") return {};
+  if (scope.view === "ORGANIZATION_COMPLETED") {
     return {
-      current_state_code: { in: ['COMPLETED', 'COMPLETE', 'CLOSED', 'PAID'] },
+      current_state_code: { in: ["COMPLETED", "COMPLETE", "CLOSED", "PAID"] },
     };
   }
-  if (scope.role === 'finance' || scope.role === 'director') return {};
-  if (scope.role === 'staff') return { submitted_by_id: scope.userId };
+  if (scope.role === "finance") return {};
+  if (scope.role === "staff") return { submitted_by_id: scope.userId };
   return {
     OR: [
       { current_assignee_id: scope.userId },
@@ -112,38 +136,60 @@ export async function listDashboardSummaryFromDatabase(scope: DashboardScope) {
   const records = await prisma.submission.findMany({
     where: {
       payment_type: { in: supportedTypes },
-      ...dashboardRoleWhere(scope),
+      ...roleWhere(scope),
     },
     select,
-    orderBy: { updated_at: 'desc' },
+    orderBy: { updated_at: "desc" },
     take: 1000,
+  });
+
+  const projects = await prisma.project.findMany({
+    where: {
+      organization_id: {
+        in: [...new Set(records.map((record) => record.organization_id))],
+      },
+      is_active: true,
+    },
+    select: { id: true, organization_id: true, code: true, name: true },
   });
 
   return records.map((record): DashboardSummaryRecord => {
     const managerViewed = record.transitions.some(
-      (transition) => transition.action_code === 'MANAGER_PREVIEW'
+      (transition) => transition.action_code === "MANAGER_PREVIEW",
     );
     const claimManagerPreviewed = record.transitions.some(
-      (transition) => transition.action_code === 'APPROVE_BY_MANAGER'
+      (transition) => transition.action_code === "APPROVE_BY_MANAGER",
     );
     const claimDirectorPreviewed = record.transitions.some(
-      (transition) => transition.action_code === 'FORWARD_BY_DIRECTOR'
+      (transition) => transition.action_code === "FORWARD_BY_DIRECTOR",
     );
     const latestLinkIssue = record.transitions
-      .filter((transition) => transition.action_code === 'ISSUE_RECIPIENT_LINK')
+      .filter((transition) => transition.action_code === "ISSUE_RECIPIENT_LINK")
       .sort(
-        (left, right) => right.created_at.getTime() - left.created_at.getTime()
+        (left, right) => right.created_at.getTime() - left.created_at.getTime(),
       )[0];
     const latestSignatureReturn = record.transitions
-      .filter((transition) => transition.action_code === 'RETURN_SIGNED_PV')
+      .filter((transition) => transition.action_code === "RETURN_SIGNED_PV")
       .sort(
-        (left, right) => right.created_at.getTime() - left.created_at.getTime()
+        (left, right) => right.created_at.getTime() - left.created_at.getTime(),
       )[0];
     const recipientLinkIssued = Boolean(
       latestLinkIssue &&
       (!latestSignatureReturn ||
-        latestLinkIssue.created_at > latestSignatureReturn.created_at)
+        latestLinkIssue.created_at > latestSignatureReturn.created_at),
     );
+    const linkedProject = record.lines.find((line) => line.project)?.project;
+    const snapshotReference = snapshotProjectReference(record);
+    const fallbackProject = snapshotReference
+      ? projects.find(
+          (project) =>
+            project.organization_id === record.organization_id &&
+            [project.id, project.code, project.name].some(
+              (value) =>
+                normalizeProject(value) === normalizeProject(snapshotReference),
+            ),
+        )
+      : undefined;
 
     return {
       id: record.id,
@@ -153,16 +199,17 @@ export async function listDashboardSummaryFromDatabase(scope: DashboardScope) {
       requesterName: record.submitted_by.name,
       status: record.current_state_code,
       amount: Number(record.total_amount),
+      purpose: record.description ?? "",
       submittedAt: record.created_at.toISOString(),
       updatedAt: record.updated_at.toISOString(),
-      projectCode: record.lines.find((line) => line.project)?.project?.code,
-      projectName: record.lines.find((line) => line.project)?.project?.name,
+      projectCode: linkedProject?.code ?? fallbackProject?.code,
+      projectName: linkedProject?.name ?? fallbackProject?.name,
       currentAssigneeId: record.current_assignee_id ?? undefined,
       approverIds: [
         ...new Set(
           record.approval_steps
             .map((step) => step.assigned_user_id)
-            .filter((id): id is string => Boolean(id))
+            .filter((id): id is string => Boolean(id)),
         ),
       ],
       managerViewed,

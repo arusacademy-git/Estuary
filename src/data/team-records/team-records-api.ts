@@ -94,7 +94,7 @@ export async function fetchTeamRecords(account: BetaAccount) {
         typeLabel: teamRecordTypeLabels[record.paymentType],
         typeCode: teamRecordTypeCodes[record.paymentType],
         statusLabel: titleCase(record.status),
-        purpose: record.projectName ?? teamRecordTypeLabels[record.paymentType],
+        purpose: record.purpose || teamRecordTypeLabels[record.paymentType],
         href: recordHref(record.paymentType, record.id),
     }));
 }

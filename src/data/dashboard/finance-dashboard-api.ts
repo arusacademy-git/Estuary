@@ -89,13 +89,13 @@ export async function fetchFinanceDashboard(account: BetaAccount) {
     typeLabel: managerTypeLabels[record.paymentType],
     requesterId: record.requesterId,
     requesterName: record.requesterName,
-    purpose: record.projectName ?? managerTypeLabels[record.paymentType],
+    purpose: record.purpose || managerTypeLabels[record.paymentType],
     status: record.status,
     statusLabel:
       record.paymentType === "PAYMENT_VOUCHER"
         ? getPaymentVoucherStatusLabel(
-            record.status as PaymentVoucherRecord["status"],
-          )
+          record.status as PaymentVoucherRecord["status"],
+        )
         : titleCase(record.status),
     amount: record.amount,
     updatedAt: record.updatedAt,
