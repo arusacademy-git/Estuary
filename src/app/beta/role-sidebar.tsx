@@ -6,7 +6,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import type { BetaAccount, BetaRole } from "@/lib/auth/beta-accounts";
-import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 import {
   createEmptySidebarActionCounts,
   fetchSidebarActionCounts,
@@ -35,6 +34,11 @@ const roleLabels: Record<BetaRole, string> = {
   director: "Director",
   finance: "Finance Admin",
 };
+
+function isProjectManagerProfile(account: BetaAccount) {
+  if (account.role === "manager") return true;
+  return /\b(?:project|operations) manager\b/i.test(account.position.trim());
+}
 
 const standardRequests: NavigationItem[] = [
   { label: "Payment Voucher", href: "/beta/payment-vouchers/new" },
@@ -267,7 +271,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const searchParameters = useSearchParams();
   const currentQuery = searchParameters.toString();
   const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
-  const projectManager = isProjectManagerAccount(account);
+  const projectManager = isProjectManagerProfile(account);
   const [financeWorkspace, setFinanceWorkspace] = useState<"finance" | "staff">(
     () =>
       typeof window !== "undefined" &&

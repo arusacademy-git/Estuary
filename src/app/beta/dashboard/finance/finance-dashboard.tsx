@@ -9,6 +9,7 @@ import {
   financeCompletedStatuses,
   financeNeedsProcessing,
 } from "@/data/dashboard/finance-dashboard-api";
+import { createLocalNotification } from "@/data/notifications/local-notification-store";
 import {
   managerTypeCodes,
   type ManagerDashboardRecord,
@@ -35,6 +36,8 @@ const money = (value: number) =>
     currency: "MYR",
     minimumFractionDigits: 2,
   }).format(value);
+const axisMoney = (value: number) =>
+  value >= 1000 ? `RM ${Math.round(value / 1000)}k` : `RM ${Math.round(value)}`;
 const ageInDays = (value: string, now: Date) =>
   Math.max(
     0,
@@ -46,6 +49,8 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
   const [records, setRecords] = useState<ManagerDashboardRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
+  const [reconciliationOpen, setReconciliationOpen] = useState(false);
+  const [reminded, setReminded] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
@@ -79,9 +84,18 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
         "TRANSACTION_PROOF_UPLOADED",
       ].includes(record.status),
   );
-  const unreconciled = records.filter((record) =>
-    record.status.includes("RECONCILIATION"),
+  const unreconciled = records.filter(
+    (record) =>
+      record.type === "CASH_ADVANCE" &&
+      record.status.includes("RECONCILIATION"),
   );
+  const reconciliationRows = unreconciled.map((record) => {
+    const due = new Date(record.updatedAt);
+    due.setDate(due.getDate() + 14);
+    const days = Math.ceil((due.getTime() - now.getTime()) / 86_400_000);
+    return { ...record, due, days };
+  });
+  const overdueRows = reconciliationRows.filter((record) => record.days < 0);
   const groupedQueue = managerTypeOrder
     .map((type) => {
       const items = queue.filter((record) => record.type === type);
@@ -117,12 +131,31 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
     1,
     ...releasedByMonth.map((month) => month.total),
   );
+  const releasedTotal = releasedByMonth.reduce(
+    (sum, month) => sum + month.total,
+    0,
+  );
+  const monthlyAverage = releasedTotal / releasedByMonth.length;
   const greeting =
     now.getHours() < 12
       ? "Good morning"
       : now.getHours() < 18
         ? "Good afternoon"
         : "Good evening";
+  const remindRequester = async (record: ManagerDashboardRecord) => {
+    await createLocalNotification({
+      actorId: account.id,
+      entityId: record.id,
+      entityType: "CASH_ADVANCE",
+      href: record.href,
+      message: `${account.name} sent a reminder for ${record.reference}. Upload the outstanding receipts to complete reconciliation.`,
+      recipientId: record.requesterId,
+      referenceNumber: record.reference,
+      title: `Reconciliation reminder from ${account.name}`,
+      type: "GENERAL",
+    });
+    setReminded((current) => new Set(current).add(record.id));
+  };
 
   if (loading)
     return <div className={styles.loading}>Loading Finance workspace…</div>;
@@ -198,7 +231,23 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
                 "/assets/icons/unreconciled-advances-tile.png",
               ],
             ].map(([label, value, note, tone, icon]) => (
-              <article data-tone={tone} key={label}>
+              <article
+                data-clickable={tone === "reconciliation"}
+                data-tone={tone}
+                key={label}
+                onClick={() => {
+                  if (tone === "reconciliation") setReconciliationOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    tone === "reconciliation" &&
+                    (event.key === "Enter" || event.key === " ")
+                  )
+                    setReconciliationOpen(true);
+                }}
+                role={tone === "reconciliation" ? "button" : undefined}
+                tabIndex={tone === "reconciliation" ? 0 : undefined}
+              >
                 <span>{label}</span>
                 <strong>{value}</strong>
                 <small>{note}</small>
@@ -259,13 +308,24 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
                 <h2>Payments released</h2>
                 <p>Money paid out by Finance each month, last 6 months.</p>
               </div>
-              <strong>
-                This month
-                <br />
-                {money(releasedByMonth.at(-1)?.total ?? 0)}
-              </strong>
+              <div className={styles.chartSummary}>
+                <span>
+                  This month so far
+                  <strong>{money(releasedByMonth.at(-1)?.total ?? 0)}</strong>
+                </span>
+                <span>
+                  Monthly average
+                  <strong>{money(monthlyAverage)}</strong>
+                </span>
+              </div>
             </header>
             <div className={styles.chart}>
+              <div className={styles.chartAxis} aria-hidden="true">
+                <span>{axisMoney(chartMaximum)}</span>
+                <span>{axisMoney(chartMaximum * 0.66)}</span>
+                <span>{axisMoney(chartMaximum * 0.33)}</span>
+                <span>RM 0</span>
+              </div>
               {releasedByMonth.map((month, index) => (
                 <div key={month.key}>
                   <strong>{money(month.total)}</strong>
@@ -275,7 +335,10 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
                       height: `${Math.max(3, (month.total / chartMaximum) * 100)}%`,
                     }}
                   />
-                  <span>{month.label}</span>
+                  <span>
+                    {month.label}
+                    {index === releasedByMonth.length - 1 ? " (so far)" : ""}
+                  </span>
                 </div>
               ))}
             </div>
@@ -320,7 +383,136 @@ export function FinanceDashboard({ account }: { account: BetaAccount }) {
       ) : (
         <div className={styles.orgOverview}>
           <DirectorDashboardOrgOverview now={now} records={records} />
-          <FinanceProgrammeBudgets records={records} />
+          <FinanceProgrammeBudgets accountId={account.id} />
+        </div>
+      )}
+      {reconciliationOpen && (
+        <div
+          className={styles.modalBackdrop}
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target)
+              setReconciliationOpen(false);
+          }}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="reconciliation-title"
+            aria-modal="true"
+            className={styles.reconciliationModal}
+            role="dialog"
+          >
+            <header>
+              <Image
+                alt=""
+                height={42}
+                src="/assets/icons/unreconciled-advances-tile.png"
+                width={42}
+              />
+              <div>
+                <h2 id="reconciliation-title">Unreconciled advances</h2>
+                <p>
+                  Cash advances that were paid out but do not have all their
+                  receipts yet. Receipts are due 14 days after payment.
+                </p>
+              </div>
+              <button
+                aria-label="Close"
+                onClick={() => setReconciliationOpen(false)}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+            <div className={styles.reconciliationSummary}>
+              <article data-tone="danger">
+                <span>Outstanding</span>
+                <strong>
+                  {money(
+                    reconciliationRows.reduce(
+                      (sum, record) => sum + record.amount,
+                      0,
+                    ),
+                  )}
+                </strong>
+              </article>
+              <article>
+                <span>Overdue</span>
+                <strong>
+                  {overdueRows.length} advance
+                  {overdueRows.length === 1 ? "" : "s"}
+                </strong>
+              </article>
+              <article>
+                <span>Receipts status</span>
+                <strong>
+                  {reconciliationRows.length
+                    ? `${reconciliationRows.length} awaiting receipts`
+                    : "All reconciled"}
+                </strong>
+              </article>
+            </div>
+            <div className={styles.reconciliationTable}>
+              <div>
+                <b>Reference</b>
+                <b>Requester</b>
+                <b>Advanced</b>
+                <b>Receipts</b>
+                <b>Due</b>
+                <b>Action</b>
+              </div>
+              {reconciliationRows.map((record) => (
+                <div key={record.id}>
+                  <strong>{record.reference}</strong>
+                  <span>{record.requesterName}</span>
+                  <strong>{money(record.amount)}</strong>
+                  <span className={styles.receiptProgress}>
+                    <small>Awaiting receipts</small>
+                    <i />
+                  </span>
+                  <em data-overdue={record.days < 0}>
+                    {record.days < 0
+                      ? `${Math.abs(record.days)} days overdue`
+                      : `Due in ${record.days} days`}
+                  </em>
+                  {record.days < 0 ? (
+                    <button
+                      disabled={reminded.has(record.id)}
+                      onClick={() => void remindRequester(record)}
+                      type="button"
+                    >
+                      {reminded.has(record.id) ? "Reminded" : "Remind"}
+                    </button>
+                  ) : (
+                    <Link href={record.href}>Reconcile</Link>
+                  )}
+                </div>
+              ))}
+              {!reconciliationRows.length && (
+                <p>There are no unreconciled advances right now.</p>
+              )}
+            </div>
+            <footer>
+              <small>
+                Reminders go to the requester through the Estuary notification
+                bell.
+              </small>
+              <button
+                onClick={() => setReconciliationOpen(false)}
+                type="button"
+              >
+                Close
+              </button>
+              <button
+                disabled={!overdueRows.length}
+                onClick={() =>
+                  void Promise.all(overdueRows.map(remindRequester))
+                }
+                type="button"
+              >
+                Remind all overdue ({overdueRows.length})
+              </button>
+            </footer>
+          </section>
         </div>
       )}
     </main>

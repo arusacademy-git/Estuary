@@ -7,6 +7,8 @@ import {
   fetchTeamRecords,
   type TeamRecord,
 } from "@/data/team-records/team-records-api";
+import { fetchProjectBudgetPositions } from "@/data/projects/project-budget-api";
+import type { ProjectBudgetPosition } from "@/domain/projects/project-budget-types";
 import { readBetaSession, type BetaAccount } from "@/lib/auth/beta-accounts";
 
 import { TeamRecordsWorkspace } from "./team-records-workspace";
@@ -15,6 +17,10 @@ export default function TeamRecordsPage() {
   const searchParameters = useSearchParams();
   const [account] = useState<BetaAccount | null>(() => readBetaSession());
   const [records, setRecords] = useState<TeamRecord[]>([]);
+  const [budgetPositions, setBudgetPositions] = useState<
+    ProjectBudgetPosition[]
+  >([]);
+  const [budgetError, setBudgetError] = useState("");
   const [error, setError] = useState(() =>
     account ? "" : "Sign in to view Team Records.",
   );
@@ -23,21 +29,37 @@ export default function TeamRecordsPage() {
   useEffect(() => {
     if (!account) return;
     let active = true;
-    fetchTeamRecords(account)
-      .then((nextRecords) => {
-        if (active) setRecords(nextRecords);
+    const recordsRequest = fetchTeamRecords(account).then((nextRecords) => {
+      if (active) setRecords(nextRecords);
+    });
+    const budgetsRequest = fetchProjectBudgetPositions(
+      "beta-arus-org",
+      account.id,
+      new Date().getFullYear(),
+    )
+      .then((result) => {
+        if (active) setBudgetPositions(result.positions);
       })
       .catch((reason: unknown) => {
         if (!active) return;
-        setError(
+        setBudgetError(
           reason instanceof Error
             ? reason.message
+            : "Project budget positions could not load.",
+        );
+      });
+    Promise.allSettled([recordsRequest, budgetsRequest]).then((results) => {
+      if (!active) return;
+      const recordsResult = results[0];
+      if (recordsResult.status === "rejected") {
+        setError(
+          recordsResult.reason instanceof Error
+            ? recordsResult.reason.message
             : "Team Records could not load.",
         );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      }
+      setLoading(false);
+    });
     return () => {
       active = false;
     };
@@ -65,6 +87,8 @@ export default function TeamRecordsPage() {
   return (
     <TeamRecordsWorkspace
       account={account}
+      budgetError={budgetError}
+      budgetPositions={budgetPositions}
       initialGroup={initialGroup}
       initialView={initialView}
       records={records}

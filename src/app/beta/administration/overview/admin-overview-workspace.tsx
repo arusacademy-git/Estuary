@@ -4,7 +4,12 @@ import Image from "next/image";
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 import { fetchDashboardSummary } from "@/data/dashboard/api";
+import {
+  fetchProjectBudgetPositions,
+  replaceProjectBudgets,
+} from "@/data/projects/project-budget-api";
 import type { DashboardSummaryRecord } from "@/domain/dashboard/types";
+import type { ProjectBudgetPosition } from "@/domain/projects/project-budget-types";
 import {
   readAdminSettings,
   saveAdminSettings,
@@ -25,23 +30,13 @@ type AttentionItem = {
   tone: "critical" | "warning" | "neutral";
 };
 const currentYear = new Date().getFullYear();
-const storageKey = (year: number) =>
-  `estuary:project-budgets:beta-arus-org:${year}`;
+const organizationId = "beta-arus-org";
 const completed = new Set([
   "COMPLETED",
   "COMPLETE",
   "CLOSED",
   "PAID",
   "RECONCILED",
-]);
-const excluded = new Set([
-  "DRAFT",
-  "REJECTED",
-  "PAYMENT_REJECTED",
-  "INACTIVE",
-  "CANCELLED",
-  "RETURNED_TO_STAFF",
-  "RETURNED_TO_CLAIMANT",
 ]);
 const money = (value: number) =>
   new Intl.NumberFormat("en-MY", {
@@ -63,16 +58,6 @@ function projectName(project: AdminSettings["programmes"][number] | undefined) {
     return project.name;
   return prototypeProjectNames[project.code] ?? project.name;
 }
-function readBudgets(year: number) {
-  try {
-    return JSON.parse(
-      window.localStorage.getItem(storageKey(year)) ?? "[]",
-    ) as BudgetRow[];
-  } catch {
-    return [];
-  }
-}
-
 export function AdminOverviewWorkspace() {
   const [account] = useState(() => readBetaSession());
   const [year, setYear] = useState(currentYear);
@@ -81,19 +66,63 @@ export function AdminOverviewWorkspace() {
   );
   const [records, setRecords] = useState<DashboardSummaryRecord[]>([]);
   const [budgets, setBudgets] = useState<BudgetRow[]>([]);
+  const [budgetPositions, setBudgetPositions] = useState<
+    ProjectBudgetPosition[]
+  >([]);
   const [draft, setDraft] = useState<BudgetRow[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [savingBudgets, setSavingBudgets] = useState(false);
+  const [budgetError, setBudgetError] = useState("");
 
   useEffect(() => {
     if (!account) return;
-    fetchDashboardSummary({ role: "director", userId: account.id })
+    let active = true;
+    const recordsRequest = fetchDashboardSummary({
+      role: "director",
+      userId: account.id,
+    })
       .then((nextRecords) => {
-        setRecords(nextRecords);
-        setBudgets(readBudgets(year));
+        if (active) setRecords(nextRecords);
       })
-      .catch(() => setBudgets(readBudgets(year)))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (active) setRecords([]);
+      });
+    const budgetsRequest = fetchProjectBudgetPositions(
+      organizationId,
+      account.id,
+      year,
+    )
+      .then((result) => {
+        if (!active) return;
+        setBudgetPositions(result.positions);
+        setBudgets(
+          result.positions
+            .filter((position) => position.configured)
+            .map((position) => ({
+              projectId: position.projectId,
+              projectName: position.projectName,
+              amount: Number(position.budget),
+            })),
+        );
+        setBudgetError("");
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setBudgets([]);
+        setBudgetPositions([]);
+        setBudgetError(
+          error instanceof Error
+            ? error.message
+            : "Project budgets could not be loaded.",
+        );
+      });
+    Promise.allSettled([recordsRequest, budgetsRequest]).then(() => {
+      if (active) setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
   }, [account, year]);
 
   if (!account)
@@ -105,15 +134,21 @@ export function AdminOverviewWorkspace() {
 
   const activeProjects = settings.programmes.filter((item) => item.active);
   const activeEmployees = settings.employees.filter((item) => item.active);
-  const totalBudget = budgets.reduce((sum, row) => sum + row.amount, 0);
-  const spent = records
-    .filter((record) => completed.has(record.status))
-    .reduce((sum, record) => sum + record.amount, 0);
-  const committed = records
-    .filter(
-      (record) => !completed.has(record.status) && !excluded.has(record.status),
-    )
-    .reduce((sum, record) => sum + record.amount, 0);
+  const configuredPositions = budgetPositions.filter(
+    (position) => position.configured,
+  );
+  const totalBudget = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.budget),
+    0,
+  );
+  const spent = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.spent),
+    0,
+  );
+  const committed = configuredPositions.reduce(
+    (sum, position) => sum + Number(position.committed),
+    0,
+  );
   const remaining = totalBudget - spent - committed;
   const spentPercent = totalBudget ? (spent / totalBudget) * 100 : 0;
   const committedPercent = totalBudget ? (committed / totalBudget) * 100 : 0;
@@ -121,20 +156,12 @@ export function AdminOverviewWorkspace() {
     ? Math.max(0, (remaining / totalBudget) * 100)
     : 0;
   const projectUsage = (projectId: string) => {
-    const project = settings.programmes.find((item) => item.id === projectId);
-    const scoped = records.filter(
-      (record) => record.projectCode === project?.code,
+    const position = budgetPositions.find(
+      (item) => item.projectId === projectId,
     );
     return {
-      spent: scoped
-        .filter((record) => completed.has(record.status))
-        .reduce((sum, record) => sum + record.amount, 0),
-      committed: scoped
-        .filter(
-          (record) =>
-            !completed.has(record.status) && !excluded.has(record.status),
-        )
-        .reduce((sum, record) => sum + record.amount, 0),
+      spent: Number(position?.spent ?? 0),
+      committed: Number(position?.committed ?? 0),
     };
   };
   const claimUsed = records
@@ -217,8 +244,10 @@ export function AdminOverviewWorkspace() {
     );
     setModalOpen(true);
   };
-  const saveBudgets = () => {
-    window.localStorage.setItem(storageKey(year), JSON.stringify(draft));
+  const saveBudgets = async () => {
+    if (!account) return;
+    setSavingBudgets(true);
+    setBudgetError("");
     const nextSettings: AdminSettings = {
       ...settings,
       programmes: settings.programmes.map((project) => {
@@ -228,17 +257,52 @@ export function AdminOverviewWorkspace() {
           : project;
       }),
     };
-    saveAdminSettings(nextSettings);
-    setSettings(nextSettings);
-    setBudgets(draft);
-    setModalOpen(false);
+    try {
+      await saveAdminSettings(nextSettings);
+      await replaceProjectBudgets({
+        organizationId,
+        actorId: account.id,
+        year,
+        budgets: draft.map((row) => ({
+          projectId: row.projectId,
+          amount: row.amount.toFixed(2),
+        })),
+      });
+      const refreshed = await fetchProjectBudgetPositions(
+        organizationId,
+        account.id,
+        year,
+      );
+      setSettings(nextSettings);
+      setBudgetPositions(refreshed.positions);
+      setBudgets(
+        refreshed.positions
+          .filter((position) => position.configured)
+          .map((position) => ({
+            projectId: position.projectId,
+            projectName:
+              draft.find((row) => row.projectId === position.projectId)
+                ?.projectName ?? position.projectName,
+            amount: Number(position.budget),
+          })),
+      );
+      setModalOpen(false);
+    } catch (error) {
+      setBudgetError(
+        error instanceof Error
+          ? error.message
+          : "Project budgets could not be saved.",
+      );
+    } finally {
+      setSavingBudgets(false);
+    }
   };
 
   return (
     <main className={styles.page}>
       <header className={styles.hero}>
         <p>
-          Admin workspace <em>Beta · saved in this browser</em>
+          Admin workspace <em>Beta · database-backed</em>
         </p>
         <h1>Overview</h1>
         <span>How the organisation is set up, and what needs fixing.</span>
@@ -314,6 +378,11 @@ export function AdminOverviewWorkspace() {
             </button>
           </div>
         </header>
+        {budgetError && !modalOpen && (
+          <p className={styles.budgetLoadError} role="alert">
+            {budgetError}
+          </p>
+        )}
         <div className={styles.budgetTotals}>
           {[
             [
@@ -517,6 +586,8 @@ export function AdminOverviewWorkspace() {
           year={year}
           close={() => setModalOpen(false)}
           save={saveBudgets}
+          error={budgetError}
+          saving={savingBudgets}
           settings={settings}
         />
       )}
@@ -528,7 +599,9 @@ function BudgetModal({
   activeProjects,
   close,
   draft,
+  error,
   save,
+  saving,
   setDraft,
   settings,
   year,
@@ -536,7 +609,9 @@ function BudgetModal({
   activeProjects: AdminSettings["programmes"];
   close: () => void;
   draft: BudgetRow[];
-  save: () => void;
+  error: string;
+  save: () => Promise<void>;
+  saving: boolean;
   setDraft: Dispatch<SetStateAction<BudgetRow[]>>;
   settings: AdminSettings;
   year: number;
@@ -676,13 +751,18 @@ function BudgetModal({
             Total {year}:{" "}
             {money(draft.reduce((sum, row) => sum + row.amount, 0))}
           </strong>
+          {error && (
+            <p className={styles.budgetError} role="alert">
+              {error}
+            </p>
+          )}
         </div>
         <footer>
-          <button onClick={close} type="button">
+          <button disabled={saving} onClick={close} type="button">
             Cancel
           </button>
-          <button onClick={save} type="button">
-            Save budgets
+          <button disabled={saving} onClick={() => void save()} type="button">
+            {saving ? "Saving…" : "Save budgets"}
           </button>
         </footer>
       </section>
