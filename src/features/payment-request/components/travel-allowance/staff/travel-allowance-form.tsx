@@ -10,6 +10,7 @@ import { notifyTravelAllowanceSubmitted } from "@/features/payment-request/notif
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
+import { ProjectBudgetWarning } from "@/features/payment-request/components/shared/project-budget-warning";
 import type {
   PaymentRequestDocument,
   TravelAllowanceLine,
@@ -25,7 +26,6 @@ import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
 import {
   isProjectManagerAccount,
   projectManagerFor,
-  readAdminSettings,
   travelProjectCodesFor,
 } from "@/features/administration/admin-settings";
 import { EMPLOYEE_OPTIONS } from "@/shared/constants/employee-options";
@@ -86,12 +86,12 @@ function readDocument(file: File): Promise<PaymentRequestDocument> {
     reader.onload = () =>
       typeof reader.result === "string"
         ? resolve({
-            id: `${file.name}-${file.size}-${file.lastModified}`,
-            fileName: file.name,
-            mimeType: file.type,
-            size: file.size,
-            dataUrl: reader.result,
-          })
+          id: `${file.name}-${file.size}-${file.lastModified}`,
+          fileName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          dataUrl: reader.result,
+        })
         : reject(new Error(`${file.name} could not be read.`));
     reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
     reader.readAsDataURL(file);
@@ -148,9 +148,7 @@ export function TravelAllowanceForm({
 
   const directors = betaAccounts.filter((item) => item.role === "director");
   const isDirector = account?.role === "director";
-  const availableProjects = requestMode === "staff"
-    ? readAdminSettings().programmes.filter((item) => item.active).map((item) => item.code)
-    : travelProjectCodesFor(account);
+  const availableProjects = travelProjectCodesFor(account);
   const assignedManagerIds = useMemo(
     () => [
       ...new Set(
@@ -172,7 +170,7 @@ export function TravelAllowanceForm({
     if (initialRecord || requestMode === "manager") return;
     queueMicrotask(() =>
       setManagerApproverId(
-        assignedManagerIds[0] ?? "",
+        assignedManagerIds.length === 1 ? assignedManagerIds[0] : "",
       ),
     );
   }, [assignedManagerIds, initialRecord, requestMode]);
@@ -316,8 +314,10 @@ export function TravelAllowanceForm({
       return `Sign in using a ${requestMode === "staff" ? "Staff" : "Manager"} account.`;
     if (!requestDate || !contact.trim() || !projectDirectorId)
       return "Complete the request date, contact and Project Director.";
-    if (requestMode === "staff" && lines.some((line) => line.projectName && !projectManagerFor(line.projectName)))
-      return "Assign a Manager to every selected programme in Settings first.";
+    if (requestMode === "staff" && assignedManagerIds.length !== 1)
+      return assignedManagerIds.length > 1
+        ? "The selected projects have different managers. Submit separate requests per project manager."
+        : "Assign a manager to the selected project in Settings first.";
     if (!lines.length) return "Add at least one travel entry.";
     if (
       !isDirector &&
@@ -370,10 +370,8 @@ export function TravelAllowanceForm({
         requesterRole: requestMode,
         requesterPosition: account.position,
         contact: contact.trim(),
-        managerApproverId: initialRecord?.managerReviewRequired
-          ? managerApproverId
-          : assignedManagerIds[0] ?? managerApproverId,
-        managerApproverIds: assignedManagerIds,
+        managerApproverId:
+          requestMode === "staff" ? managerApproverId : account.id,
         projectDirectorId,
         currency: "MYR",
         lines: lines.map(submissionLine),
@@ -477,6 +475,13 @@ export function TravelAllowanceForm({
         </div>
       )}
       <form className={styles.travelFormLayout} onSubmit={review}>
+        <ProjectBudgetWarning
+          accountId={account?.id}
+          allocations={lines.map((line) => ({
+            projectReference: line.projectName,
+            amount: travelLineTotal(line),
+          }))}
+        />
         <div className={styles.travelMainCard}>
           <section className={styles.section}>
             <div className={styles.sectionHeading}>
@@ -531,12 +536,25 @@ export function TravelAllowanceForm({
               </label>
               <label>
                 <span>
-                  Programme Manager(s) notified <em>*</em>
+                  Manager reviewer <em>*</em>
                 </span>
                 {requestMode === "manager" ? (
                   <input disabled value={account?.name ?? "Loading…"} />
                 ) : (
-                  <input disabled value={managers.map((manager) => manager.name).join(", ") || "Unassigned"} />
+                  <select
+                    required
+                    value={managerApproverId}
+                    onChange={(event) =>
+                      setManagerApproverId(event.target.value)
+                    }
+                  >
+                    <option value="">Choose a Manager</option>
+                    {managers.map((manager) => (
+                      <option key={manager.id} value={manager.id}>
+                        {manager.name} - {manager.position}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </label>
               <label>
@@ -755,9 +773,9 @@ export function TravelAllowanceForm({
                                 value === "OTHER"
                                   ? { isOtherProject: true, projectName: "" }
                                   : {
-                                      isOtherProject: false,
-                                      projectName: value,
-                                    },
+                                    isOtherProject: false,
+                                    projectName: value,
+                                  },
                               );
                             }}
                           >

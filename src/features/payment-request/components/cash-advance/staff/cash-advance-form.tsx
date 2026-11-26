@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 
 import {
   createCashAdvance,
@@ -10,6 +10,7 @@ import { notifyCashAdvanceSubmitted } from "@/features/payment-request/notificat
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import { ManualDraftStatus } from "@/features/payment-request/components/shared/manual-draft-status";
+import { ProjectBudgetWarning } from "@/features/payment-request/components/shared/project-budget-warning";
 import {
   cashAdvanceRequestedTotal,
   validateCashAdvanceRequest,
@@ -21,7 +22,7 @@ import {
   type CashAdvanceRequestLine,
 } from "@/domain/payment-requests/cash-advance/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 import { useUserSignature } from "@/features/signatures/hooks/use-user-signature";
 import { BANK_NAME_SELECT_OPTIONS } from "@/shared/constants/payment-options";
 import { CashAdvanceConfirmation } from "./cash-advance-confirmation";
@@ -55,12 +56,12 @@ function readFile(file: File): Promise<CashAdvanceDocument> {
     reader.onload = () =>
       typeof reader.result === "string"
         ? resolve({
-          id: `${file.name}-${file.size}-${file.lastModified}`,
-          fileName: file.name,
-          mimeType: file.type,
-          size: file.size,
-          dataUrl: reader.result,
-        })
+            id: `${file.name}-${file.size}-${file.lastModified}`,
+            fileName: file.name,
+            mimeType: file.type,
+            size: file.size,
+            dataUrl: reader.result,
+          })
         : reject(new Error(`${file.name} could not be read.`));
     reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
     reader.readAsDataURL(file);
@@ -100,12 +101,6 @@ export function CashAdvanceForm({
   const [managerId, setManagerId] = useState(
     initialRecord?.managerApproverId ?? "",
   );
-  useEffect(() => {
-    if (initialRecord) return;
-    const selectedProject = isOtherProject ? otherProject.trim() : projectName;
-    const assignedManager = projectManagerFor(selectedProject);
-    queueMicrotask(() => setManagerId(assignedManager ?? ""));
-  }, [initialRecord, isOtherProject, otherProject, projectName]);
   const [directorId, setDirectorId] = useState(
     initialRecord?.directorApproverId ?? "",
   );
@@ -365,6 +360,15 @@ export function CashAdvanceForm({
         </div>
       </header>
       <form className={styles.cashAdvanceForm} onSubmit={review}>
+        <ProjectBudgetWarning
+          accountId={account?.id}
+          allocations={[
+            {
+              projectReference: isOtherProject ? otherProject : projectName,
+              amount: total,
+            },
+          ]}
+        />
         {initialRecord?.returnRemarks && (
           <div className={styles.returnNotice}>
             <strong>Changes requested</strong>
@@ -457,7 +461,6 @@ export function CashAdvanceForm({
                   </label>
                   <select
                     value={managerId}
-                    disabled={!initialRecord}
                     onChange={(e) => setManagerId(e.target.value)}
                   >
                     <option value="">Choose Manager</option>
