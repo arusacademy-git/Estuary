@@ -5607,3 +5607,84 @@ obligations` and `Field disbursement`; each card now ends only with its
 - Connected the PV Google Sheet wording to Project Budget attribution. The importer now maps `Project Name` and `Project Code` headers to the backward-compatible internal `division` field, retains support for legacy `Division` headers, reports a missing `Project Name` instead of the internal field name and shows Project in the import preview. Imported vouchers continue through the standard PV API, so the snapshot resolver commits/spends them against the matched canonical project.
 - Added accessible clickable sorting to the Team Records table for Reference, Requester, Project, Amount, Submitted and Purpose. The active header shows ascending/descending state, Submitted defaults newest-first and Action remains intentionally unsortable.
 - Verification: both updated repositories pass the live ESLint configuration and a focused strict TypeScript check.
+
+## 2026-11-27 — Shared field validation, Payment Voucher first pass
+
+- Added reusable validation primitives in `generated/src/domain/validation/common-validation.ts` and an accessible shared `FieldError` component in `generated/src/features/validation`.
+- Added a pure Payment Voucher validator covering voucher date, recipient details, project, assigned director, conditional bank-transfer fields, purpose and every accounting line.
+- Updated the Staff single Payment Voucher form to render each validation message below its corresponding input. Invalid controls receive `aria-invalid`, are linked to their message through `aria-describedby` and receive the shared red invalid-state styling.
+- The form now uses `noValidate`, focuses the first invalid control after Review is clicked and clears an individual error as that field is corrected. Authorization, server and unexpected failures remain in the form-level banner.
+- Added focused validator tests and `generated/SHARED_VALIDATION_COPY_FILES.md` for copying the shared layer and first integration into the live Next.js project.
+- Verification: all five changed TypeScript/TSX source files pass the live ESLint configuration. A focused strict TypeScript configuration covering the new shared modules and updated PV form passes. The generated scaffold still has no independent dependency manifest, so its focused Vitest configuration could not be launched from this workspace; run the included test after copying the files into the live project.
+
+## 2026-11-27 — Shared field validation extended to Bulk PV
+
+- Added `bulk-validation.ts` as a thin adapter over the shared single-PV validator. It maps each bulk row into the common PV shape and adds only bulk-specific checks: Director/optional Manager account matching, nationality and non-negative tax.
+- Updated Bulk manual entry so every editable voucher and line field receives its own accessible error below the input. The previous card-level list of ordinary field errors was removed; the batch notice now serves only as a summary identifying how many vouchers require attention.
+- After Continue is clicked, the first invalid voucher opens, scrolls into view and focuses its first invalid field. Manual-entry controls use the same `FieldError`, `aria-invalid`, `aria-describedby` and red invalid-state styling as single PV.
+- Updated Google Sheet validation to use the same bulk adapter, keeping imported and manually entered rows consistent while preserving sheet/file fetch failures at panel level.
+- Added focused Bulk PV validator tests and expanded `generated/SHARED_VALIDATION_COPY_FILES.md` with the additional copy destinations.
+- Verification: the four changed Bulk/shared TypeScript files pass ESLint; only environment warnings about React detection and the absent Pages directory were reported. A focused strict TypeScript check covering both bulk interfaces and the shared validation modules passes.
+- Strengthened the shared `FieldError` colour declaration so existing Payment Voucher `.field small` helper-text rules cannot override validation messages. Single and Bulk PV field errors now consistently render in dark red (`#b42318`) while ordinary helper text retains its muted colour.
+- Restored the Bulk PV validation summary styling. The later prototype-layout block previously reduced `.validationNotice` to only `grid-area`, leaving its text visually uncontained; it now has an explicit red alert border, pale-red background, icon, spacing and readable typography. Individual field messages remain directly below their inputs.
+
+## 2026-11-27 — Invoice Payment field validation
+
+- Added a pure Invoice Payment validator under `generated/src/domain/payment-requests/invoice-payment/validation.ts`, reusing shared required-text, positive-number, date and HTTP URL rules.
+- Covered request date, project and conditional Other project, purpose, vendor, e-invoice URL, transfer type, payment portion and its conditional description, Manager/Director reviewers, invoice total and conditional custom requested amount.
+- Replaced the Invoice form's single generic validation banner with accessible messages beneath the corresponding input, select, radio group or amount cell. Invalid controls receive a red outline and the first invalid control receives focus when Continue is clicked.
+- Sign-in, file type/count/size/read failures and API save failures intentionally remain form-level errors because they do not belong to a single ordinary data-entry field.
+- Added focused validator tests and expanded `generated/SHARED_VALIDATION_COPY_FILES.md` with the Invoice copy destinations.
+- Verification: the four changed TypeScript/TSX files pass ESLint; only the scaffold's React-detection and absent Pages-directory environment warnings were emitted. A focused strict TypeScript check for the shared rules, Invoice validator and updated form passes.
+
+## 2026-11-27 — Cash Advance request field validation
+
+- Added a pure Cash Advance request validator under `generated/src/domain/payment-requests/cash-advance/validation.ts`, reusing shared date, required-text and positive-number rules plus the existing bank-specific account-number validation.
+- Covered request date, contact, selected/Other project, Manager and Director approvers, request purpose, Staff payment account details, every expense description/purpose/amount and the RM300 request minimum.
+- Updated the Staff Cash Advance form and repeatable request-lines component so every ordinary input error renders directly beneath its field. Expense errors are keyed by stable line ID, and the total-level minimum error is linked to the total panel.
+- Continue now focuses the first invalid control. Correcting a field clears only its error; changing an expense amount also clears the total error so the minimum can be reevaluated.
+- Sign-in, file-reading, signature/declaration and API failures intentionally remain banner or review-level workflow errors.
+- Added focused validator tests and expanded both the shared-validation and Cash Advance copy maps.
+- Verification: the four changed TypeScript/TSX files pass ESLint; only scaffold environment warnings were emitted. A focused strict TypeScript check covering the validator, form, request-lines component and shared UI passes.
+- Compatibility fix: removed the validator's import of `CASH_ADVANCE_MINIMUM` because the live project's older `policy.ts` does not export it. The validator now owns the same RM300 threshold locally while continuing to reuse `cashAdvanceRequestedTotal`, eliminating TS2305 without requiring the policy module to be replaced.
+- Corrected the Cash Advance total presentation: an older `.cashEntryList + .total` rule made every total red even when it exceeded RM300. The normal total is now neutral, while only totals below the minimum or explicitly carrying `aria-invalid=true` use the red state. Expense amount entry now uses the shared `PaymentAmountInput`, which renders a decimal-friendly text input instead of the browser's number spinner.
+
+## 2026-11-27 — Petty Cash request field validation
+
+- Added a pure Petty Cash request validator under `generated/src/domain/payment-requests/petty-cash/validation.ts`, reusing the shared date, required-text and positive-number rules.
+- Covered request date, contact, Staff Manager reviewer, Staff/Manager Director previewer, Finance independent previewer, every planned-expense details/account/division/amount field, the strict below-RM300 limit and requester confirmation.
+- Updated the Petty Cash form so ordinary validation messages render directly beneath their fields, invalid controls receive accessible red states and Continue focuses the first invalid control.
+- Correcting a field clears only its own error; changing an amount also clears the request-total error for reevaluation. The Continue action is no longer disabled before confirmation, allowing the checkbox's inline error to explain what is missing.
+- Sign-in and API failures remain in the form-level banner. Petty Cash intentionally has no Project Budget validation because its confirmed policy is available-fund tracking against actual spend.
+- Added focused validator tests and expanded both Petty Cash and shared-validation copy maps.
+- Verification: the validator, test and updated form pass the live ESLint configuration. `generated/tsconfig.petty-cash.json` passes with zero TypeScript errors using the live project's installed dependencies.
+- Renamed the Petty Cash planned-expense **Division** label, empty option and review-table heading to **Project Name** / **Choose project**. The internal `division` property and stored project code remain unchanged for backward API/database compatibility, matching the existing Payment Voucher transition pattern.
+
+## 2026-11-27 — Travel Allowance validation and duplicate-entry behavior
+
+- Added a pure Travel Allowance validator under `generated/src/domain/payment-requests/travel-allowance/validation.ts`, reusing shared required-text, date and non-negative-number primitives.
+- Covered request date, contact, role-aware Manager/Director routing, every entry's employee, travel date, requester-available project, meal reason, meal-or-special allowance requirement, special amount and conditional special-allowance reason.
+- Replaced the Travel form's generic ordinary-data banner with accessible errors beneath the related request or entry field. Invalid fields use the shared red state, Continue focuses the first invalid control and editing a field clears its corresponding error.
+- Corrected project editing from request-wide mutation to per-entry mutation. **Duplicate** retains the original project, employees, reason, meals and special allowance by default, creates new stable IDs and deliberately resets the travel date to blank. Users can independently change the duplicated employee selection, project and date.
+- Updated the entry guidance to explain the duplicate defaults. **Add entry** continues to default to the first project's value while starting with a blank employee and date.
+- Synced the validator, test and form into the live Next.js project without overwriting its separately evolved Travel Allowance CSS; only the required invalid-state CSS block was added there.
+- Verification: generated and live TypeScript/TSX files pass ESLint; the live project passes `tsc --noEmit --incremental false`; the focused Vitest file passes all 3 tests.
+
+## 2026-11-27 — Petty Cash restored inside Payment Request navigation
+
+- Restored **Petty Cash** inside the expanded **Payment Request** submenu for Staff, Manager, Director and project-manager profiles in the shared role sidebar.
+- Finance users receive the same restored entry whenever they switch to their Staff workspace, because that workspace reuses the Staff navigation definition.
+- Preserved the separate role-specific Petty Cash navigation item because it opens the Petty Cash workspace/approval area, while the submenu entry opens the new-request form.
+- Corrected the visual distinction between those destinations: nested **Payment Request → Petty Cash** is a plain text submenu item with no icon, while the standalone Petty Cash ledger/workspace keeps the wallet icon.
+- Corrected their routes as well: the nested creation link remains `/beta/payment-requests/petty-cash/new`, while every standalone wallet-icon entry now uses the shared ledger/workspace route `/beta/petty-cash`. Approval queues remain accessible through each role's Pending Approvals/Processing workflow rather than overloading the ledger link.
+- Expanded the shared `/beta/petty-cash` ledger page from Director/Finance-only rendering to all four supported roles. Staff, Manager, Director and Finance receive the same Petty Cash overview and ledger access; only the displayed workspace role label differs. This prevents the corrected standalone links from landing Staff or Manager on an access-unavailable screen.
+- Synced the corrected access guard into the live Next.js route after confirming that its page still contained the older `Only Director and Finance` condition. The route now rejects only an absent session; all four authenticated roles reach the shared ledger. The exact live page and ledger component pass ESLint.
+
+## 2026-11-27 — Claims field validation and Project Name standardisation
+
+- Added a pure Claims validator that covers claim date, contact, Director routing, declaration, policy total and type-specific entry fields for Expense, Mileage, Internet/Commute, Medical, PD and Tech claims.
+- Updated the shared Claims form to render accessible red errors beneath the related main-form or entry-modal field. Review and modal Save focus the first invalid control, and correcting a field clears only its own error.
+- Standardised the visible Claims wording from **Division** to **Project Name** in manual entry, list/review tables and Google Sheet errors. The internal `division` property remains unchanged so saved records and APIs stay compatible; imports accept Project Name, Project Code and legacy Division headers.
+- Preserved the live Claims approval compatibility options in `validateClaimInput` while changing its user-facing project guidance. This keeps existing repository calls and legacy approvals working.
+- Synced the Claims validator, form, CSS, policy, review and Google Sheet files into the live Next.js project.
+- Verification: the focused generated Claims TypeScript configuration passes; live ESLint passes after the policy cleanup; all 3 focused Claims validation tests pass. The full live TypeScript check is still blocked by pre-existing dashboard test fixture errors unrelated to Claims; the Claims-specific policy signature error observed during the first check was corrected.
