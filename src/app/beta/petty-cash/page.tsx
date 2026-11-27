@@ -1,30 +1,24 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { PettyCashOverview } from '@/features/payment-request/components/petty-cash/ledger/petty-cash-overview';
-import { readBetaSession } from '@/lib/auth/beta-accounts';
+import { readBetaSession } from "@/lib/auth/beta-accounts";
+import { PettyCashOverview } from "@/features/payment-request/components/petty-cash/ledger/petty-cash-overview";
+import type { PettyCashRole } from "@/domain/payment-requests/petty-cash/types";
 
 export default function PettyCashOverviewPage() {
-  const [account] = useState<ReturnType<typeof readBetaSession>>(
-    () => readBetaSession(),
+  const [account] = useState<ReturnType<typeof readBetaSession>>(() =>
+    readBetaSession(),
   );
 
-  if (
-    !account ||
-    (account.role !== 'director' && account.role !== 'finance')
-  ) {
+  if (!account) {
     return (
       <section>
         <h1>Petty Cash access unavailable</h1>
-        <p>Only Director and Finance can view the overall ledger.</p>
+        <p>Sign in to view the Petty Cash ledger.</p>
       </section>
     );
   }
 
-  return (
-    <PettyCashOverview
-      role={account.role}
-    />
-  );
+  return <PettyCashOverview role={account.role as PettyCashRole} />;
 }

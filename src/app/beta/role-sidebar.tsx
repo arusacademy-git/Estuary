@@ -50,7 +50,7 @@ const standardRequests: NavigationItem[] = [
 ];
 
 function paymentRequest(
-  includePettyCash = false,
+  includePettyCash = true,
   travelAllowanceHref?: string,
   includePaymentVoucher = true,
 ): NavigationItem {
@@ -65,11 +65,11 @@ function paymentRequest(
       ...standardRequests.slice(2),
       ...(includePettyCash
         ? [
-            {
-              label: "Petty Cash",
-              href: "/beta/payment-requests/petty-cash/new",
-            },
-          ]
+          {
+            label: "Petty Cash",
+            href: "/beta/payment-requests/petty-cash/new",
+          },
+        ]
         : []),
       { label: "Claims", href: "/beta/payment-requests/claims/new" },
     ],
@@ -86,15 +86,10 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     { items: [{ label: "Overview", href: "/beta/dashboard" }] },
     {
       label: "Create payments",
-      items: [paymentRequest(false)],
+      items: [paymentRequest(true)],
     },
     {
-      items: [
-        {
-          label: "Petty Cash",
-          href: "/beta/payment-requests/petty-cash/new",
-        },
-      ],
+      items: [pettyCash],
     },
     {
       label: "Records",
@@ -112,7 +107,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     {
       label: "Create payments",
       items: [
-        paymentRequest(false, "/beta/payment-requests/travel-allowance/new"),
+        paymentRequest(true, "/beta/payment-requests/travel-allowance/new"),
       ],
     },
     {
@@ -126,12 +121,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
       ],
     },
     {
-      items: [
-        {
-          label: "Petty Cash",
-          href: "/beta/project-manager/payment-requests/petty-cash",
-        },
-      ],
+      items: [pettyCash],
     },
     {
       label: "Records",
@@ -150,7 +140,7 @@ export const roleNavigation: Record<BetaRole, NavigationGroup[]> = {
     {
       label: "Create payments",
       items: [
-        paymentRequest(false, "/beta/payment-requests/travel-allowance/new"),
+        paymentRequest(true, "/beta/payment-requests/travel-allowance/new"),
       ],
     },
     {
@@ -209,14 +199,6 @@ export function navigationForRole(
   if (role !== "staff" || !projectManager) return roleNavigation[role];
 
   return roleNavigation.staff.flatMap((group) => {
-    if (
-      group.items.some(
-        (item) => item.href === "/beta/payment-requests/petty-cash/new",
-      )
-    ) {
-      return [];
-    }
-
     if (group.label === "Records") {
       return [
         {
@@ -234,7 +216,7 @@ export function navigationForRole(
       {
         ...group,
         items: [
-          paymentRequest(false, "/beta/payment-requests/travel-allowance/new"),
+          paymentRequest(true, "/beta/payment-requests/travel-allowance/new"),
         ],
       },
       {
@@ -244,14 +226,6 @@ export function navigationForRole(
             label: "Pending Approvals",
             href: "/beta/project-manager/pending-approvals",
             actionType: "ALL_PENDING",
-          },
-        ],
-      },
-      {
-        items: [
-          {
-            label: "Petty Cash",
-            href: "/beta/project-manager/payment-requests/petty-cash",
           },
         ],
       },
@@ -275,7 +249,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   const [financeWorkspace, setFinanceWorkspace] = useState<"finance" | "staff">(
     () =>
       typeof window !== "undefined" &&
-      window.localStorage.getItem("estuary:finance-workspace") === "staff"
+        window.localStorage.getItem("estuary:finance-workspace") === "staff"
         ? "staff"
         : "finance",
   );
@@ -291,23 +265,23 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
   );
   const groups = adminWorkspace
     ? [
+      {
+        items: [
+          { label: "Overview", href: "/beta/administration/overview" },
+          { label: "Settings", href: "/beta/administration" },
+        ],
+      },
+    ]
+    : account.isAdministrator &&
+      account.role !== "director" &&
+      !financeStaffWorkspace
+      ? [
+        ...baseGroups,
         {
-          items: [
-            { label: "Overview", href: "/beta/administration/overview" },
-            { label: "Settings", href: "/beta/administration" },
-          ],
+          label: "System",
+          items: [{ label: "Settings", href: "/beta/settings" }],
         },
       ]
-    : account.isAdministrator &&
-        account.role !== "director" &&
-        !financeStaffWorkspace
-      ? [
-          ...baseGroups,
-          {
-            label: "System",
-            items: [{ label: "Settings", href: "/beta/settings" }],
-          },
-        ]
       : baseGroups;
   const hrefs = groups.flatMap((group) => collectHrefs(group.items));
   const activeHref = hrefs
@@ -315,7 +289,7 @@ export default function RoleSidebar({ account }: { account: BetaAccount }) {
       href.includes("?")
         ? currentUrl === href
         : currentQuery.length === 0 &&
-          (pathname === href || pathname.startsWith(`${href}/`)),
+        (pathname === href || pathname.startsWith(`${href}/`)),
     )
     .sort((left, right) => right.length - left.length)[0];
 

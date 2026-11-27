@@ -413,6 +413,14 @@
   flex: 1;
 }
 
+/* Petty Cash inside Payment Request creates a request and is intentionally a
+   plain submenu label. Only the standalone Petty Cash ledger/workspace entry
+   carries the wallet icon. */
+.nestedNavigationItem[data-label="Petty Cash"]::before {
+  display: none;
+  content: none;
+}
+
 .navigationItem,
 .activeNavigationItem,
 .disabledNavigationItem {
