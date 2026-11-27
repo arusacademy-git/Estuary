@@ -36,9 +36,16 @@ export function claimLimit(
 ) {
   if (input.claimType === "INTERNET_COMMUTE") return INTERNET_COMMUTE_LIMIT;
   if (input.claimType === "MEDICAL")
-    return Math.max(0, (context.medicalAnnualEntitlement ?? MEDICAL_ANNUAL_LIMIT) - context.medicalUsedThisYear);
+    return Math.max(
+      0,
+      (context.medicalAnnualEntitlement ?? MEDICAL_ANNUAL_LIMIT) -
+        context.medicalUsedThisYear,
+    );
   if (input.claimType === "PD")
-    return Math.max(0, (context.pdAnnualEntitlement ?? PD_LIMIT) - (context.pdUsedThisYear ?? 0));
+    return Math.max(
+      0,
+      (context.pdAnnualEntitlement ?? PD_LIMIT) - (context.pdUsedThisYear ?? 0),
+    );
   if (input.claimType === "TECH")
     return input.techExtended ? TECH_EXTENDED_LIMIT : TECH_STANDARD_LIMIT;
   return null;
@@ -55,9 +62,16 @@ export function validateClaimInput(
     return "Choose the Director who will make the final Claim decision.";
   if (input.directorApproverId === input.requesterId)
     return "A claimant cannot approve their own Claim. Choose another Director.";
-  if (!options.legacyApproval && input.requesterRole !== "manager" && !(input.managerApproverIds?.length || input.managerApproverId?.trim()))
+  if (
+    !options.legacyApproval &&
+    input.requesterRole !== "manager" &&
+    !(input.managerApproverIds?.length || input.managerApproverId?.trim())
+  )
     return "Each Claim programme must have an assigned Manager.";
-  if (input.requesterRole !== "manager" && input.managerApproverId === input.requesterId)
+  if (
+    input.requesterRole !== "manager" &&
+    input.managerApproverId === input.requesterId
+  )
     return "A claimant cannot approve their own Claim.";
   if (!input.lines.length) return "Add at least one claim item.";
   if (input.claimType === "TECH" && context.techExtendedLockedUntil) {
@@ -66,8 +80,11 @@ export function validateClaimInput(
 
   if (input.lines.some((line) => !line.accountType?.trim()))
     return "Choose an account code for every claim entry.";
-  if (!options.legacyApproval && input.lines.some((line) => !line.division?.trim()))
-    return "Choose a division for every claim entry so its assigned Manager can be identified.";
+  if (
+    !options.legacyApproval &&
+    input.lines.some((line) => !line.division?.trim())
+  )
+    return "Choose a Project Name for every claim entry so its assigned Manager can be identified.";
 
   const incomplete = input.lines.some((line) => {
     if (!line.expenseDate || !line.details.trim()) return true;
@@ -86,13 +103,12 @@ export function validateClaimInput(
     );
     if (!line.supplier.trim() || !hasReceipt || Number(line.amount) <= 0)
       return true;
-    if (input.claimType === "EXPENSE")
-      return !line.division.trim();
+    if (input.claimType === "EXPENSE") return !line.division.trim();
     return false;
   });
   if (incomplete)
     return input.claimType === "MILEAGE"
-      ? "Complete every trip, including its division, route and positive distance."
+      ? "Complete every trip, including its Project Name, route and positive distance."
       : "Complete every claim item, provide its receipt link or upload, and enter a positive amount.";
 
   const total = claimTotal(input.claimType, input.lines);
@@ -177,12 +193,16 @@ export function normalizeTechAllowance(input: CreateClaimInput) {
   return {
     ...input,
     techExtended:
-      input.claimType === "TECH" && claimTotal(input.claimType, input.lines) > TECH_STANDARD_LIMIT,
+      input.claimType === "TECH" &&
+      claimTotal(input.claimType, input.lines) > TECH_STANDARD_LIMIT,
   };
 }
 
 /** Claims now bypass Manager approval; retained for old screens during route cleanup. */
-export function requiresTechManagerApproval(_input: Pick<CreateClaimInput, "claimType" | "techExtended">) {
+export function requiresTechManagerApproval(
+  _input: Pick<CreateClaimInput, "claimType" | "techExtended">,
+) {
+  void _input;
   return false;
 }
 
