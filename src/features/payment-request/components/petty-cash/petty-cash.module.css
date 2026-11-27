@@ -4513,6 +4513,20 @@
   outline: 3px solid rgb(37 99 235 / 12%);
 }
 
+.pettyForm input[aria-invalid="true"],
+.pettyForm select[aria-invalid="true"],
+.pettyForm textarea[aria-invalid="true"] {
+  border-color: #ef4444 !important;
+  outline-color: rgb(239 68 68 / 14%);
+}
+
+.pettyForm input[aria-invalid="true"]:focus,
+.pettyForm select[aria-invalid="true"]:focus,
+.pettyForm textarea[aria-invalid="true"]:focus {
+  border-color: #dc2626 !important;
+  outline: 3px solid rgb(220 38 38 / 14%);
+}
+
 .plannedExpenseList {
   display: grid;
   gap: 12px;

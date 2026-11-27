@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createPettyCashRequest,
@@ -10,8 +10,16 @@ import {
 import {
   PETTY_CASH_REQUEST_LIMIT,
   pettyCashTotal,
-  validatePettyCashInput,
 } from "@/domain/payment-requests/petty-cash/policy";
+import {
+  type PettyCashValidationErrors,
+  validatePettyCash,
+} from "@/domain/payment-requests/petty-cash/validation";
+import { hasValidationErrors } from "@/domain/validation/common-validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 import {
   DIVISION_TYPES,
   PETTY_CASH_ACCOUNT_TYPES,
@@ -21,7 +29,7 @@ import {
   type PettyCashRequestLine,
 } from "@/domain/payment-requests/petty-cash/types";
 import { betaAccounts, readBetaSession } from "@/lib/auth/beta-accounts";
-import { isProjectManagerAccount, projectManagerFor } from "@/features/administration/admin-settings";
+import { isProjectManagerAccount } from "@/features/administration/admin-settings";
 import { notifyPettyCashSubmitted } from "@/features/payment-request/notifications/petty-cash-notifications";
 import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
@@ -74,14 +82,11 @@ export function PettyCashForm({
   const [lines, setLines] = useState<PettyCashRequestLine[]>(
     initialRecord?.lines ?? [makeLine()],
   );
-  const assignedManagerIds = [...new Set(lines.map((line) => projectManagerFor(line.division)).filter((id): id is string => Boolean(id)))];
-  useEffect(() => {
-    if (initialRecord) return;
-    queueMicrotask(() => setManagerId(assignedManagerIds[0] ?? ""));
-  }, [initialRecord, lines]);
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<PettyCashValidationErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [draftSaved, setDraftSaved] = useState(false);
   const [created, setCreated] = useState<PettyCashRecord | null>(null);
   const [stage, setStage] = useState<"FORM" | "REVIEW">("FORM");
@@ -140,25 +145,72 @@ export function PettyCashForm({
     setLines((current) =>
       current.map((line) => (line.id === id ? { ...line, ...patch } : line)),
     );
+    const fields = Object.keys(patch) as Array<keyof PettyCashRequestLine>;
+    setFieldErrors((current) => {
+      const currentLine = current.lines?.[id];
+      if (!currentLine) {
+        return fields.includes("amount")
+          ? { ...current, total: undefined }
+          : current;
+      }
+      const nextLine = { ...currentLine };
+      if (fields.includes("details")) nextLine.details = undefined;
+      if (fields.includes("accountType")) nextLine.accountType = undefined;
+      if (fields.includes("division")) nextLine.division = undefined;
+      if (fields.includes("amount")) nextLine.amount = undefined;
+      return {
+        ...current,
+        total: fields.includes("amount") ? undefined : current.total,
+        lines: { ...current.lines, [id]: nextLine },
+      };
+    });
+  }
+
+  function clearFieldError(field: keyof PettyCashValidationErrors) {
+    if (!fieldErrors[field]) return;
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function validate() {
+    if (!account) return {};
+    return validatePettyCash({
+      requesterRole: account.role,
+      requestDate,
+      contact,
+      managerId,
+      directorId,
+      financeReviewerId,
+      lines,
+      confirmed,
+    });
   }
 
   function buildInput(
     currentAccount: NonNullable<typeof account>,
   ): CreatePettyCashInput {
-    const requesterRole = currentAccount.role === "staff" && isProjectManagerAccount(currentAccount)
-      ? "manager" : currentAccount.role;
     return {
       organizationId: "beta-arus-org",
       requesterId: currentAccount.id,
-      requesterRole,
+      requesterRole: currentAccount.role,
       requesterName: currentAccount.name,
       requesterPosition: currentAccount.position,
       requesterContact: contact.trim(),
       requestDate,
       location,
-      managerApproverId: managerId,
-      managerApproverIds: assignedManagerIds,
-      directorApproverId: directorId,
+      managerApproverId:
+        currentAccount.role === "staff"
+          ? managerId
+          : currentAccount.role === "finance" &&
+              financeReviewerRole === "manager"
+            ? financeReviewerId
+            : currentAccount.id,
+      directorApproverId:
+        currentAccount.role === "staff" || currentAccount.role === "manager"
+          ? directorId
+          : currentAccount.role === "finance" &&
+              financeReviewerRole === "director"
+            ? financeReviewerId
+            : currentAccount.id,
       financeReviewerId:
         currentAccount.role === "finance" ? financeReviewerId : undefined,
       financeReviewerRole:
@@ -175,16 +227,18 @@ export function PettyCashForm({
     if (!account) {
       return setError("Sign in before submitting a Petty Cash request.");
     }
-    const input = buildInput(account);
-    if (!initialRecord && lines.some((line) => line.division && !projectManagerFor(line.division)))
-      return setError("Each Petty Cash division must have an assigned Manager in Settings before submission.");
-    const validation = validatePettyCashInput(input, { legacyRoute: Boolean(initialRecord?.managerActionRequired) });
-    if (validation) return setError(validation);
-    if (!confirmed)
-      return setError(
-        "Confirm that the request information and supporting links are correct.",
-      );
     setError("");
+    const nextFieldErrors = validate();
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus();
+      });
+      return;
+    }
+    setFieldErrors({});
     setStage("REVIEW");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -192,6 +246,12 @@ export function PettyCashForm({
   async function submit() {
     if (!account)
       return setError("Sign in before submitting a Petty Cash request.");
+    const nextFieldErrors = validate();
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      setStage("FORM");
+      return;
+    }
     const input = buildInput(account);
     setSaving(true);
     setError("");
@@ -296,7 +356,7 @@ export function PettyCashForm({
                       <th>#</th>
                       <th>Description</th>
                       <th>Purpose / account</th>
-                      <th>Division</th>
+                      <th>Project Name</th>
                       <th>Amount</th>
                     </tr>
                   </thead>
@@ -394,7 +454,12 @@ export function PettyCashForm({
         </div>
         <strong>{initialRecord ? "Correction" : "Draft"}</strong>
       </header>
-      <form className={styles.pettyForm} onSubmit={review}>
+      <form
+        className={styles.pettyForm}
+        noValidate
+        onSubmit={review}
+        ref={formRef}
+      >
         {error && (
           <div className={styles.error} role="alert">
             {error}
@@ -435,20 +500,40 @@ export function PettyCashForm({
                     Request date <em className={styles.requiredMark}>*</em>
                   </span>
                   <input
+                    {...invalidFieldProps(
+                      "petty-request-date-error",
+                      fieldErrors.requestDate,
+                    )}
                     type="date"
                     value={requestDate}
-                    onChange={(event) => setRequestDate(event.target.value)}
+                    onChange={(event) => {
+                      setRequestDate(event.target.value);
+                      clearFieldError("requestDate");
+                    }}
                   />
+                  <FieldError id="petty-request-date-error">
+                    {fieldErrors.requestDate}
+                  </FieldError>
                 </label>
                 <label>
                   <span>
                     Contact <em className={styles.requiredMark}>*</em>
                   </span>
                   <input
+                    {...invalidFieldProps(
+                      "petty-contact-error",
+                      fieldErrors.contact,
+                    )}
                     value={contact}
-                    onChange={(event) => setContact(event.target.value)}
+                    onChange={(event) => {
+                      setContact(event.target.value);
+                      clearFieldError("contact");
+                    }}
                     placeholder="Phone or email"
                   />
+                  <FieldError id="petty-contact-error">
+                    {fieldErrors.contact}
+                  </FieldError>
                 </label>
                 <label>
                   <span>
@@ -469,38 +554,68 @@ export function PettyCashForm({
                     ))}
                   </select>
                 </label>
-                {account && (
+                {(account?.role === "staff" || account?.role === "manager") && (
                   <label
-                    className={`${styles.reviewerField} ${account?.role === "manager"
+                    className={`${styles.reviewerField} ${
+                      account?.role === "manager"
                         ? styles.reviewerFieldFull
                         : ""
-                      }`}
+                    }`}
                   >
                     <span>
-                      Director approver{" "}
+                      Director previewer{" "}
                       <em className={styles.requiredMark}>*</em>
                     </span>
                     <select
+                      {...invalidFieldProps(
+                        "petty-director-error",
+                        fieldErrors.directorId,
+                      )}
                       value={directorId}
-                      onChange={(event) => setDirectorId(event.target.value)}
+                      onChange={(event) => {
+                        setDirectorId(event.target.value);
+                        clearFieldError("directorId");
+                      }}
                     >
                       <option value="">Choose Director</option>
-                      {directors.filter((item) => item.id !== account.id).map((item) => (
+                      {directors.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name}
                         </option>
                       ))}
                     </select>
+                    <FieldError id="petty-director-error">
+                      {fieldErrors.directorId}
+                    </FieldError>
                   </label>
                 )}
-                {account?.role === "staff" && !isProjectManagerAccount(account) && (
+                {account?.role === "staff" && (
                   <label className={styles.reviewerField}>
                     <span>
-                      Programme Manager(s) notified{" "}
+                      Manager reviewer{" "}
                       <em className={styles.requiredMark}>*</em>
                     </span>
-                    {initialRecord ? <select value={managerId} onChange={(event) => setManagerId(event.target.value)}><option value="">Choose Manager</option>{managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-                      : <input disabled value={assignedManagerIds.map((id) => betaAccounts.find((item) => item.id === id)?.name ?? id).join(", ") || "Unassigned"} />}
+                    <select
+                      {...invalidFieldProps(
+                        "petty-manager-error",
+                        fieldErrors.managerId,
+                      )}
+                      value={managerId}
+                      onChange={(event) => {
+                        setManagerId(event.target.value);
+                        clearFieldError("managerId");
+                      }}
+                    >
+                      <option value="">Choose Manager</option>
+                      {managers.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                    <FieldError id="petty-manager-error">
+                      {fieldErrors.managerId}
+                    </FieldError>
                   </label>
                 )}
                 {account?.role === "finance" && (
@@ -510,6 +625,10 @@ export function PettyCashForm({
                       <em className={styles.requiredMark}>*</em>
                     </span>
                     <select
+                      {...invalidFieldProps(
+                        "petty-finance-reviewer-error",
+                        fieldErrors.financeReviewerId,
+                      )}
                       value={
                         financeReviewerRole && financeReviewerId
                           ? `${financeReviewerRole}:${financeReviewerId}`
@@ -521,6 +640,7 @@ export function PettyCashForm({
                           (role as "manager" | "director" | "finance") || "",
                         );
                         setFinanceReviewerId(id || "");
+                        clearFieldError("financeReviewerId");
                       }}
                     >
                       <option value="">
@@ -545,6 +665,9 @@ export function PettyCashForm({
                         );
                       })}
                     </select>
+                    <FieldError id="petty-finance-reviewer-error">
+                      {fieldErrors.financeReviewerId}
+                    </FieldError>
                   </label>
                 )}
               </div>
@@ -592,13 +715,19 @@ export function PettyCashForm({
                         <em className={styles.requiredMark}>*</em>
                       </span>
                       <input
-                        required
+                        {...invalidFieldProps(
+                          `${line.id}-petty-details-error`,
+                          fieldErrors.lines?.[line.id]?.details,
+                        )}
                         value={line.details}
                         onChange={(event) =>
                           updateLine(line.id, { details: event.target.value })
                         }
                         placeholder="What is this expense for?"
                       />
+                      <FieldError id={`${line.id}-petty-details-error`}>
+                        {fieldErrors.lines?.[line.id]?.details}
+                      </FieldError>
                     </label>
                     <div className={styles.expenseFieldGrid}>
                       <label>
@@ -607,7 +736,10 @@ export function PettyCashForm({
                           <em className={styles.requiredMark}>*</em>
                         </span>
                         <select
-                          required
+                          {...invalidFieldProps(
+                            `${line.id}-petty-account-error`,
+                            fieldErrors.lines?.[line.id]?.accountType,
+                          )}
                           value={line.accountType}
                           onChange={(event) =>
                             updateLine(line.id, {
@@ -628,13 +760,20 @@ export function PettyCashForm({
                             <option key={item}>{item}</option>
                           ))}
                         </select>
+                        <FieldError id={`${line.id}-petty-account-error`}>
+                          {fieldErrors.lines?.[line.id]?.accountType}
+                        </FieldError>
                       </label>
                       <label>
                         <span>
-                          Division <em className={styles.requiredMark}>*</em>
+                          Project Name{" "}
+                          <em className={styles.requiredMark}>*</em>
                         </span>
                         <select
-                          required
+                          {...invalidFieldProps(
+                            `${line.id}-petty-division-error`,
+                            fieldErrors.lines?.[line.id]?.division,
+                          )}
                           value={line.division}
                           onChange={(event) =>
                             updateLine(line.id, {
@@ -642,7 +781,7 @@ export function PettyCashForm({
                             })
                           }
                         >
-                          <option value="">Choose division</option>
+                          <option value="">Choose project</option>
                           {line.division &&
                             !DIVISION_TYPES.includes(
                               line.division as (typeof DIVISION_TYPES)[number],
@@ -657,6 +796,9 @@ export function PettyCashForm({
                             </option>
                           ))}
                         </select>
+                        <FieldError id={`${line.id}-petty-division-error`}>
+                          {fieldErrors.lines?.[line.id]?.division}
+                        </FieldError>
                       </label>
                       <label>
                         <span>
@@ -664,12 +806,16 @@ export function PettyCashForm({
                           <em className={styles.requiredMark}>*</em>
                         </span>
                         <DecimalInput
-                          required
+                          describedBy={`${line.id}-petty-amount-error`}
+                          error={fieldErrors.lines?.[line.id]?.amount}
                           value={line.amount}
                           onValueChange={(amount) =>
                             updateLine(line.id, { amount })
                           }
                         />
+                        <FieldError id={`${line.id}-petty-amount-error`}>
+                          {fieldErrors.lines?.[line.id]?.amount}
+                        </FieldError>
                       </label>
                     </div>
                   </article>
@@ -726,7 +872,9 @@ export function PettyCashForm({
               </div>
             </dl>
             <div
-              className={`${styles.pettyPolicyBox} ${total >= PETTY_CASH_REQUEST_LIMIT ? styles.pettyPolicyError : ""}`}
+              {...invalidFieldProps("petty-total-error", fieldErrors.total)}
+              className={`${styles.pettyPolicyBox} ${total >= PETTY_CASH_REQUEST_LIMIT || fieldErrors.total ? styles.pettyPolicyError : ""}`}
+              tabIndex={fieldErrors.total ? -1 : undefined}
             >
               <b>Policy check</b>
               <p>
@@ -735,6 +883,7 @@ export function PettyCashForm({
                   : `Limit exceeded. Reduce the total to below RM${PETTY_CASH_REQUEST_LIMIT.toFixed(2)}.`}
               </p>
             </div>
+            <FieldError id="petty-total-error">{fieldErrors.total}</FieldError>
             <div className={styles.pettyNextBox}>
               <b>What happens next</b>
               <p>
@@ -744,8 +893,15 @@ export function PettyCashForm({
             </div>
             <label>
               <input
+                {...invalidFieldProps(
+                  "petty-confirmed-error",
+                  fieldErrors.confirmed,
+                )}
                 checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
+                onChange={(event) => {
+                  setConfirmed(event.target.checked);
+                  clearFieldError("confirmed");
+                }}
                 type="checkbox"
               />
               <span>
@@ -753,10 +909,13 @@ export function PettyCashForm({
                 accurate.
               </span>
             </label>
+            <FieldError id="petty-confirmed-error">
+              {fieldErrors.confirmed}
+            </FieldError>
             <div className={styles.draftActions}>
               <button
                 className={styles.primaryButton}
-                disabled={saving || !confirmed}
+                disabled={saving}
                 type="submit"
               >
                 Continue to review →
@@ -790,20 +949,22 @@ export function PettyCashForm({
 }
 
 function DecimalInput({
-  required = false,
+  describedBy,
+  error,
   value,
   onValueChange,
 }: {
-  required?: boolean;
+  describedBy: string;
+  error?: string;
   value: number;
   onValueChange: (value: number) => void;
 }) {
   const [text, setText] = useState(value ? String(value) : "");
   return (
     <input
+      {...invalidFieldProps(describedBy, error)}
       inputMode="decimal"
       placeholder="0.00"
-      required={required}
       type="text"
       value={text}
       onBlur={() => {

@@ -5153,7 +5153,8 @@
   text-transform: none !important;
 }
 
-.field input[aria-invalid="true"] {
+.field :is(input, select, textarea)[aria-invalid="true"],
+.mobileFieldLabel :is(input, select)[aria-invalid="true"] {
   border-color: #ef4444;
   box-shadow: 0 0 0 1px #ef4444;
 }

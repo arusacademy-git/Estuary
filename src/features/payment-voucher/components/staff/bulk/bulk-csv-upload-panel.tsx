@@ -2,10 +2,8 @@
 
 import { useMemo, useState } from "react";
 
-import {
-  normalizeBulkPaymentVoucherRow,
-  validateBulkPaymentVoucherRows,
-} from "@/domain/payment-vouchers/bulk-upload";
+import { normalizeBulkPaymentVoucherRow } from "@/domain/payment-vouchers/bulk-upload";
+import { validateBulkPaymentVoucherRows } from "@/domain/payment-vouchers/bulk-validation";
 import type {
   BulkPaymentVoucherField,
   BulkPaymentVoucherRow,

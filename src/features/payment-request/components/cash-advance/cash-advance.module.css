@@ -103,6 +103,17 @@
   resize: vertical;
 }
 
+.field :is(input, select, textarea)[aria-invalid="true"],
+.cashEntryGrid input[aria-invalid="true"] {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
+}
+
+.total[aria-invalid="true"] {
+  border: 1px solid #ef4444;
+  background: #fff5f6;
+}
+
 .full {
   grid-column: 1 / -1;
 }
@@ -4812,8 +4823,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  border-color: #fecaca;
-  background: #fff5f6;
+  border-color: #dbe5f0;
+  background: #f7f9fc;
 }
 
 .cashEntryList+.total span,
@@ -4823,13 +4834,26 @@
 
 .cashEntryList+.total small {
   margin-top: 3px;
-  color: #db224a;
+  color: #64748b;
   font-size: 9px;
 }
 
 .cashEntryList+.total strong {
-  color: #cf203f;
+  color: #102f55;
   font-size: 21px;
+}
+
+.cashEntryList+.totalBelowMinimum,
+.cashEntryList+.total[aria-invalid="true"] {
+  border-color: #fecaca;
+  background: #fff5f6;
+}
+
+.cashEntryList+.totalBelowMinimum small,
+.cashEntryList+.totalBelowMinimum strong,
+.cashEntryList+.total[aria-invalid="true"] small,
+.cashEntryList+.total[aria-invalid="true"] strong {
+  color: #cf203f;
 }
 
 .cashSummaryHeading>span,

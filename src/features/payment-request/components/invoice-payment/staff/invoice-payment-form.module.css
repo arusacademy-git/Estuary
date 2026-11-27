@@ -196,6 +196,17 @@
   box-shadow: 0 0 0 3px rgb(37 99 235 / 11%);
 }
 
+.field :is(input, select, textarea)[aria-invalid="true"],
+.otherInput[aria-invalid="true"],
+.amountTable input[aria-invalid="true"] {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
+}
+
+.choiceGroup[aria-invalid="true"] .choice {
+  border-color: #ef4444;
+}
+
 .field small {
   color: #8091a7;
   font-size: 12px;

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createTravelAllowance,
@@ -11,6 +11,15 @@ import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation"
 import { ManualDraftStatus } from "../../shared/manual-draft-status";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import { ProjectBudgetWarning } from "@/features/payment-request/components/shared/project-budget-warning";
+import {
+  type TravelAllowanceValidationErrors,
+  validateTravelAllowance,
+} from "@/domain/payment-requests/travel-allowance/validation";
+import { hasValidationErrors } from "@/domain/validation/common-validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 import type {
   PaymentRequestDocument,
   TravelAllowanceLine,
@@ -86,12 +95,12 @@ function readDocument(file: File): Promise<PaymentRequestDocument> {
     reader.onload = () =>
       typeof reader.result === "string"
         ? resolve({
-          id: `${file.name}-${file.size}-${file.lastModified}`,
-          fileName: file.name,
-          mimeType: file.type,
-          size: file.size,
-          dataUrl: reader.result,
-        })
+            id: `${file.name}-${file.size}-${file.lastModified}`,
+            fileName: file.name,
+            mimeType: file.type,
+            size: file.size,
+            dataUrl: reader.result,
+          })
         : reject(new Error(`${file.name} could not be read.`));
     reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
     reader.readAsDataURL(file);
@@ -131,6 +140,9 @@ export function TravelAllowanceForm({
   const [draftSaved, setDraftSaved] = useState(false);
   const [record, setRecord] = useState<TravelAllowanceRecord | null>(null);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] =
+    useState<TravelAllowanceValidationErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -217,12 +229,42 @@ export function TravelAllowanceForm({
         return line.groupId === target?.groupId ? { ...line, ...patch } : line;
       }),
     );
+    const fields = Object.keys(patch) as Array<keyof TravelAllowanceLine>;
+    setFieldErrors((current) => {
+      if (!current.lines) return current;
+      const nextLines = { ...current.lines };
+      const target = lines.find((line) => line.id === id);
+      lines
+        .filter(
+          (line) =>
+            (line.groupId ?? line.id) === (target?.groupId ?? target?.id),
+        )
+        .forEach((line) => {
+          const currentLine = nextLines[line.id];
+          if (!currentLine) return;
+          const nextLine = { ...currentLine };
+          if (fields.includes("employeeId")) nextLine.employeeId = undefined;
+          if (fields.includes("travelDate")) nextLine.travelDate = undefined;
+          if (fields.includes("projectName")) nextLine.projectName = undefined;
+          if (fields.includes("reason")) nextLine.reason = undefined;
+          if (fields.includes("meals")) nextLine.allowance = undefined;
+          if (fields.includes("specialAllowance")) {
+            nextLine.allowance = undefined;
+            nextLine.specialAllowance = undefined;
+            nextLine.specialAllowanceReason = undefined;
+          }
+          if (fields.includes("specialAllowanceReason")) {
+            nextLine.specialAllowanceReason = undefined;
+          }
+          nextLines[line.id] = nextLine;
+        });
+      return { ...current, lines: nextLines };
+    });
   }
 
-  function updateRequestProject(
-    patch: Pick<TravelAllowanceLine, "projectName" | "isOtherProject">,
-  ) {
-    setLines((current) => current.map((line) => ({ ...line, ...patch })));
+  function clearFieldError(field: keyof TravelAllowanceValidationErrors) {
+    if (!fieldErrors[field]) return;
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
   }
 
   function toggleGroupEmployee(line: EditableTravelLine, employeeId: string) {
@@ -264,6 +306,23 @@ export function TravelAllowanceForm({
         },
       ];
     });
+    setFieldErrors((current) => {
+      if (!current.lines) return current;
+      const groupId = line.groupId ?? line.id;
+      return {
+        ...current,
+        lines: Object.fromEntries(
+          Object.entries(current.lines).map(([id, errors]) => [
+            id,
+            lines.some(
+              (item) => item.id === id && (item.groupId ?? item.id) === groupId,
+            )
+              ? { ...errors, employeeId: undefined }
+              : errors,
+          ]),
+        ),
+      };
+    });
   }
 
   function toggleMeal(line: TravelAllowanceLine, meal: TravelMealType) {
@@ -304,7 +363,7 @@ export function TravelAllowanceForm({
     }
   }
 
-  function validationMessage() {
+  function accountValidationMessage() {
     if (
       !account ||
       (requestMode === "staff"
@@ -312,54 +371,52 @@ export function TravelAllowanceForm({
         : !(isDirector || isProjectManagerAccount(account)))
     )
       return `Sign in using a ${requestMode === "staff" ? "Staff" : "Manager"} account.`;
-    if (!requestDate || !contact.trim() || !projectDirectorId)
-      return "Complete the request date, contact and Project Director.";
-    if (requestMode === "staff" && assignedManagerIds.length !== 1)
-      return assignedManagerIds.length > 1
-        ? "The selected projects have different managers. Submit separate requests per project manager."
-        : "Assign a manager to the selected project in Settings first.";
-    if (!lines.length) return "Add at least one travel entry.";
-    if (
-      !isDirector &&
-      lines.some((line) => !availableProjects.includes(line.projectName))
-    )
-      return "Travel Allowance is limited to projects you manage.";
-    const incomplete = lines.find(
-      (line) =>
-        !line.employeeId ||
-        !line.employeeName.trim() ||
-        !line.travelDate ||
-        !line.projectName.trim() ||
-        !line.reason.trim(),
-    );
-    if (incomplete)
-      return "Complete the travel date, Project Name and reason for every entry.";
-    const noAllowance = lines.find(
-      (line) => line.meals.length === 0 && line.specialAllowance <= 0,
-    );
-    if (noAllowance)
-      return "Select at least one meal or enter a special allowance for every entry.";
-    const missingReason = lines.find(
-      (line) =>
-        line.specialAllowance > 0 && !line.specialAllowanceReason?.trim(),
-    );
-    if (missingReason) return "Explain the reason for every special allowance.";
     return null;
+  }
+
+  function validate() {
+    return validateTravelAllowance({
+      requestMode,
+      requestDate,
+      contact,
+      managerApproverId,
+      projectDirectorId,
+      lines,
+      availableProjects,
+      isDirector,
+      assignedManagerCount: assignedManagerIds.length,
+    });
   }
 
   function review(event: React.FormEvent) {
     event.preventDefault();
-    const message = validationMessage();
-    if (message) return setError(message);
+    const accountMessage = accountValidationMessage();
+    if (accountMessage) return setError(accountMessage);
     setError("");
+    const nextFieldErrors = validate();
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus();
+      });
+      return;
+    }
+    setFieldErrors({});
     setStage("REVIEW");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function submit() {
-    const message = validationMessage();
-    if (message || !account)
-      return setError(message ?? "The request is incomplete.");
+    const accountMessage = accountValidationMessage();
+    const nextFieldErrors = validate();
+    if (accountMessage || hasValidationErrors(nextFieldErrors) || !account) {
+      setFieldErrors(nextFieldErrors);
+      setError(accountMessage ?? "");
+      setStage("FORM");
+      return;
+    }
     setIsSaving(true);
     try {
       const input = {
@@ -474,7 +531,12 @@ export function TravelAllowanceForm({
           {error}
         </div>
       )}
-      <form className={styles.travelFormLayout} onSubmit={review}>
+      <form
+        className={styles.travelFormLayout}
+        noValidate
+        onSubmit={review}
+        ref={formRef}
+      >
         <ProjectBudgetWarning
           accountId={account?.id}
           allocations={lines.map((line) => ({
@@ -503,11 +565,20 @@ export function TravelAllowanceForm({
                   Request date <em>*</em>
                 </span>
                 <input
-                  required
+                  {...invalidFieldProps(
+                    "travel-request-date-error",
+                    fieldErrors.requestDate,
+                  )}
                   type="date"
                   value={requestDate}
-                  onChange={(event) => setRequestDate(event.target.value)}
+                  onChange={(event) => {
+                    setRequestDate(event.target.value);
+                    clearFieldError("requestDate");
+                  }}
                 />
+                <FieldError id="travel-request-date-error">
+                  {fieldErrors.requestDate}
+                </FieldError>
               </label>
               <label>
                 <span>
@@ -528,11 +599,20 @@ export function TravelAllowanceForm({
                   Contact <em>*</em>
                 </span>
                 <input
-                  required
+                  {...invalidFieldProps(
+                    "travel-contact-error",
+                    fieldErrors.contact,
+                  )}
                   placeholder="Phone number or extension"
                   value={contact}
-                  onChange={(event) => setContact(event.target.value)}
+                  onChange={(event) => {
+                    setContact(event.target.value);
+                    clearFieldError("contact");
+                  }}
                 />
+                <FieldError id="travel-contact-error">
+                  {fieldErrors.contact}
+                </FieldError>
               </label>
               <label>
                 <span>
@@ -542,11 +622,15 @@ export function TravelAllowanceForm({
                   <input disabled value={account?.name ?? "Loading…"} />
                 ) : (
                   <select
-                    required
+                    {...invalidFieldProps(
+                      "travel-manager-error",
+                      fieldErrors.managerApproverId,
+                    )}
                     value={managerApproverId}
-                    onChange={(event) =>
-                      setManagerApproverId(event.target.value)
-                    }
+                    onChange={(event) => {
+                      setManagerApproverId(event.target.value);
+                      clearFieldError("managerApproverId");
+                    }}
                   >
                     <option value="">Choose a Manager</option>
                     {managers.map((manager) => (
@@ -556,15 +640,24 @@ export function TravelAllowanceForm({
                     ))}
                   </select>
                 )}
+                <FieldError id="travel-manager-error">
+                  {fieldErrors.managerApproverId}
+                </FieldError>
               </label>
               <label>
                 <span>
                   Project Director in charge <em>*</em>
                 </span>
                 <select
-                  required
+                  {...invalidFieldProps(
+                    "travel-director-error",
+                    fieldErrors.projectDirectorId,
+                  )}
                   value={projectDirectorId}
-                  onChange={(event) => setProjectDirectorId(event.target.value)}
+                  onChange={(event) => {
+                    setProjectDirectorId(event.target.value);
+                    clearFieldError("projectDirectorId");
+                  }}
                 >
                   <option value="">Choose a Director</option>
                   {directors.map((director) => (
@@ -573,6 +666,9 @@ export function TravelAllowanceForm({
                     </option>
                   ))}
                 </select>
+                <FieldError id="travel-director-error">
+                  {fieldErrors.projectDirectorId}
+                </FieldError>
               </label>
             </div>
           </section>
@@ -582,9 +678,10 @@ export function TravelAllowanceForm({
               <div>
                 <h2>Travel entries</h2>
                 <p>
-                  Select one or more employees per entry. Every entry in this
-                  request must use the same project. Create a new request for a
-                  different project. Up to {MAX_LINES} rows are supported.
+                  Select one or more employees per entry. Duplicates keep the
+                  same project by default and start with a blank travel date;
+                  change the employee, project or date when needed. Up to{" "}
+                  {MAX_LINES} rows are supported.
                 </p>
               </div>
               <button
@@ -618,6 +715,9 @@ export function TravelAllowanceForm({
                   const groupLines = lines.filter(
                     (item) => (item.groupId ?? item.id) === groupId,
                   );
+                  const groupErrors = groupLines
+                    .map((item) => fieldErrors.lines?.[item.id])
+                    .find((item) => hasValidationErrors(item));
                   return (
                     <article className={styles.entryCard} key={line.id}>
                       <div className={styles.entryTop}>
@@ -665,7 +765,13 @@ export function TravelAllowanceForm({
                             <span>
                               Employee name <em>*</em>
                             </span>
-                            <details>
+                            <details
+                              {...invalidFieldProps(
+                                `${line.id}-travel-employee-error`,
+                                groupErrors?.employeeId,
+                              )}
+                              tabIndex={groupErrors?.employeeId ? -1 : undefined}
+                            >
                               <summary>
                                 {groupLines.some((item) => item.employeeId)
                                   ? `${groupLines.filter((item) => item.employeeId).length} employee${groupLines.filter((item) => item.employeeId).length === 1 ? "" : "s"} selected`
@@ -691,6 +797,9 @@ export function TravelAllowanceForm({
                                 ))}
                               </div>
                             </details>
+                            <FieldError id={`${line.id}-travel-employee-error`}>
+                              {groupErrors?.employeeId}
+                            </FieldError>
                             <div className={styles.employeeChips}>
                               {groupLines
                                 .filter((item) => item.employeeId)
@@ -714,7 +823,10 @@ export function TravelAllowanceForm({
                               Employee name <em>*</em>
                             </span>
                             <select
-                              required
+                              {...invalidFieldProps(
+                                `${line.id}-travel-employee-error`,
+                                groupErrors?.employeeId,
+                              )}
                               value={line.employeeId}
                               onChange={(event) => {
                                 const employee = employees.find(
@@ -741,6 +853,9 @@ export function TravelAllowanceForm({
                                 </option>
                               ))}
                             </select>
+                            <FieldError id={`${line.id}-travel-employee-error`}>
+                              {groupErrors?.employeeId}
+                            </FieldError>
                           </label>
                         )}
                         <label>
@@ -748,7 +863,10 @@ export function TravelAllowanceForm({
                             Travel date <em>*</em>
                           </span>
                           <input
-                            required
+                            {...invalidFieldProps(
+                              `${line.id}-travel-date-error`,
+                              groupErrors?.travelDate,
+                            )}
                             type="date"
                             value={line.travelDate}
                             onChange={(event) =>
@@ -757,25 +875,32 @@ export function TravelAllowanceForm({
                               })
                             }
                           />
+                          <FieldError id={`${line.id}-travel-date-error`}>
+                            {groupErrors?.travelDate}
+                          </FieldError>
                         </label>
                         <label>
                           <span>
                             Project Name <em>*</em>
                           </span>
                           <select
-                            required
+                            {...invalidFieldProps(
+                              `${line.id}-travel-project-error`,
+                              groupErrors?.projectName,
+                            )}
                             value={
                               line.isOtherProject ? "OTHER" : line.projectName
                             }
                             onChange={(event) => {
                               const value = event.target.value;
-                              updateRequestProject(
+                              updateLine(
+                                line.id,
                                 value === "OTHER"
                                   ? { isOtherProject: true, projectName: "" }
                                   : {
-                                    isOtherProject: false,
-                                    projectName: value,
-                                  },
+                                      isOtherProject: false,
+                                      projectName: value,
+                                    },
                               );
                             }}
                           >
@@ -793,20 +918,26 @@ export function TravelAllowanceForm({
                               placeholder="Enter the Project Name"
                               value={line.projectName}
                               onChange={(event) =>
-                                updateRequestProject({
+                                updateLine(line.id, {
                                   isOtherProject: true,
                                   projectName: event.target.value,
                                 })
                               }
                             />
                           )}
+                          <FieldError id={`${line.id}-travel-project-error`}>
+                            {groupErrors?.projectName}
+                          </FieldError>
                         </label>
                         <label className={styles.reason}>
                           <span>
                             Reason for meal allowance <em>*</em>
                           </span>
                           <input
-                            required
+                            {...invalidFieldProps(
+                              `${line.id}-travel-reason-error`,
+                              groupErrors?.reason,
+                            )}
                             placeholder="Example: Cohort workshop"
                             value={line.reason}
                             onChange={(event) =>
@@ -815,9 +946,19 @@ export function TravelAllowanceForm({
                               })
                             }
                           />
+                          <FieldError id={`${line.id}-travel-reason-error`}>
+                            {groupErrors?.reason}
+                          </FieldError>
                         </label>
                       </div>
-                      <fieldset className={styles.meals}>
+                      <fieldset
+                        {...invalidFieldProps(
+                          `${line.id}-travel-allowance-error`,
+                          groupErrors?.allowance,
+                        )}
+                        className={styles.meals}
+                        tabIndex={groupErrors?.allowance ? -1 : undefined}
+                      >
                         <legend>Meal type - fixed rates</legend>
                         {meals.map((meal) => (
                           <label key={meal}>
@@ -833,10 +974,15 @@ export function TravelAllowanceForm({
                           </label>
                         ))}
                       </fieldset>
+                      <FieldError id={`${line.id}-travel-allowance-error`}>
+                        {groupErrors?.allowance}
+                      </FieldError>
                       <div className={styles.specialRow}>
                         <label>
                           <span>Special allowance (RM)</span>
                           <DecimalInput
+                            describedBy={`${line.id}-travel-special-amount-error`}
+                            error={groupErrors?.specialAllowance}
                             value={line.specialAllowance}
                             onValueChange={(value) =>
                               updateLine(line.id, {
@@ -844,6 +990,11 @@ export function TravelAllowanceForm({
                               })
                             }
                           />
+                          <FieldError
+                            id={`${line.id}-travel-special-amount-error`}
+                          >
+                            {groupErrors?.specialAllowance}
+                          </FieldError>
                         </label>
                         <label>
                           <span>
@@ -853,8 +1004,11 @@ export function TravelAllowanceForm({
                             )}
                           </span>
                           <input
+                            {...invalidFieldProps(
+                              `${line.id}-travel-special-reason-error`,
+                              groupErrors?.specialAllowanceReason,
+                            )}
                             disabled={line.specialAllowance <= 0}
-                            required={line.specialAllowance > 0}
                             value={line.specialAllowanceReason ?? ""}
                             onChange={(event) =>
                               updateLine(line.id, {
@@ -862,6 +1016,11 @@ export function TravelAllowanceForm({
                               })
                             }
                           />
+                          <FieldError
+                            id={`${line.id}-travel-special-reason-error`}
+                          >
+                            {groupErrors?.specialAllowanceReason}
+                          </FieldError>
                         </label>
                         <div>
                           <span>Entry total</span>
@@ -1057,9 +1216,13 @@ function TravelCheck({
 }
 
 function DecimalInput({
+  describedBy,
+  error,
   value,
   onValueChange,
 }: {
+  describedBy: string;
+  error?: string;
   value: number;
   onValueChange: (value: number) => void;
 }) {
@@ -1067,6 +1230,7 @@ function DecimalInput({
 
   return (
     <input
+      {...invalidFieldProps(describedBy, error)}
       inputMode="decimal"
       placeholder="0.00"
       type="text"

@@ -1,6 +1,12 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   createCashAdvance,
@@ -11,10 +17,16 @@ import { ManualDraftConfirmation } from "../../shared/manual-draft-confirmation"
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import { ManualDraftStatus } from "@/features/payment-request/components/shared/manual-draft-status";
 import { ProjectBudgetWarning } from "@/features/payment-request/components/shared/project-budget-warning";
+import { cashAdvanceRequestedTotal } from "@/domain/payment-requests/cash-advance/policy";
 import {
-  cashAdvanceRequestedTotal,
-  validateCashAdvanceRequest,
-} from "@/domain/payment-requests/cash-advance/policy";
+  type CashAdvanceValidationErrors,
+  validateCashAdvance,
+} from "@/domain/payment-requests/cash-advance/validation";
+import { hasValidationErrors } from "@/domain/validation/common-validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 import {
   CASH_ADVANCE_PROJECTS,
   type CashAdvanceDocument,
@@ -119,6 +131,10 @@ export function CashAdvanceForm({
   const [submittedRecord, setSubmittedRecord] =
     useState<CashAdvanceRecord | null>(null);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<CashAdvanceValidationErrors>(
+    {},
+  );
+  const formRef = useRef<HTMLFormElement>(null);
   const [saving, setSaving] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
 
@@ -186,6 +202,29 @@ export function CashAdvanceForm({
     setLines((current) =>
       current.map((line) => (line.id === id ? { ...line, ...patch } : line)),
     );
+    const fields = Object.keys(patch) as Array<keyof CashAdvanceRequestLine>;
+    setFieldErrors((current) => {
+      const currentLine = current.lines?.[id];
+      if (!currentLine) {
+        return fields.includes("amount")
+          ? { ...current, total: undefined }
+          : current;
+      }
+      const nextLine = { ...currentLine };
+      if (fields.includes("description")) nextLine.description = undefined;
+      if (fields.includes("purpose")) nextLine.purpose = undefined;
+      if (fields.includes("amount")) nextLine.amount = undefined;
+      return {
+        ...current,
+        total: fields.includes("amount") ? undefined : current.total,
+        lines: { ...current.lines, [id]: nextLine },
+      };
+    });
+  }
+
+  function clearFieldError(field: keyof CashAdvanceValidationErrors) {
+    if (!fieldErrors[field]) return;
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
   }
 
   async function selectFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -213,39 +252,54 @@ export function CashAdvanceForm({
   }
 
   function validate() {
-    if (!account) return "Sign in before creating a Cash Advance request.";
-    if (
-      !requestDate ||
-      !contact.trim() ||
-      !managerId ||
-      !directorId ||
-      !purpose.trim()
-    )
-      return "Complete the request, contact, approvers and purpose.";
-    if (
-      !accountHolderName.trim() ||
-      !bankName.trim() ||
-      !bankAccountNumber.trim()
-    )
-      return "Complete the Staff bank account details for payment.";
-    if (!(isOtherProject ? otherProject.trim() : projectName))
-      return "Select or enter the Project Name.";
-    return validateCashAdvanceRequest(lines);
+    return validateCashAdvance({
+      requestDate,
+      contact,
+      projectName,
+      otherProject,
+      isOtherProject,
+      managerId,
+      directorId,
+      purpose,
+      accountHolderName,
+      bankName,
+      bankAccountNumber,
+      lines,
+    });
   }
 
   function review(event: FormEvent) {
     event.preventDefault();
-    const message = validate();
-    if (message) return setError(message);
     setError("");
+    setFieldErrors({});
+    if (!account) {
+      setError("Sign in before creating a Cash Advance request.");
+      return;
+    }
+    const nextFieldErrors = validate();
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus();
+      });
+      return;
+    }
     setStage("REVIEW");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function submit() {
-    const message = validate();
-    if (message || !account)
-      return setError(message ?? "The request is incomplete.");
+    const nextFieldErrors = validate();
+    if (hasValidationErrors(nextFieldErrors) || !account) {
+      setFieldErrors(nextFieldErrors);
+      setError(
+        account ? "" : "Sign in before creating a Cash Advance request.",
+      );
+      setStage("FORM");
+      return;
+    }
     if (!activeSignature || !confirmed)
       return setError(
         "Save your digital signature in Settings and confirm the Staff declaration before submitting.",
@@ -359,7 +413,12 @@ export function CashAdvanceForm({
           </span>
         </div>
       </header>
-      <form className={styles.cashAdvanceForm} onSubmit={review}>
+      <form
+        className={styles.cashAdvanceForm}
+        noValidate
+        ref={formRef}
+        onSubmit={review}
+      >
         <ProjectBudgetWarning
           accountId={account?.id}
           allocations={[
@@ -408,29 +467,59 @@ export function CashAdvanceForm({
                     Request date <em className={styles.requiredMark}>*</em>
                   </label>
                   <input
+                    {...invalidFieldProps(
+                      "cash-account-holder-error",
+                      fieldErrors.accountHolderName,
+                    )}
+                    {...invalidFieldProps(
+                      "cash-request-date-error",
+                      fieldErrors.requestDate,
+                    )}
                     type="date"
                     value={requestDate}
-                    onChange={(e) => setRequestDate(e.target.value)}
+                    onChange={(e) => {
+                      setRequestDate(e.target.value);
+                      clearFieldError("requestDate");
+                    }}
                   />
+                  <FieldError id="cash-request-date-error">
+                    {fieldErrors.requestDate}
+                  </FieldError>
                 </div>
                 <div className={styles.field}>
                   <label>
                     Contact <em className={styles.requiredMark}>*</em>
                   </label>
                   <input
+                    {...invalidFieldProps(
+                      "cash-contact-error",
+                      fieldErrors.contact,
+                    )}
                     placeholder="e.g. +60 12-345 6789"
                     value={contact}
-                    onChange={(e) => setContact(e.target.value)}
+                    onChange={(e) => {
+                      setContact(e.target.value);
+                      clearFieldError("contact");
+                    }}
                   />
+                  <FieldError id="cash-contact-error">
+                    {fieldErrors.contact}
+                  </FieldError>
                 </div>
                 <div className={styles.field}>
                   <label>
                     Project Name <em className={styles.requiredMark}>*</em>
                   </label>
                   <select
+                    {...invalidFieldProps(
+                      "cash-project-error",
+                      fieldErrors.projectName,
+                    )}
                     value={isOtherProject ? "__OTHER__" : projectName}
                     onChange={(e) => {
                       setIsOtherProject(e.target.value === "__OTHER__");
+                      clearFieldError("projectName");
+                      clearFieldError("otherProject");
                       setProjectName(
                         e.target.value === "__OTHER__" ? "" : e.target.value,
                       );
@@ -442,6 +531,9 @@ export function CashAdvanceForm({
                     ))}
                     <option value="__OTHER__">Other</option>
                   </select>
+                  <FieldError id="cash-project-error">
+                    {fieldErrors.projectName}
+                  </FieldError>
                 </div>
                 {isOtherProject && (
                   <div className={styles.field}>
@@ -450,9 +542,19 @@ export function CashAdvanceForm({
                       <em className={styles.requiredMark}>*</em>
                     </label>
                     <input
+                      {...invalidFieldProps(
+                        "cash-other-project-error",
+                        fieldErrors.otherProject,
+                      )}
                       value={otherProject}
-                      onChange={(e) => setOtherProject(e.target.value)}
+                      onChange={(e) => {
+                        setOtherProject(e.target.value);
+                        clearFieldError("otherProject");
+                      }}
                     />
+                    <FieldError id="cash-other-project-error">
+                      {fieldErrors.otherProject}
+                    </FieldError>
                   </div>
                 )}
                 <div className={styles.field}>
@@ -460,8 +562,15 @@ export function CashAdvanceForm({
                     Manager approver <em className={styles.requiredMark}>*</em>
                   </label>
                   <select
+                    {...invalidFieldProps(
+                      "cash-manager-error",
+                      fieldErrors.managerId,
+                    )}
                     value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
+                    onChange={(e) => {
+                      setManagerId(e.target.value);
+                      clearFieldError("managerId");
+                    }}
                   >
                     <option value="">Choose Manager</option>
                     {managers.map((item) => (
@@ -470,14 +579,24 @@ export function CashAdvanceForm({
                       </option>
                     ))}
                   </select>
+                  <FieldError id="cash-manager-error">
+                    {fieldErrors.managerId}
+                  </FieldError>
                 </div>
                 <div className={`${styles.field} ${styles.full}`}>
                   <label>
                     Director approver <em className={styles.requiredMark}>*</em>
                   </label>
                   <select
+                    {...invalidFieldProps(
+                      "cash-director-error",
+                      fieldErrors.directorId,
+                    )}
                     value={directorId}
-                    onChange={(e) => setDirectorId(e.target.value)}
+                    onChange={(e) => {
+                      setDirectorId(e.target.value);
+                      clearFieldError("directorId");
+                    }}
                   >
                     <option value="">Choose Director</option>
                     {directors.map((item) => (
@@ -486,6 +605,9 @@ export function CashAdvanceForm({
                       </option>
                     ))}
                   </select>
+                  <FieldError id="cash-director-error">
+                    {fieldErrors.directorId}
+                  </FieldError>
                 </div>
                 <div className={`${styles.field} ${styles.full}`}>
                   <label>
@@ -493,10 +615,20 @@ export function CashAdvanceForm({
                     <em className={styles.requiredMark}>*</em>
                   </label>
                   <textarea
+                    {...invalidFieldProps(
+                      "cash-purpose-error",
+                      fieldErrors.purpose,
+                    )}
                     placeholder="Explain the main project requirement or context necessitating this Cash Advance…"
                     value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
+                    onChange={(e) => {
+                      setPurpose(e.target.value);
+                      clearFieldError("purpose");
+                    }}
                   />
+                  <FieldError id="cash-purpose-error">
+                    {fieldErrors.purpose}
+                  </FieldError>
                 </div>
               </div>
             </section>
@@ -522,16 +654,30 @@ export function CashAdvanceForm({
                   <input
                     placeholder="Name as registered with the bank"
                     value={accountHolderName}
-                    onChange={(e) => setAccountHolderName(e.target.value)}
+                    onChange={(e) => {
+                      setAccountHolderName(e.target.value);
+                      clearFieldError("accountHolderName");
+                    }}
                   />
+                  <FieldError id="cash-account-holder-error">
+                    {fieldErrors.accountHolderName}
+                  </FieldError>
                 </div>
                 <div className={styles.field}>
                   <label>
                     Bank name <em className={styles.requiredMark}>*</em>
                   </label>
                   <select
+                    {...invalidFieldProps(
+                      "cash-bank-name-error",
+                      fieldErrors.bankName,
+                    )}
                     value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
+                    onChange={(e) => {
+                      setBankName(e.target.value);
+                      clearFieldError("bankName");
+                      clearFieldError("bankAccountNumber");
+                    }}
                   >
                     <option value="">Choose a bank</option>
                     {BANK_NAME_SELECT_OPTIONS.map((option) => (
@@ -540,28 +686,51 @@ export function CashAdvanceForm({
                       </option>
                     ))}
                   </select>
+                  <FieldError id="cash-bank-name-error">
+                    {fieldErrors.bankName}
+                  </FieldError>
                 </div>
                 <div className={styles.field}>
                   <label>
                     Account number <em className={styles.requiredMark}>*</em>
                   </label>
                   <input
+                    {...invalidFieldProps(
+                      "cash-bank-account-error",
+                      fieldErrors.bankAccountNumber,
+                    )}
                     inputMode="numeric"
                     placeholder="Bank account number"
                     value={bankAccountNumber}
-                    onChange={(e) => setBankAccountNumber(e.target.value)}
+                    onChange={(e) => {
+                      setBankAccountNumber(e.target.value);
+                      clearFieldError("bankAccountNumber");
+                    }}
                   />
+                  <FieldError id="cash-bank-account-error">
+                    {fieldErrors.bankAccountNumber}
+                  </FieldError>
                 </div>
               </div>
             </section>
             <CashAdvanceRequestLines
+              fieldErrors={fieldErrors.lines}
               lines={lines}
-              onAdd={() => setLines((current) => [...current, makeLine()])}
+              onAdd={() => {
+                setLines((current) => [...current, makeLine()]);
+                clearFieldError("total");
+              }}
               onChange={updateLine}
-              onRemove={(id) =>
-                setLines((current) => current.filter((item) => item.id !== id))
-              }
+              onRemove={(id) => {
+                setLines((current) => current.filter((item) => item.id !== id));
+                setFieldErrors((current) => {
+                  const nextLines = { ...current.lines };
+                  delete nextLines[id];
+                  return { ...current, lines: nextLines, total: undefined };
+                });
+              }}
               total={total}
+              totalError={fieldErrors.total}
             />
             <section className={styles.receiptSection}>
               <div className={styles.sectionHeading}>
