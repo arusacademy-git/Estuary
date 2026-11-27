@@ -21,8 +21,12 @@ import {
 import {
   calculateBulkPaymentVoucherAmount,
   createEmptyBulkPaymentVoucherRow,
-  validateBulkPaymentVoucherRows,
 } from "@/domain/payment-vouchers/bulk-upload";
+import { validateBulkPaymentVoucherRows } from "@/domain/payment-vouchers/bulk-validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 
 import type {
   BulkPaymentVoucherField,
@@ -62,6 +66,7 @@ type InputFieldProps = {
   inputMode?: "numeric" | "decimal";
 
   errorMessage?: string;
+  errorId: string;
   placeholder?: string;
 };
 
@@ -72,6 +77,8 @@ type SelectFieldProps = {
   options: Option[];
   onUpdate: RowUpdateFunction;
   required?: boolean;
+  errorMessage?: string;
+  errorId: string;
 };
 
 const divisions: Option[] = DIVISION_SELECT_OPTIONS;
@@ -123,6 +130,7 @@ function InputField({
   type = "text",
   inputMode,
   errorMessage,
+  errorId,
   placeholder,
 }: InputFieldProps) {
   return (
@@ -133,7 +141,7 @@ function InputField({
       </span>
 
       <input
-        aria-invalid={Boolean(errorMessage)}
+        {...invalidFieldProps(errorId, errorMessage)}
         inputMode={inputMode}
         placeholder={placeholder}
         required={required}
@@ -142,11 +150,7 @@ function InputField({
         onChange={(event) => onUpdate(field, event.target.value)}
       />
 
-      {errorMessage && (
-        <small className={styles.fieldError} role="alert">
-          {errorMessage}
-        </small>
-      )}
+      <FieldError id={errorId}>{errorMessage}</FieldError>
     </label>
   );
 }
@@ -158,6 +162,8 @@ function SelectField({
   options,
   onUpdate,
   required = false,
+  errorMessage,
+  errorId,
 }: SelectFieldProps) {
   return (
     <label className={styles.field}>
@@ -167,6 +173,7 @@ function SelectField({
       </span>
 
       <select
+        {...invalidFieldProps(errorId, errorMessage)}
         required={required}
         value={value}
         onChange={(event) => onUpdate(field, event.target.value)}
@@ -177,6 +184,7 @@ function SelectField({
           </option>
         ))}
       </select>
+      <FieldError id={errorId}>{errorMessage}</FieldError>
     </label>
   );
 }
@@ -207,6 +215,8 @@ function VoucherEditor({
     row.paymentMethod.trim().toLowerCase() === "bank transfer";
 
   const supportingDocumentInputId = `bulk-voucher-documents-${row.rowId}`;
+  const errorId = (field: BulkPaymentVoucherField) =>
+    `${row.rowId}-${field}-error`;
 
   return (
     <div className={styles.voucherBody}>
@@ -214,6 +224,8 @@ function VoucherEditor({
 
       <div className={styles.formGrid}>
         <InputField
+          errorId={errorId("pvDate")}
+          errorMessage={fieldErrors.pvDate}
           field="pvDate"
           label="PV date"
           onUpdate={onUpdate}
@@ -223,6 +235,8 @@ function VoucherEditor({
         />
 
         <InputField
+          errorId={errorId("recipientName")}
+          errorMessage={fieldErrors.recipientName}
           field="recipientName"
           label="Recipient name"
           onUpdate={onUpdate}
@@ -232,6 +246,8 @@ function VoucherEditor({
         />
 
         <InputField
+          errorId={errorId("recipientEmail")}
+          errorMessage={fieldErrors.recipientEmail}
           field="recipientEmail"
           label="Recipient email"
           onUpdate={onUpdate}
@@ -242,6 +258,7 @@ function VoucherEditor({
         />
 
         <InputField
+          errorId={errorId("recipientIc")}
           errorMessage={fieldErrors.recipientIc}
           field="recipientIc"
           label="IC / identity number"
@@ -252,6 +269,8 @@ function VoucherEditor({
         />
 
         <SelectField
+          errorId={errorId("recipientIsMalaysian")}
+          errorMessage={fieldErrors.recipientIsMalaysian}
           field="recipientIsMalaysian"
           label="Malaysian?"
           onUpdate={onUpdate}
@@ -261,6 +280,8 @@ function VoucherEditor({
         />
 
         <SelectField
+          errorId={errorId("division")}
+          errorMessage={fieldErrors.division}
           field="division"
           label="Project Name"
           onUpdate={onUpdate}
@@ -280,6 +301,8 @@ function VoucherEditor({
 
       <div className={`${styles.formGrid} ${styles.paymentDetailsGrid}`}>
         <SelectField
+          errorId={errorId("directorEmail")}
+          errorMessage={fieldErrors.directorEmail}
           field="directorEmail"
           label="Assigned Director"
           onUpdate={onUpdate}
@@ -295,6 +318,8 @@ function VoucherEditor({
         />
 
         <SelectField
+          errorId={errorId("paymentMethod")}
+          errorMessage={fieldErrors.paymentMethod}
           field="paymentMethod"
           label="Payment method"
           onUpdate={onUpdate}
@@ -304,6 +329,8 @@ function VoucherEditor({
         />
 
         <SelectField
+          errorId={errorId("bankName")}
+          errorMessage={fieldErrors.bankName}
           field="bankName"
           label="Bank name"
           onUpdate={onUpdate}
@@ -319,6 +346,7 @@ function VoucherEditor({
         />
 
         <InputField
+          errorId={errorId("bankAccountNumber")}
           errorMessage={fieldErrors.bankAccountNumber}
           field="bankAccountNumber"
           inputMode="numeric"
@@ -336,11 +364,13 @@ function VoucherEditor({
           </span>
 
           <textarea
+            {...invalidFieldProps(errorId("purpose"), fieldErrors.purpose)}
             required
             rows={3}
             value={row.purpose}
             onChange={(event) => onUpdate("purpose", event.target.value)}
           />
+          <FieldError id={errorId("purpose")}>{fieldErrors.purpose}</FieldError>
         </label>
 
         <div className={`${styles.field} ${styles.fullWidth}`}>
@@ -423,6 +453,10 @@ function VoucherEditor({
                 <td>
                   <select
                     aria-label="Account"
+                    {...invalidFieldProps(
+                      errorId("accountCode"),
+                      fieldErrors.accountCode,
+                    )}
                     required
                     value={row.accountCode}
                     onChange={(event) =>
@@ -435,10 +469,17 @@ function VoucherEditor({
                       </option>
                     ))}
                   </select>
+                  <FieldError id={errorId("accountCode")}>
+                    {fieldErrors.accountCode}
+                  </FieldError>
                 </td>
                 <td>
                   <input
                     aria-label="Description"
+                    {...invalidFieldProps(
+                      errorId("lineDescription"),
+                      fieldErrors.lineDescription,
+                    )}
                     placeholder="Payment description"
                     required
                     type="text"
@@ -447,10 +488,17 @@ function VoucherEditor({
                       onUpdate("lineDescription", event.target.value)
                     }
                   />
+                  <FieldError id={errorId("lineDescription")}>
+                    {fieldErrors.lineDescription}
+                  </FieldError>
                 </td>
                 <td>
                   <input
                     aria-label="Quantity"
+                    {...invalidFieldProps(
+                      errorId("quantity"),
+                      fieldErrors.quantity,
+                    )}
                     inputMode="decimal"
                     required
                     type="text"
@@ -459,10 +507,17 @@ function VoucherEditor({
                       onUpdate("quantity", event.target.value)
                     }
                   />
+                  <FieldError id={errorId("quantity")}>
+                    {fieldErrors.quantity}
+                  </FieldError>
                 </td>
                 <td>
                   <input
                     aria-label="Unit price"
+                    {...invalidFieldProps(
+                      errorId("unitAmount"),
+                      fieldErrors.unitAmount,
+                    )}
                     inputMode="decimal"
                     placeholder="Enter amount"
                     required
@@ -472,6 +527,9 @@ function VoucherEditor({
                       onUpdate("unitAmount", event.target.value)
                     }
                   />
+                  <FieldError id={errorId("unitAmount")}>
+                    {fieldErrors.unitAmount}
+                  </FieldError>
                 </td>
                 <td>
                   <strong>{formatCurrency(amount)}</strong>
@@ -764,12 +822,14 @@ export function BulkManualEntryPanel({
       setExpandedRowId(firstInvalid.rowId);
 
       window.setTimeout(() => {
-        document
-          .getElementById(`bulk-voucher-${firstInvalid.rowId}`)
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
+        const voucher = document.getElementById(
+          `bulk-voucher-${firstInvalid.rowId}`,
+        );
+        voucher?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        voucher?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
       }, 0);
 
       return;
@@ -896,24 +956,15 @@ export function BulkManualEntryPanel({
           const recipientLabel =
             row.recipientName.trim() || "Recipient not entered";
 
-          const identityFieldNames = new Set<BulkPaymentVoucherField>([
-            "recipientIc",
-            "bankAccountNumber",
-          ]);
-
           const inlineFieldErrors =
             validationAttempted && validation
               ? (Object.fromEntries(
-                  validation.errors
-                    .filter((error) => identityFieldNames.has(error.field))
-                    .map((error) => [error.field, error.message]),
+                  validation.errors.map((error) => [
+                    error.field,
+                    error.message,
+                  ]),
                 ) as Partial<Record<BulkPaymentVoucherField, string>>)
               : {};
-
-          const remainingErrors =
-            validation?.errors.filter(
-              (error) => !identityFieldNames.has(error.field),
-            ) ?? [];
 
           return (
             <article
@@ -983,22 +1034,6 @@ export function BulkManualEntryPanel({
                       updateSupportingDocuments(row.rowId, fileNames)
                     }
                   />
-
-                  {validationAttempted &&
-                    validation &&
-                    remainingErrors.length > 0 && (
-                      <div className={styles.cardValidationNotice} role="alert">
-                        <strong>Please correct:</strong>
-
-                        <ul>
-                          {remainingErrors.map((error, errorIndex) => (
-                            <li key={`${error.field}-${errorIndex}`}>
-                              {error.message}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                 </div>
               )}
             </article>

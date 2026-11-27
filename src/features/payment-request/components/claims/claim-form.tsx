@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createClaimRequest,
@@ -15,8 +15,18 @@ import {
   claimTotal,
   MEDICAL_ANNUAL_LIMIT,
   mileageRate,
-  validateClaimInput,
 } from "@/domain/payment-requests/claims/policy";
+import {
+  type ClaimLineValidationErrors,
+  type ClaimValidationErrors,
+  hasValidationErrors,
+  validateClaimLine,
+  validateClaimRequest,
+} from "@/domain/payment-requests/claims/validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 import {
   CLAIM_ACCOUNT_TYPES,
   CLAIM_DIVISION_TYPES,
@@ -117,6 +127,9 @@ export function ClaimForm({
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<ClaimValidationErrors>({});
+  const [entryErrors, setEntryErrors] = useState<ClaimLineValidationErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [created, setCreated] = useState<ClaimRecord | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
   const [stage, setStage] = useState<"FORM" | "REVIEW">("FORM");
@@ -215,16 +228,19 @@ export function ClaimForm({
   }
 
   function openNewEntry() {
+    setEntryErrors({});
     setEntryReceipt(undefined);
     setEntryModal({ line: makeLine(), mode: "ADD" });
   }
 
   function openEditEntry(line: ClaimLine) {
+    setEntryErrors({});
     setEntryReceipt(receiptFiles[line.id]);
     setEntryModal({ line: { ...line }, mode: "EDIT" });
   }
 
   function closeEntryModal() {
+    setEntryErrors({});
     setEntryModal(null);
     setEntryReceipt(undefined);
   }
@@ -232,33 +248,16 @@ export function ClaimForm({
   function saveEntry(addAnother = false) {
     if (!entryModal) return;
     const line = entryModal.line;
-    const hasReceipt = Boolean(
-      entryReceipt ||
-      line.receiptDocumentId ||
-      line.receiptLink?.trim() ||
-      (line.receiptFileName.trim() && line.receiptFileSize > 0),
+    const nextEntryErrors = validateClaimLine(
+      claimType,
+      line,
+      Boolean(entryReceipt),
     );
-    const incomplete =
-      !line.expenseDate ||
-      !line.details.trim() ||
-      (claimType === "MILEAGE"
-        ? !line.division.trim() ||
-        !line.from.trim() ||
-        !line.to.trim() ||
-        line.kilometers <= 0
-        : !line.supplier.trim() ||
-        !hasReceipt ||
-        line.amount <= 0 ||
-        (claimType === "EXPENSE" &&
-          (!line.accountType.trim() || !line.division.trim())));
-    if (incomplete) {
-      setError(
-        claimType === "MILEAGE"
-          ? "Complete the date, purpose, division, route and distance before saving this trip."
-          : "Complete every required expense field and attach a receipt before saving.",
-      );
+    if (hasValidationErrors(nextEntryErrors)) {
+      setEntryErrors(nextEntryErrors);
       return;
     }
+    setEntryErrors({});
     setError("");
     setLines((current) =>
       entryModal.mode === "EDIT"
@@ -306,20 +305,50 @@ export function ClaimForm({
   function review(event: FormEvent) {
     event.preventDefault();
     if (!account) return setError("Sign in before creating a claim.");
-    const input = buildInput(account);
-    const validation = validateClaimInput(input, context);
-    if (validation) return setError(validation);
-    if (!confirmed)
-      return setError(
-        "Confirm that the claim information and supporting documents are correct.",
-      );
     setError("");
+    const nextFieldErrors = validateClaimRequest({
+      claimDate,
+      contact,
+      directorId,
+      requesterId: account.id,
+      claimType,
+      techExtended,
+      lines,
+      context,
+      confirmed,
+    });
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus();
+      });
+      return;
+    }
+    setFieldErrors({});
     setStage("REVIEW");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function submit() {
     if (!account) return setError("Sign in before creating a claim.");
+    const nextFieldErrors = validateClaimRequest({
+      claimDate,
+      contact,
+      directorId,
+      requesterId: account.id,
+      claimType,
+      techExtended,
+      lines,
+      context,
+      confirmed,
+    });
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      setStage("FORM");
+      return;
+    }
     const input = buildInput(account);
     setSaving(true);
     setError("");
@@ -542,7 +571,12 @@ export function ClaimForm({
           </p>
         </div>
       </header>
-      <form className={styles.claimForm} onSubmit={review}>
+      <form
+        className={styles.claimForm}
+        noValidate
+        onSubmit={review}
+        ref={formRef}
+      >
         <ProjectBudgetWarning
           accountId={account?.id}
           allocations={lines.map((line) => ({
@@ -654,11 +688,23 @@ export function ClaimForm({
                 <label>
                   <span>Claim date</span>
                   <input
-                    required
+                    {...invalidFieldProps(
+                      "claim-date-error",
+                      fieldErrors.claimDate,
+                    )}
                     type="date"
                     value={claimDate}
-                    onChange={(event) => setClaimDate(event.target.value)}
+                    onChange={(event) => {
+                      setClaimDate(event.target.value);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        claimDate: undefined,
+                      }));
+                    }}
                   />
+                  <FieldError id="claim-date-error">
+                    {fieldErrors.claimDate}
+                  </FieldError>
                 </label>
                 <label className={styles.halfField}>
                   <span>
@@ -666,11 +712,23 @@ export function ClaimForm({
                     <em className={styles.requiredMark}>*</em>
                   </span>
                   <input
-                    required
+                    {...invalidFieldProps(
+                      "claim-contact-error",
+                      fieldErrors.contact,
+                    )}
                     value={contact}
-                    onChange={(event) => setContact(event.target.value)}
+                    onChange={(event) => {
+                      setContact(event.target.value);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        contact: undefined,
+                      }));
+                    }}
                     placeholder="Phone number or email"
                   />
+                  <FieldError id="claim-contact-error">
+                    {fieldErrors.contact}
+                  </FieldError>
                 </label>
                 {account && (
                   <label className={styles.halfField}>
@@ -679,9 +737,18 @@ export function ClaimForm({
                       <em className={styles.requiredMark}>*</em>
                     </span>
                     <select
-                      required
+                      {...invalidFieldProps(
+                        "claim-director-error",
+                        fieldErrors.directorId,
+                      )}
                       value={directorId}
-                      onChange={(event) => setDirectorId(event.target.value)}
+                      onChange={(event) => {
+                        setDirectorId(event.target.value);
+                        setFieldErrors((current) => ({
+                          ...current,
+                          directorId: undefined,
+                        }));
+                      }}
                     >
                       <option value="">Choose a Director</option>
                       {betaAccounts
@@ -695,6 +762,9 @@ export function ClaimForm({
                           </option>
                         ))}
                     </select>
+                    <FieldError id="claim-director-error">
+                      {fieldErrors.directorId}
+                    </FieldError>
                   </label>
                 )}
               </div>
@@ -732,7 +802,14 @@ export function ClaimForm({
                   onRemove={removeLine}
                 />
               ) : (
-                <div className={styles.emptyEntries}>
+                <div
+                  {...invalidFieldProps(
+                    "claim-entries-error",
+                    fieldErrors.entries,
+                  )}
+                  className={styles.emptyEntries}
+                  tabIndex={fieldErrors.entries ? -1 : undefined}
+                >
                   <strong>No {claimEntryLabel(claimType)} added yet</strong>
                   <span>
                     Add your first {claimEntryLabel(claimType)} and attach its
@@ -743,15 +820,22 @@ export function ClaimForm({
                   </button>
                 </div>
               )}
+              <FieldError id="claim-entries-error">
+                {fieldErrors.entries}
+              </FieldError>
               <PolicyBar
                 claimType={claimType}
                 context={context}
+                error={fieldErrors.total}
                 limit={limit}
                 limitExceeded={limitExceeded}
                 loading={loadingPolicy}
                 techExtended={techExtended}
                 total={total}
               />
+              <FieldError id="claim-total-error">
+                {fieldErrors.total}
+              </FieldError>
             </section>
 
             <section className={styles.section}>
@@ -779,8 +863,18 @@ export function ClaimForm({
               )}
               <label className={styles.declaration}>
                 <input
+                  {...invalidFieldProps(
+                    "claim-confirmed-error",
+                    fieldErrors.confirmed,
+                  )}
                   checked={confirmed}
-                  onChange={(event) => setConfirmed(event.target.checked)}
+                  onChange={(event) => {
+                    setConfirmed(event.target.checked);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      confirmed: undefined,
+                    }));
+                  }}
                   type="checkbox"
                 />
                 <span>
@@ -789,6 +883,9 @@ export function ClaimForm({
                   expenses listed.
                 </span>
               </label>
+              <FieldError id="claim-confirmed-error">
+                {fieldErrors.confirmed}
+              </FieldError>
               <div className={styles.actions}>
                 <button
                   className={styles.draftButton}
@@ -840,11 +937,11 @@ export function ClaimForm({
                   {claimType === "MILEAGE"
                     ? 0
                     : lines.filter(
-                      (line) =>
-                        !line.receiptFileName &&
-                        !line.receiptLink &&
-                        !line.receiptDocumentId,
-                    ).length}
+                        (line) =>
+                          !line.receiptFileName &&
+                          !line.receiptLink &&
+                          !line.receiptDocumentId,
+                      ).length}
                 </dd>
               </div>
               <div>
@@ -866,32 +963,57 @@ export function ClaimForm({
       {entryModal && (
         <ClaimEntryModal
           claimType={claimType}
+          errors={entryErrors}
           line={entryModal.line}
           mode={entryModal.mode}
           receipt={entryReceipt}
           onCancel={closeEntryModal}
-          onChange={(patch) =>
+          onChange={(patch) => {
+            setEntryErrors((current) => {
+              const next = { ...current };
+              (Object.keys(patch) as Array<keyof ClaimLine>).forEach(
+                (field) => {
+                  if (field === "expenseDate") next.expenseDate = undefined;
+                  if (field === "supplier") next.supplier = undefined;
+                  if (field === "details") next.details = undefined;
+                  if (field === "accountType") next.accountType = undefined;
+                  if (field === "division") next.division = undefined;
+                  if (field === "amount") next.amount = undefined;
+                  if (field === "from") next.from = undefined;
+                  if (field === "to") next.to = undefined;
+                  if (field === "kilometers") next.kilometers = undefined;
+                  if (
+                    field === "receiptLink" ||
+                    field === "receiptDocumentId" ||
+                    field === "receiptFileName"
+                  ) {
+                    next.receipt = undefined;
+                  }
+                },
+              );
+              return next;
+            });
             setEntryModal((current) =>
               current
                 ? { ...current, line: { ...current.line, ...patch } }
                 : current,
-            )
-          }
+            );
+          }}
           onReceipt={(file) => {
             if (!file) {
               setEntryReceipt(undefined);
               setEntryModal((current) =>
                 current
                   ? {
-                    ...current,
-                    line: {
-                      ...current.line,
-                      receiptDocumentId: undefined,
-                      receiptFileName: "",
-                      receiptMimeType: "",
-                      receiptFileSize: 0,
-                    },
-                  }
+                      ...current,
+                      line: {
+                        ...current.line,
+                        receiptDocumentId: undefined,
+                        receiptFileName: "",
+                        receiptMimeType: "",
+                        receiptFileSize: 0,
+                      },
+                    }
                   : current,
               );
               return;
@@ -905,19 +1027,20 @@ export function ClaimForm({
               return;
             }
             setError("");
+            setEntryErrors((current) => ({ ...current, receipt: undefined }));
             setEntryReceipt(file);
             setEntryModal((current) =>
               current
                 ? {
-                  ...current,
-                  line: {
-                    ...current.line,
-                    receiptLink: undefined,
-                    receiptFileName: file.name,
-                    receiptMimeType: file.type,
-                    receiptFileSize: file.size,
-                  },
-                }
+                    ...current,
+                    line: {
+                      ...current.line,
+                      receiptLink: undefined,
+                      receiptFileName: file.name,
+                      receiptMimeType: file.type,
+                      receiptFileSize: file.size,
+                    },
+                  }
                 : current,
             );
           }}
@@ -1005,6 +1128,7 @@ function ClaimEntriesTable({
 
 function ClaimEntryModal({
   claimType,
+  errors,
   line,
   mode,
   receipt,
@@ -1014,6 +1138,7 @@ function ClaimEntryModal({
   onSave,
 }: {
   claimType: ClaimType;
+  errors: ClaimLineValidationErrors;
   line: ClaimLine;
   mode: "ADD" | "EDIT";
   receipt?: File;
@@ -1028,6 +1153,14 @@ function ClaimEntryModal({
   const [proofMode, setProofMode] = useState<"UPLOAD" | "DRIVE">(() =>
     line.receiptLink ? "DRIVE" : "UPLOAD",
   );
+  const modalRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!hasValidationErrors(errors)) return;
+    modalRef.current
+      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      ?.focus();
+  }, [errors]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -1052,7 +1185,7 @@ function ClaimEntryModal({
         if (event.currentTarget === event.target) onCancel();
       }}
     >
-      <section className={styles.entryModal}>
+      <section className={styles.entryModal} ref={modalRef}>
         <header>
           <div>
             <span>{mode === "EDIT" ? "Edit entry" : "New entry"}</span>
@@ -1080,13 +1213,19 @@ function ClaimEntryModal({
               Date <em>*</em>
             </span>
             <input
-              required
+              {...invalidFieldProps(
+                "claim-entry-date-error",
+                errors.expenseDate,
+              )}
               type="date"
               value={line.expenseDate}
               onChange={(event) =>
                 onChange({ expenseDate: event.target.value })
               }
             />
+            <FieldError id="claim-entry-date-error">
+              {errors.expenseDate}
+            </FieldError>
           </label>
           {mileage ? (
             <>
@@ -1095,48 +1234,66 @@ function ClaimEntryModal({
                   Total distance (km) <em>*</em>
                 </span>
                 <DecimalInput
+                  describedBy="claim-entry-kilometers-error"
+                  error={errors.kilometers}
                   placeholder="0.0"
                   value={line.kilometers}
                   onValueChange={(kilometers) => onChange({ kilometers })}
                 />
+                <FieldError id="claim-entry-kilometers-error">
+                  {errors.kilometers}
+                </FieldError>
               </label>
               <label>
                 <span>
                   From <em>*</em>
                 </span>
                 <input
+                  {...invalidFieldProps("claim-entry-from-error", errors.from)}
                   value={line.from}
                   onChange={(event) => onChange({ from: event.target.value })}
                   placeholder="Starting point"
                 />
+                <FieldError id="claim-entry-from-error">
+                  {errors.from}
+                </FieldError>
               </label>
               <label>
                 <span>
                   To <em>*</em>
                 </span>
                 <input
+                  {...invalidFieldProps("claim-entry-to-error", errors.to)}
                   value={line.to}
                   onChange={(event) => onChange({ to: event.target.value })}
                   placeholder="Destination"
                 />
+                <FieldError id="claim-entry-to-error">{errors.to}</FieldError>
               </label>
               <label className={styles.modalFullField}>
                 <span>
-                  Division <em>*</em>
+                  Project Name <em>*</em>
                 </span>
                 <select
+                  {...invalidFieldProps(
+                    "claim-entry-project-error",
+                    errors.division,
+                  )}
                   value={line.division}
                   onChange={(event) =>
                     onChange({ division: event.target.value })
                   }
                 >
-                  <option value="">Choose division</option>
+                  <option value="">Choose project</option>
                   {CLAIM_DIVISION_TYPES.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
                 </select>
+                <FieldError id="claim-entry-project-error">
+                  {errors.division}
+                </FieldError>
               </label>
             </>
           ) : (
@@ -1146,22 +1303,34 @@ function ClaimEntryModal({
                   Amount (RM) <em>*</em>
                 </span>
                 <DecimalInput
+                  describedBy="claim-entry-amount-error"
+                  error={errors.amount}
                   placeholder="0.00"
                   value={line.amount}
                   onValueChange={(amount) => onChange({ amount })}
                 />
+                <FieldError id="claim-entry-amount-error">
+                  {errors.amount}
+                </FieldError>
               </label>
               <label className={styles.modalFullField}>
                 <span>
                   Supplier / merchant <em>*</em>
                 </span>
                 <input
+                  {...invalidFieldProps(
+                    "claim-entry-supplier-error",
+                    errors.supplier,
+                  )}
                   value={line.supplier}
                   onChange={(event) =>
                     onChange({ supplier: event.target.value })
                   }
                   placeholder="Where was it bought?"
                 />
+                <FieldError id="claim-entry-supplier-error">
+                  {errors.supplier}
+                </FieldError>
               </label>
               {generalExpense && (
                 <>
@@ -1170,6 +1339,10 @@ function ClaimEntryModal({
                       Type of account <em>*</em>
                     </span>
                     <select
+                      {...invalidFieldProps(
+                        "claim-entry-account-error",
+                        errors.accountType,
+                      )}
                       value={line.accountType}
                       onChange={(event) =>
                         onChange({ accountType: event.target.value })
@@ -1182,24 +1355,34 @@ function ClaimEntryModal({
                         </option>
                       ))}
                     </select>
+                    <FieldError id="claim-entry-account-error">
+                      {errors.accountType}
+                    </FieldError>
                   </label>
                   <label>
                     <span>
-                      Division <em>*</em>
+                      Project Name <em>*</em>
                     </span>
                     <select
+                      {...invalidFieldProps(
+                        "claim-entry-project-error",
+                        errors.division,
+                      )}
                       value={line.division}
                       onChange={(event) =>
                         onChange({ division: event.target.value })
                       }
                     >
-                      <option value="">Choose division</option>
+                      <option value="">Choose project</option>
                       {CLAIM_DIVISION_TYPES.map((item) => (
                         <option key={item} value={item}>
                           {item}
                         </option>
                       ))}
                     </select>
+                    <FieldError id="claim-entry-project-error">
+                      {errors.division}
+                    </FieldError>
                   </label>
                 </>
               )}
@@ -1210,6 +1393,10 @@ function ClaimEntryModal({
               Description & purpose <em>*</em>
             </span>
             <input
+              {...invalidFieldProps(
+                "claim-entry-details-error",
+                errors.details,
+              )}
               value={line.details}
               onChange={(event) => onChange({ details: event.target.value })}
               placeholder={
@@ -1218,9 +1405,19 @@ function ClaimEntryModal({
                   : "What was purchased and why?"
               }
             />
+            <FieldError id="claim-entry-details-error">
+              {errors.details}
+            </FieldError>
           </label>
           {!mileage && (
-            <div className={styles.modalFullField}>
+            <div
+              {...invalidFieldProps(
+                "claim-entry-receipt-error",
+                errors.receipt,
+              )}
+              className={styles.modalFullField}
+              tabIndex={errors.receipt ? -1 : undefined}
+            >
               <span>
                 Receipt / proof <em>*</em>
               </span>
@@ -1288,6 +1485,9 @@ function ClaimEntryModal({
                   </small>
                 </div>
               )}
+              <FieldError id="claim-entry-receipt-error">
+                {errors.receipt}
+              </FieldError>
             </div>
           )}
         </div>
@@ -1355,7 +1555,7 @@ export function ExpenseTable({
           {expense && (
             <>
               <th>Type of account</th>
-              <th>Division</th>
+              <th>Project Name</th>
             </>
           )}
           <th>Receipt / proof</th>
@@ -1417,7 +1617,7 @@ export function ExpenseTable({
                       updateLine(line.id, { division: event.target.value })
                     }
                   >
-                    <option value="">Choose division</option>
+                    <option value="">Choose project</option>
                     {CLAIM_DIVISION_TYPES.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -1509,7 +1709,7 @@ export function MileageTable({
         <tr>
           <th>Date</th>
           <th>Details / purpose</th>
-          <th>Division</th>
+          <th>Project Name</th>
           <th>From</th>
           <th>To</th>
           <th>Total km</th>
@@ -1546,7 +1746,7 @@ export function MileageTable({
                   updateLine(line.id, { division: event.target.value })
                 }
               >
-                <option value="">Choose division</option>
+                <option value="">Choose project</option>
                 {CLAIM_DIVISION_TYPES.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -1601,10 +1801,14 @@ export function MileageTable({
 }
 
 function DecimalInput({
+  describedBy,
+  error,
   value,
   placeholder,
   onValueChange,
 }: {
+  describedBy?: string;
+  error?: string;
   value: number;
   placeholder: string;
   onValueChange: (value: number) => void;
@@ -1612,6 +1816,7 @@ function DecimalInput({
   const [text, setText] = useState(value ? String(value) : "");
   return (
     <input
+      {...(describedBy ? invalidFieldProps(describedBy, error) : {})}
       inputMode="decimal"
       placeholder={placeholder}
       type="text"
@@ -1634,6 +1839,7 @@ function DecimalInput({
 function PolicyBar({
   claimType,
   context,
+  error,
   limit,
   limitExceeded,
   loading,
@@ -1642,6 +1848,7 @@ function PolicyBar({
 }: {
   claimType: ClaimType;
   context: ClaimPolicyContext;
+  error?: string;
   limit: number | null;
   limitExceeded: boolean;
   loading: boolean;
@@ -1664,7 +1871,9 @@ function PolicyBar({
       : "Standard Tech claim limit: RM500.00.";
   return (
     <div
+      {...invalidFieldProps("claim-total-error", error)}
       className={`${styles.policyBar} ${limitExceeded ? styles.policyError : ""}`}
+      tabIndex={error ? -1 : undefined}
     >
       <div>
         <span>

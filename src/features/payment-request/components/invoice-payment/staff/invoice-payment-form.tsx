@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createInvoicePayment,
@@ -13,6 +13,15 @@ import type {
   PaymentRequestDocument,
 } from "@/domain/payment-requests/invoice-payment/types";
 import { INVOICE_PAYMENT_PROJECTS } from "@/domain/payment-requests/invoice-payment/types";
+import {
+  type InvoicePaymentValidationErrors,
+  validateInvoicePayment,
+} from "@/domain/payment-requests/invoice-payment/validation";
+import { hasValidationErrors } from "@/domain/validation/common-validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 import { getBetaAccount, readBetaSession } from "@/lib/auth/beta-accounts";
 import { amountToMalayWords } from "@/lib/currency/amount-words";
 import { notifyManagerInvoicePaymentSubmitted } from "@/features/payment-request/notifications/invoice-payment-notifications";
@@ -133,6 +142,9 @@ export function InvoicePaymentForm({
   const [isReviewing, setIsReviewing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] =
+    useState<InvoicePaymentValidationErrors>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [draftSaved, setDraftSaved] = useState(false);
   const [createdRequest, setCreatedRequest] =
     useState<InvoicePaymentRequestRecord | null>(null);
@@ -270,53 +282,46 @@ export function InvoicePaymentForm({
     }
   }
 
+  function clearFieldError(field: keyof InvoicePaymentValidationErrors) {
+    if (!fieldErrors[field]) return;
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
   function validateForm() {
-    if (!account) {
-      return "A signed-in requester account is required.";
-    }
-    if (!requestDate || !projectName.trim() || !purpose.trim()) {
-      return "Complete the request date, project and purpose of payment.";
-    }
-    if (!vendorName.trim() || !eInvoiceLink.trim()) {
-      return "Enter the vendor name and e-invoice link.";
-    }
-    try {
-      const url = new URL(eInvoiceLink.trim());
-      if (url.protocol !== "https:" && url.protocol !== "http:")
-        throw new Error();
-    } catch {
-      return "Enter a valid e-invoice link beginning with http:// or https://.";
-    }
-    if (!transferType || !paymentPortion) {
-      return "Select the transfer type and payment portion.";
-    }
-    if (paymentPortion === "OTHER" && !paymentPortionOther.trim()) {
-      return "Describe the other payment portion.";
-    }
-    if (!managerApproverId || !directorApproverId) {
-      return "Select the Manager and Director reviewers.";
-    }
-    const invoiceValue = Number(invoiceTotal);
-    const taxValue = Number(taxAmount);
-    if (!Number.isFinite(invoiceValue) || invoiceValue <= 0) {
-      return "Enter an invoice total greater than RM 0.00.";
-    }
-    if (!Number.isFinite(taxValue) || taxValue < 0 || taxValue > invoiceValue) {
-      return "Enter a valid Tax/SST amount that does not exceed the invoice total.";
-    }
-    if (requestedAmount <= 0 || requestedAmount > invoiceValue) {
-      return "The amount requested must be greater than RM 0.00 and cannot exceed the invoice total.";
-    }
-    return null;
+    return validateInvoicePayment({
+      requestDate,
+      projectSelection,
+      projectName,
+      otherProjectName,
+      purpose,
+      vendorName,
+      eInvoiceLink,
+      transferType,
+      paymentPortion,
+      paymentPortionOther,
+      managerApproverId,
+      directorApproverId,
+      invoiceTotal: Number(invoiceTotal),
+      requestedAmount,
+    });
   }
 
   function continueToReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    const message = validateForm();
-    if (message) {
-      setError(message);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    setFieldErrors({});
+    if (!account) {
+      setError("A signed-in requester account is required.");
+      return;
+    }
+    const nextFieldErrors = validateForm();
+    if (hasValidationErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus();
+      });
       return;
     }
     setIsReviewing(true);
@@ -324,9 +329,15 @@ export function InvoicePaymentForm({
   }
 
   async function submitRequest() {
-    const message = validateForm();
-    if (message || !account || !transferType || !paymentPortion) {
-      setError(message ?? "The Invoice Payment request is incomplete.");
+    const nextFieldErrors = validateForm();
+    if (
+      hasValidationErrors(nextFieldErrors) ||
+      !account ||
+      !transferType ||
+      !paymentPortion
+    ) {
+      setFieldErrors(nextFieldErrors);
+      setError(account ? "" : "A signed-in requester account is required.");
       setIsReviewing(false);
       return;
     }
@@ -445,7 +456,12 @@ export function InvoicePaymentForm({
           {error}
         </div>
       )}
-      <form className={styles.formLayout} onSubmit={continueToReview}>
+      <form
+        className={styles.formLayout}
+        noValidate
+        ref={formRef}
+        onSubmit={continueToReview}
+      >
         <ProjectBudgetWarning
           accountId={account?.id}
           allocations={[
@@ -473,24 +489,45 @@ export function InvoicePaymentForm({
               </div>
             </div>
             <div className={styles.fieldGrid}>
-              <Field label="Request date" required>
+              <Field
+                error={fieldErrors.requestDate}
+                errorId="invoice-request-date-error"
+                label="Request date"
+                required
+              >
                 <input
+                  {...invalidFieldProps(
+                    "invoice-request-date-error",
+                    fieldErrors.requestDate,
+                  )}
                   required
                   type="date"
                   value={requestDate}
-                  onChange={(event) => setRequestDate(event.target.value)}
+                  onChange={(event) => {
+                    setRequestDate(event.target.value);
+                    clearFieldError("requestDate");
+                  }}
                 />
               </Field>
               <Field
+                error={fieldErrors.projectName}
+                errorId="invoice-project-error"
                 label="Project name"
                 required
                 help="If your project is not listed, select Other and enter it below."
               >
                 <select
+                  {...invalidFieldProps(
+                    "invoice-project-error",
+                    fieldErrors.projectName,
+                  )}
                   required
                   value={projectSelection}
                   onChange={(event) => {
                     setProjectSelection(event.target.value);
+                    clearFieldError("projectName");
+                    clearFieldError("otherProjectName");
+                    clearFieldError("managerApproverId");
                     if (event.target.value !== "OTHER") {
                       setOtherProjectName("");
                     }
@@ -507,14 +544,23 @@ export function InvoicePaymentForm({
 
                 {projectSelection === "OTHER" && (
                   <input
+                    {...invalidFieldProps(
+                      "invoice-other-project-error",
+                      fieldErrors.otherProjectName,
+                    )}
                     required
                     placeholder="Enter the Project Name"
                     value={otherProjectName}
-                    onChange={(event) =>
-                      setOtherProjectName(event.target.value)
-                    }
+                    onChange={(event) => {
+                      setOtherProjectName(event.target.value);
+                      clearFieldError("otherProjectName");
+                      clearFieldError("managerApproverId");
+                    }}
                   />
                 )}
+                <FieldError id="invoice-other-project-error">
+                  {fieldErrors.otherProjectName}
+                </FieldError>
               </Field>
             </div>
           </FormSection>
@@ -525,89 +571,161 @@ export function InvoicePaymentForm({
             copy="Information required to verify and process the e-invoice"
           >
             <div className={styles.fieldGrid}>
-              <Field label="Contractor / Vendor name" required>
+              <Field
+                error={fieldErrors.vendorName}
+                errorId="invoice-vendor-error"
+                label="Contractor / Vendor name"
+                required
+              >
                 <input
+                  {...invalidFieldProps(
+                    "invoice-vendor-error",
+                    fieldErrors.vendorName,
+                  )}
                   required
                   placeholder="Enter the vendor name shown on the invoice"
                   value={vendorName}
-                  onChange={(event) => setVendorName(event.target.value)}
+                  onChange={(event) => {
+                    setVendorName(event.target.value);
+                    clearFieldError("vendorName");
+                  }}
                 />
               </Field>
               <Field
+                error={fieldErrors.eInvoiceLink}
+                errorId="invoice-link-error"
                 label="E-invoice link"
                 required
                 help="Use the complete URL beginning with https://"
               >
                 <input
+                  {...invalidFieldProps(
+                    "invoice-link-error",
+                    fieldErrors.eInvoiceLink,
+                  )}
                   required
                   type="url"
                   placeholder="https://..."
                   value={eInvoiceLink}
-                  onChange={(event) => setEInvoiceLink(event.target.value)}
+                  onChange={(event) => {
+                    setEInvoiceLink(event.target.value);
+                    clearFieldError("eInvoiceLink");
+                  }}
                 />
               </Field>
             </div>
             <div className={styles.choiceStack}>
-              <ChoiceGroup legend="Transfer type" required>
+              <ChoiceGroup
+                error={fieldErrors.transferType}
+                errorId="invoice-transfer-type-error"
+                legend="Transfer type"
+                required
+              >
                 <Choice
                   checked={transferType === "GIRO"}
                   label="GIRO transfer"
                   description="Processed on the next working day"
-                  onChange={() => setTransferType("GIRO")}
+                  onChange={() => {
+                    setTransferType("GIRO");
+                    clearFieldError("transferType");
+                  }}
                 />
                 <Choice
                   checked={transferType === "INSTANT"}
                   label="Instant transfer"
                   description="Process the payment immediately"
-                  onChange={() => setTransferType("INSTANT")}
+                  onChange={() => {
+                    setTransferType("INSTANT");
+                    clearFieldError("transferType");
+                  }}
                 />
               </ChoiceGroup>
-              <ChoiceGroup legend="Payment portion" required>
+              <ChoiceGroup
+                error={fieldErrors.paymentPortion}
+                errorId="invoice-payment-portion-error"
+                legend="Payment portion"
+                required
+              >
                 <Choice
                   checked={paymentPortion === "UPFRONT_50"}
                   label="50% upfront payment"
-                  onChange={() => setPaymentPortion("UPFRONT_50")}
+                  onChange={() => {
+                    setPaymentPortion("UPFRONT_50");
+                    clearFieldError("paymentPortion");
+                    clearFieldError("paymentPortionOther");
+                    clearFieldError("requestedAmount");
+                  }}
                 />
                 <Choice
                   checked={paymentPortion === "BALANCE_50"}
                   label="50% balance payment"
-                  onChange={() => setPaymentPortion("BALANCE_50")}
+                  onChange={() => {
+                    setPaymentPortion("BALANCE_50");
+                    clearFieldError("paymentPortion");
+                    clearFieldError("paymentPortionOther");
+                    clearFieldError("requestedAmount");
+                  }}
                 />
                 <Choice
                   checked={paymentPortion === "FULL"}
                   label="Full payment"
-                  onChange={() => setPaymentPortion("FULL")}
+                  onChange={() => {
+                    setPaymentPortion("FULL");
+                    clearFieldError("paymentPortion");
+                    clearFieldError("paymentPortionOther");
+                    clearFieldError("requestedAmount");
+                  }}
                 />
                 <Choice
                   checked={paymentPortion === "OTHER"}
                   label="Other"
-                  onChange={() => setPaymentPortion("OTHER")}
+                  onChange={() => {
+                    setPaymentPortion("OTHER");
+                    clearFieldError("paymentPortion");
+                  }}
                 />
                 {paymentPortion === "OTHER" && (
                   <input
+                    {...invalidFieldProps(
+                      "invoice-payment-portion-other-error",
+                      fieldErrors.paymentPortionOther,
+                    )}
                     className={styles.otherInput}
                     required
                     placeholder="Describe the payment portion"
                     value={paymentPortionOther}
-                    onChange={(event) =>
-                      setPaymentPortionOther(event.target.value)
-                    }
+                    onChange={(event) => {
+                      setPaymentPortionOther(event.target.value);
+                      clearFieldError("paymentPortionOther");
+                    }}
                   />
                 )}
+                <FieldError id="invoice-payment-portion-other-error">
+                  {fieldErrors.paymentPortionOther}
+                </FieldError>
               </ChoiceGroup>
             </div>
             <div className={`${styles.fieldGrid} ${styles.purposeFieldGrid}`}>
               <Field
                 className={styles.fullWidth}
+                error={fieldErrors.purpose}
+                errorId="invoice-purpose-error"
                 label="Purpose of payment"
                 required
               >
                 <textarea
+                  {...invalidFieldProps(
+                    "invoice-purpose-error",
+                    fieldErrors.purpose,
+                  )}
                   required
                   rows={3}
                   placeholder="Describe the services, billing period and reason for payment"
                   value={purpose}
-                  onChange={(event) => setPurpose(event.target.value)}
+                  onChange={(event) => {
+                    setPurpose(event.target.value);
+                    clearFieldError("purpose");
+                  }}
                 />
               </Field>
             </div>
@@ -639,29 +757,43 @@ export function InvoicePaymentForm({
                     <td>
                       <input
                         aria-label="Invoice total"
+                        {...invalidFieldProps(
+                          "invoice-total-error",
+                          fieldErrors.invoiceTotal,
+                        )}
                         required
                         inputMode="decimal"
                         type="text"
                         placeholder="Enter invoice total"
                         value={invoiceTotal}
-                        onChange={(event) =>
-                          setInvoiceTotal(event.target.value)
-                        }
+                        onChange={(event) => {
+                          setInvoiceTotal(event.target.value);
+                          clearFieldError("invoiceTotal");
+                          clearFieldError("requestedAmount");
+                        }}
                       />
+                      <FieldError id="invoice-total-error">
+                        {fieldErrors.invoiceTotal}
+                      </FieldError>
                       <small>Total shown on the invoice</small>
                     </td>
                     <td>
                       {paymentPortion === "OTHER" ? (
                         <input
                           aria-label="Amount requested"
+                          {...invalidFieldProps(
+                            "invoice-requested-amount-error",
+                            fieldErrors.requestedAmount,
+                          )}
                           required
                           inputMode="decimal"
                           type="text"
                           placeholder="Enter requested amount"
                           value={otherRequestedAmount}
-                          onChange={(event) =>
-                            setOtherRequestedAmount(event.target.value)
-                          }
+                          onChange={(event) => {
+                            setOtherRequestedAmount(event.target.value);
+                            clearFieldError("requestedAmount");
+                          }}
                         />
                       ) : (
                         <input
@@ -673,6 +805,9 @@ export function InvoicePaymentForm({
                           }
                         />
                       )}
+                      <FieldError id="invoice-requested-amount-error">
+                        {fieldErrors.requestedAmount}
+                      </FieldError>
                       <small>
                         {paymentPortion === "OTHER"
                           ? "Custom payment portion"
@@ -745,9 +880,18 @@ export function InvoicePaymentForm({
             copy="Manager and Director review without signatures"
           >
             <div className={styles.fieldGrid}>
-              <Field label="Project manager" required>
+              <Field
+                error={fieldErrors.managerApproverId}
+                errorId="invoice-manager-error"
+                label="Project manager"
+                required
+              >
                 <input
-                  disabled
+                  {...invalidFieldProps(
+                    "invoice-manager-error",
+                    fieldErrors.managerApproverId,
+                  )}
+                  readOnly
                   value={
                     managerApproverId
                       ? (getBetaAccount(managerApproverId)?.name ??
@@ -756,13 +900,23 @@ export function InvoicePaymentForm({
                   }
                 />
               </Field>
-              <Field label="Director reviewer" required>
+              <Field
+                error={fieldErrors.directorApproverId}
+                errorId="invoice-director-error"
+                label="Director reviewer"
+                required
+              >
                 <select
+                  {...invalidFieldProps(
+                    "invoice-director-error",
+                    fieldErrors.directorApproverId,
+                  )}
                   required
                   value={directorApproverId}
-                  onChange={(event) =>
-                    setDirectorApproverId(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setDirectorApproverId(event.target.value);
+                    clearFieldError("directorApproverId");
+                  }}
                 >
                   <option value="">Choose Director</option>
                   <option value="amir-iskandar">Amir Iskandar</option>
@@ -982,12 +1136,16 @@ function Field({
   required = false,
   help,
   className,
+  error,
+  errorId,
   children,
 }: {
   label: string;
   required?: boolean;
   help?: string;
   className?: string;
+  error?: string;
+  errorId?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -997,6 +1155,7 @@ function Field({
         {required && <em> *</em>}
       </span>
       {children}
+      {errorId && <FieldError id={errorId}>{error}</FieldError>}
       {help && <small>{help}</small>}
     </label>
   );
@@ -1005,19 +1164,28 @@ function Field({
 function ChoiceGroup({
   legend,
   required = false,
+  error,
+  errorId,
   children,
 }: {
   legend: string;
   required?: boolean;
+  error?: string;
+  errorId?: string;
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className={styles.choiceGroup}>
+    <fieldset
+      className={styles.choiceGroup}
+      tabIndex={error ? -1 : undefined}
+      {...(errorId ? invalidFieldProps(errorId, error) : {})}
+    >
       <legend>
         {legend}
         {required && <em> *</em>}
       </legend>
       {children}
+      {errorId && <FieldError id={errorId}>{error}</FieldError>}
     </fieldset>
   );
 }

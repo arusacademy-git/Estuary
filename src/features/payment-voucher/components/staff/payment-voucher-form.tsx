@@ -20,11 +20,16 @@ import {
 import { useAdminAccountingOptions } from "@/features/administration/use-admin-accounting-options";
 import { parsePaymentAmountInput } from "@/shared/utils/payment-amount";
 import { PaymentAmountInput } from "@/shared/payment-amount-input";
+import { normalizeNumericIdentifier } from "@/shared/payment-identity-validation";
+import { hasValidationErrors } from "@/domain/validation/common-validation";
 import {
-  bankAccountNumberError,
-  identificationNumberError,
-  normalizeNumericIdentifier,
-} from "@/shared/payment-identity-validation";
+  type PaymentVoucherValidationErrors,
+  validatePaymentVoucher,
+} from "@/domain/payment-vouchers/validation";
+import {
+  FieldError,
+  invalidFieldProps,
+} from "@/features/validation/field-error";
 import { useManualFormDraft } from "@/features/payment-request/components/shared/use-manual-form-draft";
 import { ManualDraftConfirmation } from "../../../payment-request/components/shared/manual-draft-confirmation";
 import { ManualDraftStatus } from "../../../payment-request/components/shared/manual-draft-status";
@@ -57,11 +62,6 @@ type VoucherLine = {
 type PaymentVoucherDraftSnapshot = {
   fields: Record<string, string>;
   voucherLines: VoucherLine[];
-};
-
-type IdentityFieldErrors = {
-  recipientIdentity?: string;
-  bankAccountNumber?: string;
 };
 
 const draftFieldNames = [
@@ -168,7 +168,8 @@ export function PaymentVoucherForm({
   );
 
   const [formError, setFormError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<IdentityFieldErrors>({});
+  const [fieldErrors, setFieldErrors] =
+    useState<PaymentVoucherValidationErrors>({});
   const [draftSaved, setDraftSaved] = useState(false);
 
   const draft = useManualFormDraft<PaymentVoucherDraftSnapshot>({
@@ -251,6 +252,25 @@ export function PaymentVoucherForm({
     );
   }
 
+  function clearFieldError(field: keyof PaymentVoucherValidationErrors) {
+    if (!fieldErrors[field]) return;
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function clearLineError(
+    lineId: string,
+    field: "account" | "description" | "quantity" | "unitPrice",
+  ) {
+    if (!fieldErrors.lines?.[lineId]?.[field]) return;
+    setFieldErrors((current) => ({
+      ...current,
+      lines: {
+        ...current.lines,
+        [lineId]: { ...current.lines?.[lineId], [field]: undefined },
+      },
+    }));
+  }
+
   function handleReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
@@ -278,31 +298,6 @@ export function PaymentVoucherForm({
       return;
     }
 
-    if (totals.grandTotal <= 0) {
-      setFormError(
-        "Add at least one voucher line with an amount greater than RM 0.00.",
-      );
-
-      return;
-    }
-
-    const hasIncompleteLine = voucherLines.some((line) => {
-      return (
-        !line.account.trim() ||
-        !line.description.trim() ||
-        line.quantity <= 0 ||
-        line.unitPrice < 0
-      );
-    });
-
-    if (hasIncompleteLine) {
-      setFormError(
-        "Complete every voucher line and make sure all amounts are valid.",
-      );
-
-      return;
-    }
-
     const formData = new FormData(event.currentTarget);
 
     const divisionValue = String(formData.get("division") ?? "");
@@ -318,27 +313,27 @@ export function PaymentVoucherForm({
     const bankAccountNumber = String(
       formData.get("bankAccountNumber") ?? "",
     ).trim();
-    const identityError = identificationNumberError(recipientIdentity);
-    const accountError = bankAccountNumberError(bankName, bankAccountNumber);
-
-    const nextFieldErrors: IdentityFieldErrors = {
-      recipientIdentity: identityError || undefined,
-      bankAccountNumber:
-        paymentMethodValue === "Bank Transfer"
-          ? accountError || undefined
-          : undefined,
-    };
-    if (
-      nextFieldErrors.recipientIdentity ||
-      nextFieldErrors.bankAccountNumber
-    ) {
+    const nextFieldErrors = validatePaymentVoucher({
+      pvDate: String(formData.get("pvDate") ?? ""),
+      recipientName: String(formData.get("recipientName") ?? ""),
+      recipientEmail: String(formData.get("recipientEmail") ?? ""),
+      recipientIdentity,
+      project: divisionValue,
+      assignedDirector: directorId,
+      paymentMethod:
+        paymentMethodLabels[paymentMethodValue] ?? paymentMethodValue,
+      bankName,
+      bankAccountNumber,
+      purpose: String(formData.get("purpose") ?? ""),
+      lines: voucherLines,
+    });
+    if (hasValidationErrors(nextFieldErrors)) {
       setFieldErrors(nextFieldErrors);
-      return;
-    }
-
-    if (!directorId) {
-      setFormError("Please select an assigned Director.");
-
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus();
+      });
       return;
     }
 
@@ -447,6 +442,7 @@ export function PaymentVoucherForm({
       <form
         className={`${styles.pvFormLayout} ${isAmendment ? styles.amendmentForm : ""}`}
         ref={formRef}
+        noValidate
         onSubmit={handleReview}
       >
         <ProjectBudgetWarning
@@ -502,11 +498,14 @@ export function PaymentVoucherForm({
                 </span>
 
                 <input
+                  {...invalidFieldProps("pv-date-error", fieldErrors.pvDate)}
                   defaultValue={initialVoucher?.pvDate ?? ""}
                   name="pvDate"
+                  onChange={() => clearFieldError("pvDate")}
                   required
                   type="date"
                 />
+                <FieldError id="pv-date-error">{fieldErrors.pvDate}</FieldError>
               </label>
 
               <label className={styles.field}>
@@ -515,11 +514,19 @@ export function PaymentVoucherForm({
                 </span>
 
                 <input
+                  {...invalidFieldProps(
+                    "recipient-name-error",
+                    fieldErrors.recipientName,
+                  )}
                   defaultValue={initialVoucher?.recipientName ?? ""}
                   name="recipientName"
+                  onInput={() => clearFieldError("recipientName")}
                   required
                   type="text"
                 />
+                <FieldError id="recipient-name-error">
+                  {fieldErrors.recipientName}
+                </FieldError>
               </label>
 
               <label className={styles.field}>
@@ -528,11 +535,19 @@ export function PaymentVoucherForm({
                 </span>
 
                 <input
+                  {...invalidFieldProps(
+                    "recipient-email-error",
+                    fieldErrors.recipientEmail,
+                  )}
                   defaultValue={initialVoucher?.recipientEmail ?? ""}
                   name="recipientEmail"
+                  onInput={() => clearFieldError("recipientEmail")}
                   required
                   type="email"
                 />
+                <FieldError id="recipient-email-error">
+                  {fieldErrors.recipientEmail}
+                </FieldError>
               </label>
 
               <label className={styles.field}>
@@ -542,12 +557,10 @@ export function PaymentVoucherForm({
                 </span>
 
                 <input
-                  aria-describedby={
-                    fieldErrors.recipientIdentity
-                      ? "recipient-identity-error"
-                      : undefined
-                  }
-                  aria-invalid={Boolean(fieldErrors.recipientIdentity)}
+                  {...invalidFieldProps(
+                    "recipient-identity-error",
+                    fieldErrors.recipientIdentity,
+                  )}
                   defaultValue={initialVoucher?.recipientIc ?? ""}
                   name="recipientIdentity"
                   inputMode="numeric"
@@ -566,15 +579,9 @@ export function PaymentVoucherForm({
                     }
                   }}
                 />
-                {fieldErrors.recipientIdentity && (
-                  <small
-                    className={styles.fieldError}
-                    id="recipient-identity-error"
-                    role="alert"
-                  >
-                    {fieldErrors.recipientIdentity}
-                  </small>
-                )}
+                <FieldError id="recipient-identity-error">
+                  {fieldErrors.recipientIdentity}
+                </FieldError>
               </label>
 
               <label className={styles.field}>
@@ -604,9 +611,13 @@ export function PaymentVoucherForm({
                 </span>
 
                 <select
+                  {...invalidFieldProps("project-error", fieldErrors.project)}
                   defaultValue={selectedDivision}
                   name="division"
-                  onChange={(event) => setDivision(event.target.value)}
+                  onChange={(event) => {
+                    setDivision(event.target.value);
+                    clearFieldError("project");
+                  }}
                   required
                 >
                   <option disabled value="">
@@ -619,6 +630,9 @@ export function PaymentVoucherForm({
                     </option>
                   ))}
                 </select>
+                <FieldError id="project-error">
+                  {fieldErrors.project}
+                </FieldError>
               </label>
 
               <label className={styles.field}>
@@ -635,9 +649,14 @@ export function PaymentVoucherForm({
                 )}
 
                 <select
+                  {...invalidFieldProps(
+                    "assigned-director-error",
+                    fieldErrors.assignedDirector,
+                  )}
                   defaultValue={initialVoucher?.directorId ?? ""}
                   disabled={isAmendment}
                   name={isAmendment ? undefined : "assignedDirector"}
+                  onChange={() => clearFieldError("assignedDirector")}
                   required={!isAmendment}
                 >
                   <option disabled value="">
@@ -659,6 +678,9 @@ export function PaymentVoucherForm({
                     </option>
                   ))}
                 </select>
+                <FieldError id="assigned-director-error">
+                  {fieldErrors.assignedDirector}
+                </FieldError>
 
                 {isAmendment && (
                   <small>
@@ -675,6 +697,10 @@ export function PaymentVoucherForm({
                 <select
                   defaultValue={selectedPaymentMethod}
                   name="paymentMethod"
+                  onChange={() => {
+                    clearFieldError("bankName");
+                    clearFieldError("bankAccountNumber");
+                  }}
                 >
                   {paymentMethodOptions.map((method) => (
                     <option key={method} value={method}>
@@ -690,8 +716,16 @@ export function PaymentVoucherForm({
                 </span>
 
                 <select
+                  {...invalidFieldProps(
+                    "bank-name-error",
+                    fieldErrors.bankName,
+                  )}
                   defaultValue={initialVoucher?.bankName ?? ""}
                   name="bankName"
+                  onChange={() => {
+                    clearFieldError("bankName");
+                    clearFieldError("bankAccountNumber");
+                  }}
                 >
                   <option value="">Select bank</option>
 
@@ -701,6 +735,9 @@ export function PaymentVoucherForm({
                     </option>
                   ))}
                 </select>
+                <FieldError id="bank-name-error">
+                  {fieldErrors.bankName}
+                </FieldError>
               </label>
 
               <label className={styles.field}>
@@ -710,12 +747,10 @@ export function PaymentVoucherForm({
                 </span>
 
                 <input
-                  aria-describedby={
-                    fieldErrors.bankAccountNumber
-                      ? "bank-account-number-error"
-                      : undefined
-                  }
-                  aria-invalid={Boolean(fieldErrors.bankAccountNumber)}
+                  {...invalidFieldProps(
+                    "bank-account-number-error",
+                    fieldErrors.bankAccountNumber,
+                  )}
                   defaultValue={initialVoucher?.bankAccountNumber ?? ""}
                   name="bankAccountNumber"
                   inputMode="numeric"
@@ -732,15 +767,9 @@ export function PaymentVoucherForm({
                     }
                   }}
                 />
-                {fieldErrors.bankAccountNumber && (
-                  <small
-                    className={styles.fieldError}
-                    id="bank-account-number-error"
-                    role="alert"
-                  >
-                    {fieldErrors.bankAccountNumber}
-                  </small>
-                )}
+                <FieldError id="bank-account-number-error">
+                  {fieldErrors.bankAccountNumber}
+                </FieldError>
               </label>
 
               <label className={`${styles.field} ${styles.wide}`}>
@@ -750,11 +779,16 @@ export function PaymentVoucherForm({
                 </span>
 
                 <textarea
+                  {...invalidFieldProps("purpose-error", fieldErrors.purpose)}
                   defaultValue={initialVoucher?.purpose ?? ""}
                   name="purpose"
+                  onInput={() => clearFieldError("purpose")}
                   required
                   rows={4}
                 />
+                <FieldError id="purpose-error">
+                  {fieldErrors.purpose}
+                </FieldError>
               </label>
 
               <label className={`${styles.field} ${styles.wide}`}>
@@ -800,10 +834,10 @@ export function PaymentVoucherForm({
             </div>
 
             <div className={styles.lineLabels}>
-              <span>Account <em className={styles.requiredMarker}>*</em></span>
-              <span>Description <em className={styles.requiredMarker}>*</em></span>
-              <span>Quantity <em className={styles.requiredMarker}>*</em></span>
-              <span>Unit price <em className={styles.requiredMarker}>*</em></span>
+              <span>Account *</span>
+              <span>Description *</span>
+              <span>Quantity *</span>
+              <span>Unit price *</span>
               <span>Total</span>
             </div>
 
@@ -820,13 +854,18 @@ export function PaymentVoucherForm({
 
                       <select
                         aria-label="Account"
+                        {...invalidFieldProps(
+                          `${line.id}-account-error`,
+                          fieldErrors.lines?.[line.id]?.account,
+                        )}
                         required
                         value={line.account}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           updateVoucherLine(line.id, {
                             account: event.target.value,
-                          })
-                        }
+                          });
+                          clearLineError(line.id, "account");
+                        }}
                       >
                         {!knownAccountCodes.includes(line.account) && (
                           <option value={line.account}>{line.account}</option>
@@ -838,6 +877,9 @@ export function PaymentVoucherForm({
                           </option>
                         ))}
                       </select>
+                      <FieldError id={`${line.id}-account-error`}>
+                        {fieldErrors.lines?.[line.id]?.account}
+                      </FieldError>
                     </label>
 
                     <label className={styles.mobileFieldLabel}>
@@ -847,16 +889,24 @@ export function PaymentVoucherForm({
 
                       <input
                         aria-label="Description"
+                        {...invalidFieldProps(
+                          `${line.id}-description-error`,
+                          fieldErrors.lines?.[line.id]?.description,
+                        )}
                         placeholder="Payment description"
                         required
                         type="text"
                         value={line.description}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           updateVoucherLine(line.id, {
                             description: event.target.value,
-                          })
-                        }
+                          });
+                          clearLineError(line.id, "description");
+                        }}
                       />
+                      <FieldError id={`${line.id}-description-error`}>
+                        {fieldErrors.lines?.[line.id]?.description}
+                      </FieldError>
                     </label>
 
                     <label className={styles.mobileFieldLabel}>
@@ -866,19 +916,27 @@ export function PaymentVoucherForm({
 
                       <input
                         aria-label="Quantity"
+                        {...invalidFieldProps(
+                          `${line.id}-quantity-error`,
+                          fieldErrors.lines?.[line.id]?.quantity,
+                        )}
                         inputMode="decimal"
                         placeholder="For example: 1"
                         required
                         type="text"
                         value={line.quantity}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           updateVoucherLine(line.id, {
                             quantity: parsePaymentAmountInput(
                               event.target.value,
                             ),
-                          })
-                        }
+                          });
+                          clearLineError(line.id, "quantity");
+                        }}
                       />
+                      <FieldError id={`${line.id}-quantity-error`}>
+                        {fieldErrors.lines?.[line.id]?.quantity}
+                      </FieldError>
                     </label>
 
                     <label className={styles.mobileFieldLabel}>
@@ -888,13 +946,21 @@ export function PaymentVoucherForm({
 
                       <PaymentAmountInput
                         aria-label="Unit price"
+                        {...invalidFieldProps(
+                          `${line.id}-unit-price-error`,
+                          fieldErrors.lines?.[line.id]?.unitPrice,
+                        )}
                         placeholder="0.00"
                         required
                         value={line.unitPrice}
-                        onValueChange={(unitPrice) =>
-                          updateVoucherLine(line.id, { unitPrice })
-                        }
+                        onValueChange={(unitPrice) => {
+                          updateVoucherLine(line.id, { unitPrice });
+                          clearLineError(line.id, "unitPrice");
+                        }}
                       />
+                      <FieldError id={`${line.id}-unit-price-error`}>
+                        {fieldErrors.lines?.[line.id]?.unitPrice}
+                      </FieldError>
                     </label>
 
                     <div className={styles.lineTotal}>
